@@ -4,32 +4,13 @@
       <stop offset="0" stop-color="#00e676"/>
       <stop offset="1" stop-color="#0a7d3a"/>
     </linearGradient>
-    <linearGradient id="sync" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#eafff2"/>
-      <stop offset="1" stop-color="#bff5d6"/>
-    </linearGradient>
   </defs>
 
   <!-- Fundo arredondado com a cor da marca -->
   <rect x="0" y="0" width="512" height="512" rx="112" fill="url(#bg)"/>
 
-  <!-- Setas de "sync" ao redor da caixa (sutis) -->
-  <g fill="none" stroke="url(#sync)" stroke-width="16" stroke-linecap="round" opacity="0.85">
-    <path d="M 132 138 A 168 168 0 0 1 404 156"/>
-    <path d="M 380 374 A 168 168 0 0 1 108 356"/>
-  </g>
-  <path d="M 404 156 l 4 -50 l -48 20 z" fill="url(#sync)" opacity="0.85"/>
-  <path d="M 108 356 l -4 50 l 48 -20 z" fill="url(#sync)" opacity="0.85"/>
-
-  <!-- Caixa isométrica (almoxarifado) -->
-  <g stroke="#0a7d3a" stroke-width="7" stroke-linejoin="round">
-    <!-- Topo -->
-    <polygon points="256,150 392,214 256,278 120,214" fill="#ffffff"/>
-    <!-- Face esquerda -->
-    <polygon points="120,214 256,278 256,398 120,334" fill="#cdeedd"/>
-    <!-- Face direita -->
-    <polygon points="392,214 256,278 256,398 392,334" fill="#e8fff2"/>
-  </g>
-  <!-- "Fita" no centro da caixa -->
-  <line x1="256" y1="278" x2="256" y2="398" stroke="#9fd9b8" stroke-width="7"/>
+  <!-- Monograma InvenSync -->
+  <text x="256" y="358" text-anchor="middle" fill="#ffffff"
+        font-family="'Segoe UI', Arial, Helvetica, sans-serif"
+        font-size="290" font-weight="800" letter-spacing="-6">IS</text>
 </svg>
