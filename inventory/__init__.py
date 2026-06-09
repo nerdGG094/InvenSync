@@ -59,6 +59,7 @@ def create_app():
     from .routes.reports import bp as reports_bp
     from .routes.users import bp as users_bp  # ⬅️ NOVO: blueprint de usuários
     from .routes.kanban import bp as kanban_bp  # ⬅️ NOVO: board kanban de estoque
+    from .routes.health import bp as health_bp  # ⬅️ NOVO: endpoint /health (launcher)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -69,6 +70,7 @@ def create_app():
     app.register_blueprint(reports_bp, url_prefix="/reports")
     app.register_blueprint(users_bp, url_prefix="/users")  # ⬅️ NOVO: rota /users
     app.register_blueprint(kanban_bp, url_prefix="/kanban")  # ⬅️ NOVO: rota /kanban
+    app.register_blueprint(health_bp)  # ⬅️ NOVO: /health (sem login, para o launcher)
 
     # Handlers de erro
     @app.errorhandler(404)

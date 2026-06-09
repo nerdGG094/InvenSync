@@ -6,3 +6,5 @@ email-validator==2.2.0
 Werkzeug==3.0.3
 psycopg[binary]==3.3.3
 python-dotenv==1.2.2
+waitress==3.0.2
+PyQt5==5.15.11
