@@ -31,6 +31,15 @@ class Product(db.Model):
     price = db.Column(db.Numeric(12, 2), default=0, server_default="0")
     created_at = db.Column(db.DateTime, server_default=db.func.now())
 
+    # ===== Campos específicos de TI =====
+    brand = db.Column(db.String(120), nullable=True)          # Marca (HP, Brother, Dell...)
+    model = db.Column(db.String(120), nullable=True)          # Modelo (ex.: TN-660, M404)
+    patrimony = db.Column(db.String(60), nullable=True, index=True)   # Nº patrimônio
+    serial_number = db.Column(db.String(120), nullable=True, index=True)  # Nº de série
+    location = db.Column(db.String(120), nullable=True)       # Localização (armário/prateleira)
+    compatibility = db.Column(db.Text, nullable=True)         # Compatibilidade (impressoras/modelos)
+    expiry_date = db.Column(db.Date, nullable=True)           # Validade (toner/cilindro)
+
     category = db.relationship("Category", backref=db.backref("products", lazy=True))
     supplier = db.relationship("Supplier", backref=db.backref("products", lazy=True))
 

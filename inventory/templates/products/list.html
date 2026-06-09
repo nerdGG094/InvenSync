@@ -59,7 +59,15 @@
         {% set mn = p.min_stock or 0 %}
         <tr class="{% if est <= mn %}table-warning{% endif %}">
           <td class="text-nowrap font-monospace">{{ p.sku }}</td>
-          <td class="fw-semibold">{{ p.name }}</td>
+          <td>
+            <div class="fw-semibold">{{ p.name }}</div>
+            {% if p.brand or p.model %}
+              <small class="text-muted">{{ p.brand or '' }}{% if p.brand and p.model %} · {% endif %}{{ p.model or '' }}</small>
+            {% endif %}
+            {% if p.location %}
+              <span class="badge bg-secondary-subtle text-secondary-emphasis ms-1"><i class="bi bi-geo-alt"></i> {{ p.location }}</span>
+            {% endif %}
+          </td>
           <td class="text-nowrap">
             <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ p.unit or 'UN' }}</span>
             <span class="d-none d-xl-inline text-muted small">{{ unit_labels.get(p.unit) or '' }}</span>

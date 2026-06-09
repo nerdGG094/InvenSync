@@ -63,6 +63,14 @@ def _form_to_kwargs(form: ProductForm) -> dict:
         price=form.price.data or 0,
         item_type=form.item_type.data or "product",
         unit=form.unit.data or "UN",
+        # Campos específicos de TI
+        brand=(form.brand.data or "").strip() or None,
+        model=(form.model.data or "").strip() or None,
+        patrimony=(form.patrimony.data or "").strip() or None,
+        serial_number=(form.serial_number.data or "").strip() or None,
+        location=(form.location.data or "").strip() or None,
+        compatibility=(form.compatibility.data or "").strip() or None,
+        expiry_date=form.expiry_date.data or None,
     )
 
 @bp.route("")

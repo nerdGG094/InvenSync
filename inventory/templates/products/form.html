@@ -108,6 +108,59 @@
           </div>
         </div>
 
+        <!-- ===== Detalhes de TI ===== -->
+        <hr class="my-4" style="border-color:#243024">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <i class="bi bi-pc-display text-success"></i>
+          <span class="fw-semibold">Detalhes de TI</span>
+          <span class="text-muted small">(opcional — útil para toner, cilindros, ativos e peças)</span>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-12 col-md-4">
+            {{ form.brand.label(class="form-label fw-semibold") }}
+            {{ form.brand(class="form-control" + (" is-invalid" if form.brand.errors else ""), placeholder="Ex.: HP, Brother, Dell") }}
+            {{ field_error(form.brand) }}
+          </div>
+          <div class="col-12 col-md-4">
+            {{ form.model.label(class="form-label fw-semibold") }}
+            {{ form.model(class="form-control" + (" is-invalid" if form.model.errors else ""), placeholder="Ex.: TN-660, M404dn") }}
+            {{ field_error(form.model) }}
+          </div>
+          <div class="col-12 col-md-4">
+            {{ form.location.label(class="form-label fw-semibold") }}
+            {{ form.location(class="form-control" + (" is-invalid" if form.location.errors else ""), placeholder="Ex.: Armário A, Prateleira 3") }}
+            {{ field_error(form.location) }}
+          </div>
+        </div>
+
+        <div class="row g-3 mt-1">
+          <div class="col-12 col-md-4">
+            {{ form.patrimony.label(class="form-label fw-semibold") }}
+            {{ form.patrimony(class="form-control" + (" is-invalid" if form.patrimony.errors else ""), placeholder="Nº do patrimônio") }}
+            <div class="form-text">Para ativos (notebook, monitor...).</div>
+            {{ field_error(form.patrimony) }}
+          </div>
+          <div class="col-12 col-md-4">
+            {{ form.serial_number.label(class="form-label fw-semibold") }}
+            {{ form.serial_number(class="form-control" + (" is-invalid" if form.serial_number.errors else ""), placeholder="Serial / SN") }}
+            {{ field_error(form.serial_number) }}
+          </div>
+          <div class="col-12 col-md-4">
+            {{ form.expiry_date.label(class="form-label fw-semibold") }}
+            {{ form.expiry_date(class="form-control" + (" is-invalid" if form.expiry_date.errors else ""), type="date") }}
+            <div class="form-text">Validade (toner/cilindro).</div>
+            {{ field_error(form.expiry_date) }}
+          </div>
+        </div>
+
+        <div class="mt-3">
+          {{ form.compatibility.label(class="form-label fw-semibold") }}
+          {{ form.compatibility(class="form-control" + (" is-invalid" if form.compatibility.errors else ""), rows=2, placeholder="Ex.: compatível com HP LaserJet M404 / M428; ou impressoras do setor Financeiro") }}
+          <div class="form-text">Liste impressoras/equipamentos compatíveis — ajuda na hora de repor.</div>
+          {{ field_error(form.compatibility) }}
+        </div>
+
         <!-- Ações -->
         <div class="d-flex justify-content-end gap-2 mt-4">
           <a href="{{ url_for('products.list_view') }}" class="btn btn-outline-light">Cancelar</a>

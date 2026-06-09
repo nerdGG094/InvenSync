@@ -16,6 +16,14 @@ _ALLOWED_FIELDS = {
     "price",
     "item_type",
     "unit",
+    # Campos específicos de TI
+    "brand",
+    "model",
+    "patrimony",
+    "serial_number",
+    "location",
+    "compatibility",
+    "expiry_date",
 }
 
 

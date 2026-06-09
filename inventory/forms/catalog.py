@@ -1,6 +1,9 @@
 
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, SubmitField, IntegerField, DecimalField, SelectField
+from wtforms import (
+    StringField, TextAreaField, SubmitField, IntegerField, DecimalField,
+    SelectField, DateField,
+)
 from wtforms.validators import DataRequired, Length, Email, Optional, NumberRange
 
 class CategoryForm(FlaskForm):
@@ -26,6 +29,16 @@ class ProductForm(FlaskForm):
     supplier_id = SelectField("Fornecedor", coerce=int, validators=[Optional()])
     min_stock = IntegerField("Estoque mínimo", validators=[NumberRange(min=0)], default=0)
     price = DecimalField("Preço", places=2, validators=[NumberRange(min=0)], default=0)
+
+    # ===== Campos específicos de TI =====
+    brand = StringField("Marca", validators=[Optional(), Length(max=120)])
+    model = StringField("Modelo", validators=[Optional(), Length(max=120)])
+    patrimony = StringField("Nº Patrimônio", validators=[Optional(), Length(max=60)])
+    serial_number = StringField("Nº de Série", validators=[Optional(), Length(max=120)])
+    location = StringField("Localização", validators=[Optional(), Length(max=120)])
+    compatibility = TextAreaField("Compatibilidade", validators=[Optional()])
+    expiry_date = DateField("Validade", validators=[Optional()])
+
     submit = SubmitField("Salvar")
 
 class MovementForm(FlaskForm):
