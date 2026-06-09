@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Kanban de Estoque{% endblock %}
+
+{% block extra_head %}
+<style>
+  .kanban-wrap {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(260px, 1fr));
+    gap: 1rem;
+    align-items: start;
+  }
+  @media (max-width: 992px) {
+    .kanban-wrap { grid-auto-flow: column; grid-template-columns: none;
+                   grid-auto-columns: 85%; overflow-x: auto; padding-bottom: .5rem; }
+  }
+  .kanban-col {
+    background: var(--bg-2, #1e1e1e);
+    border: 1px solid #243024;
+    border-radius: 12px;
+    display: flex; flex-direction: column;
+    max-height: calc(100vh - 220px);
+  }
+  .kanban-col-head {
+    position: sticky; top: 0;
+    padding: .75rem .9rem;
+    border-bottom: 1px solid #243024;
+    border-top-left-radius: 12px; border-top-right-radius: 12px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: #17261c;
+  }
+  .kanban-col[data-accent="danger"]  .kanban-col-head { border-top: 3px solid #f4433699; }
+  .kanban-col[data-accent="warning"] .kanban-col-head { border-top: 3px solid #ffc10799; }
+  .kanban-col[data-accent="info"]    .kanban-col-head { border-top: 3px solid #0dcaf099; }
+  .kanban-col[data-accent="success"] .kanban-col-head { border-top: 3px solid #00c85399; }
+
+  .kanban-body { padding: .75rem; overflow-y: auto; display: flex; flex-direction: column; gap: .6rem; }
+
+  .kanban-card {
+    background: #15211a;
+    border: 1px solid #25382b;
+    border-left: 4px solid #3c6b52;
+    border-radius: 10px;
+    padding: .7rem .8rem;
+    transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+  }
+  .kanban-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,.35); }
+  .kanban-card[data-accent="danger"]  { border-left-color: #f44336; }
+  .kanban-card[data-accent="warning"] { border-left-color: #ffc107; }
+  .kanban-card[data-accent="info"]    { border-left-color: #0dcaf0; }
+  .kanban-card[data-accent="success"] { border-left-color: #00c853; }
+
+  .kanban-card .sku { font-size: .72rem; letter-spacing: .03em; color: #8fcaa6; }
+  .kanban-card .pname { font-weight: 600; color: #e6ffe9; line-height: 1.2; }
+  .kanban-card .meta { font-size: .74rem; color: #9bb6a6; }
+  .kanban-card .stock-num { font-variant-numeric: tabular-nums; font-weight: 700; }
+  .kanban-progress { height: 6px; background: #0f1a13; border-radius: 4px; overflow: hidden; }
+  .kanban-progress > span { display:block; height:100%; }
+  .kanban-empty { color:#6f8a7a; font-size:.82rem; text-align:center; padding:1.2rem .5rem; }
+  .col-count { font-variant-numeric: tabular-nums; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <h1 class="h4 mb-0 d-flex align-items-center gap-2">
+    <i class="bi bi-kanban text-success"></i> Kanban de Estoque
+    <span class="badge bg-success-subtle text-success-emphasis">{{ total }} itens</span>
+  </h1>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('movements.list_and_new') }}" class="btn btn-primary btn-sm">
+      <i class="bi bi-arrow-left-right"></i> Movimentar
+    </a>
+    <a href="{{ url_for('products.list_view') }}" class="btn btn-outline-light btn-sm">
+      <i class="bi bi-grid"></i> Ver lista
+    </a>
+  </div>
+</div>
+
+<div class="kanban-wrap">
+  {% for col in columns %}
+  <section class="kanban-col" data-accent="{{ col.accent }}">
+    <header class="kanban-col-head">
+      <span class="fw-semibold d-flex align-items-center gap-2">
+        <i class="bi bi-{{ col.icon }} text-{{ col.accent }}"></i> {{ col.title }}
+      </span>
+      <span class="badge bg-{{ col.accent }}-subtle text-{{ col.accent }}-emphasis col-count">
+        {{ col.cards|length }}
+      </span>
+    </header>
+    <div class="kanban-body">
+      {% for c in col.cards %}
+      <article class="kanban-card" data-accent="{{ col.accent }}">
+        <div class="d-flex justify-content-between align-items-start gap-2">
+          <div class="me-1">
+            <div class="sku">{{ c.sku }}</div>
+            <div class="pname">{{ c.name }}</div>
+          </div>
+          <div class="text-end">
+            <div class="stock-num text-{{ col.accent }}">{{ c.stock }}</div>
+            <div class="meta">{{ c.unit or 'UN' }}</div>
+          </div>
+        </div>
+
+        {% if c.minimo > 0 %}
+        <div class="kanban-progress mt-2" title="Cobertura do mínimo">
+          <span class="bg-{{ col.accent }}" style="width: {{ c.pct }}%"></span>
+        </div>
+        <div class="meta mt-1">mín. {{ c.minimo }} · {{ c.pct }}% da meta</div>
+        {% else %}
+        <div class="meta mt-2">mínimo não definido</div>
+        {% endif %}
+
+        <div class="d-flex justify-content-between align-items-center mt-2">
+          <span class="meta">
+            {% if c.category %}<i class="bi bi-tag"></i> {{ c.category }}{% else %}—{% endif %}
+          </span>
+          <span class="d-flex gap-1">
+            <a class="btn btn-sm btn-outline-secondary py-0 px-1"
+               href="{{ url_for('movements.list_and_new') }}?q={{ c.sku }}"
+               title="Movimentações deste item"><i class="bi bi-arrow-left-right"></i></a>
+            <a class="btn btn-sm btn-outline-secondary py-0 px-1"
+               href="{{ url_for('products.edit', pid=c.id) }}"
+               title="Editar produto"><i class="bi bi-pencil"></i></a>
+          </span>
+        </div>
+      </article>
+      {% endfor %}
+
+      {% if not col.cards %}
+        <div class="kanban-empty"><i class="bi bi-inbox"></i><br>Nenhum item aqui</div>
+      {% endif %}
+    </div>
+  </section>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Usuários{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-people"></i></span>
+    Usuários
+    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ users|length }}</span>
+  </h1>
+  <a href="{{ url_for('users.new') }}" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> Novo Usuário
+  </a>
+</div>
+
+<div class="table-card">
+  <div class="table-card-tools">
+    <form class="d-flex search-box" method="get" role="search">
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input class="form-control" type="search" placeholder="Buscar por nome ou e-mail..." name="q" value="{{ q or '' }}">
+      </div>
+      {% if q %}
+      <a href="{{ url_for('users.list_view') }}" class="btn btn-outline-light ms-2" title="Limpar"><i class="bi bi-x-lg"></i></a>
+      {% endif %}
+    </form>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead>
+        <tr>
+          <th style="min-width:220px">Nome</th>
+          <th style="min-width:240px">E-mail</th>
+          <th>Perfil</th>
+          <th class="text-end" style="width:140px">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <span class="avatar-circle">{{ u.name[:2] }}</span>
+              <span class="fw-semibold">{{ u.name }}</span>
+            </div>
+          </td>
+          <td><a class="contact-chip text-decoration-none" href="mailto:{{ u.email }}"><i class="bi bi-envelope"></i>{{ u.email }}</a></td>
+          <td>
+            {% if u.is_admin %}
+              <span class="badge bg-success-subtle text-success"><i class="bi bi-shield-check me-1"></i>Admin</span>
+            {% else %}
+              <span class="badge bg-secondary-subtle text-secondary"><i class="bi bi-person me-1"></i>Usuário</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('users.edit', uid=u.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
+            <form class="d-inline" method="post" action="{{ url_for('users.delete', uid=u.id) }}"
+                  onsubmit="return confirm('Excluir o usuário “{{ u.name }}”?');">
+              <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="4">
+            <div class="empty-state">
+              <i class="bi bi-people"></i>
+              {% if q %}Nenhum usuário encontrado para “{{ q }}”.{% else %}Nenhum usuário cadastrado ainda.{% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

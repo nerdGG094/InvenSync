@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Relatório de Estoque{% endblock %}
+{% block content %}
+
+{# ---- Totais calculados no template ---- #}
+{% set ns = namespace(total_itens=0, valor=0.0, baixo=0, zerado=0) %}
+{% for p in products %}
+  {% set est = current_stock(p) %}
+  {% set ns.total_itens = ns.total_itens + (est if est > 0 else 0) %}
+  {% set ns.valor = ns.valor + ((est if est > 0 else 0) * (p.price or 0)|float) %}
+  {% if est <= 0 %}{% set ns.zerado = ns.zerado + 1 %}
+  {% elif est <= (p.min_stock or 0) %}{% set ns.baixo = ns.baixo + 1 %}{% endif %}
+{% endfor %}
+
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-clipboard-data"></i></span>
+    Relatório de Estoque
+    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ products|length }} itens</span>
+  </h1>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('kanban.board') }}" class="btn btn-outline-light"><i class="bi bi-kanban"></i> Kanban</a>
+    <a href="{{ url_for('reports.export_products') }}" class="btn btn-primary"><i class="bi bi-filetype-csv"></i> Exportar CSV</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card h-100"><div class="card-body">
+      <h6 class="text-muted mb-1">Itens em estoque</h6>
+      <div class="h3 mb-0 number">{{ ns.total_itens }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card h-100"><div class="card-body">
+      <h6 class="text-muted mb-1">Valor em estoque</h6>
+      <div class="h3 mb-0 number">R$ {{ '%.2f'|format(ns.valor) }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card h-100" style="border-left-color:#ffc107"><div class="card-body">
+      <h6 class="text-muted mb-1">Abaixo do mínimo</h6>
+      <div class="h3 mb-0 number text-warning">{{ ns.baixo }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card h-100" style="border-left-color:#f44336"><div class="card-body">
+      <h6 class="text-muted mb-1">Sem estoque</h6>
+      <div class="h3 mb-0 number text-danger">{{ ns.zerado }}</div>
+    </div></div>
+  </div>
+</div>
+
+<div class="table-card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead>
+        <tr>
+          <th>SKU</th>
+          <th>Produto</th>
+          <th>Categoria</th>
+          <th>Fornecedor</th>
+          <th class="text-end">Preço</th>
+          <th class="text-end">Estoque</th>
+          <th class="text-end">Mínimo</th>
+          <th>Situação</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in products %}
+        {% set est = current_stock(p) %}
+        {% set mn = p.min_stock or 0 %}
+        <tr class="{% if est <= mn %}table-warning{% endif %}">
+          <td class="text-nowrap font-monospace">{{ p.sku }}</td>
+          <td class="fw-semibold">{{ p.name }}</td>
+          <td>{% if p.category %}{{ p.category.name }}{% else %}<span class="contact-muted">—</span>{% endif %}</td>
+          <td>{% if p.supplier %}{{ p.supplier.name }}{% else %}<span class="contact-muted">—</span>{% endif %}</td>
+          <td class="text-end number">R$ {{ '%.2f'|format(p.price) }}</td>
+          <td class="text-end number">{{ est }}</td>
+          <td class="text-end number">{{ mn }}</td>
+          <td>
+            {% if est <= 0 %}
+              <span class="badge bg-danger-subtle text-danger"><i class="bi bi-x-octagon me-1"></i>Sem estoque</span>
+            {% elif est <= mn %}
+              <span class="badge bg-warning-subtle text-warning-emphasis"><i class="bi bi-exclamation-triangle me-1"></i>Abaixo do mínimo</span>
+            {% else %}
+              <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>OK</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8">
+            <div class="empty-state"><i class="bi bi-clipboard-x"></i>Nenhum produto cadastrado.</div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+{% block title %}Movimentações{% endblock %}
+
+{% block content %}
+{# Badge de tipo #}
+{% macro movement_badge(t) -%}
+  {% if t == 'IN' -%}
+    <span class="badge bg-success-subtle text-success px-2"><i class="bi bi-arrow-down-circle me-1"></i>Entrada</span>
+  {%- else -%}
+    <span class="badge bg-danger-subtle text-danger px-2"><i class="bi bi-arrow-up-circle me-1"></i>Saída</span>
+  {%- endif %}
+{%- endmacro %}
+
+{# Exibição resiliente do usuário #}
+{% macro movement_user(m) -%}
+  {# tenta m.user (objeto), depois m.created_by, depois user_id #}
+  {% if m.user is defined and m.user %}
+    {{ m.user.name if m.user.name is defined and m.user.name else (m.user.email if m.user.email is defined and m.user.email else ('ID ' ~ (m.user.id if m.user.id is defined else ''))) }}
+  {% elif m.created_by is defined and m.created_by %}
+    {% if m.created_by.name is defined %}{{ m.created_by.name }}{% else %}{{ m.created_by }}{% endif %}
+  {% elif m.user_id is defined and m.user_id %}
+    ID {{ m.user_id }}
+  {% else %}-{% endif %}
+{%- endmacro %}
+
+{% macro field_error(field) -%}
+  {% if field.errors %}<div class="form-text text-danger">{{ field.errors[0] }}</div>{% endif %}
+{%- endmacro %}
+
+<style>
+  .number{font-variant-numeric:tabular-nums}
+  .sticky-head{position:sticky;top:0;z-index:2}
+  .sticky-foot{position:sticky;bottom:0;z-index:1}
+  .table thead th{background:var(--bs-body-bg);box-shadow:inset 0 -1px 0 rgba(0,0,0,.05)}
+  .table tfoot th{background:var(--bs-warning-bg-subtle)}
+  .table-fit{width:100%;table-layout:fixed}
+  .table-fit th,.table-fit td{overflow:hidden;text-overflow:ellipsis}
+  .history-wrap{overflow:auto}
+  @media (min-height:1000px){.history-wrap{max-height:720px}}
+  @media (min-height:800px) and (max-height:999.98px){.history-wrap{max-height:600px}}
+  @media (max-height:799.98px){.history-wrap{max-height:520px}}
+  .toolbar-gap>*{margin-right:.5rem}
+  .toolbar-gap>*:last-child{margin-right:0}
+  .card-header-min{min-height:3rem}
+  .summary-card .card-body{padding:1rem 1.25rem}
+  .summary-card .h4{line-height:1.25}
+  .summary-card i{opacity:.9}
+</style>
+
+<section class="mb-3">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-2">
+      <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Movimentações</li>
+    </ol>
+  </nav>
+
+  {# Totais dos cards: usa 'totals' se vier da view; senão calcula pelos itens da página #}
+  {% if totals is defined %}
+    {% set entrada_total = totals.in_total or 0 %}
+    {% set saida_total   = totals.out_total or 0 %}
+  {% else %}
+    {% set entrada_total = 0 %}
+    {% set saida_total   = 0 %}
+    {% for _m in items or [] %}
+      {% if _m.movement_type == 'IN' %}
+        {% set entrada_total = entrada_total + (_m.quantity or 0) %}
+      {% else %}
+        {% set saida_total   = saida_total   + (_m.quantity or 0) %}
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+  {% set saldo_total = entrada_total - saida_total %}
+
+  <div class="row g-3">
+    <div class="col-12 col-md-4">
+      <div class="card shadow-sm h-100 summary-card">
+        <div class="card-body d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-muted small">Entradas</div>
+            <div class="h4 mb-0 number">{{ entrada_total }}</div>
+          </div>
+          <i class="bi bi-box-arrow-in-down text-success fs-3"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+      <div class="card shadow-sm h-100 summary-card">
+        <div class="card-body d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-muted small">Saídas</div>
+            <div class="h4 mb-0 number">{{ saida_total }}</div>
+          </div>
+          <i class="bi bi-box-arrow-up text-danger fs-3"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+      <div class="card shadow-sm h-100 summary-card">
+        <div class="card-body d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-muted small">Saldo acumulado</div>
+            <div class="h4 mb-0 number">{{ saldo_total }}</div>
+          </div>
+          <i class="bi bi-calculator text-secondary fs-3"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="row g-3 align-items-stretch">
+  <section class="col-12 col-lg-5">
+    <div class="card shadow-sm h-100">
+      <div class="card-header card-header-min d-flex align-items-center justify-content-between">
+        <span class="d-flex align-items-center gap-2">
+          <i class="bi bi-plus-circle text-success"></i>
+          <span class="fw-semibold">Registrar movimentação</span>
+        </span>
+        <a class="btn btn-sm btn-outline-light" href="{{ url_for('movements.list_and_new') }}" title="Limpar formulário">
+          <i class="bi bi-arrow-counterclockwise"></i>
+        </a>
+      </div>
+      <div class="card-body">
+        <form method="post" novalidate class="d-grid gap-3">
+          {{ form.hidden_tag() }}
+
+          <div>
+            <div class="d-flex justify-content-between align-items-center">
+              {{ form.product_id.label(class="form-label fw-semibold mb-1") }}
+              <a href="{{ url_for('products.new') }}" class="small text-decoration-none"><i class="bi bi-plus-circle me-1"></i>Novo produto</a>
+            </div>
+            {{ form.product_id(class="form-select", aria_describedby="productHelp") }}
+            <div id="productHelp" class="form-text">Selecione o produto para registrar a movimentação.</div>
+            {{ field_error(form.product_id) }}
+          </div>
+
+          <div class="row g-3">
+            <div class="col-12 col-md-4">
+              {{ form.movement_type.label(class="form-label fw-semibold mb-1") }}
+              {{ form.movement_type(class="form-select") }}
+              {{ field_error(form.movement_type) }}
+            </div>
+
+            <div class="col-12 col-md-4">
+              {{ form.quantity.label(class="form-label fw-semibold mb-1") }}
+              <div class="input-group">
+                {{ form.quantity(class="form-control text-end number", placeholder="0", min="1", inputmode="numeric", aria_describedby="qtyHelp") }}
+                <span class="input-group-text"><i class="bi bi-box-seam"></i></span>
+              </div>
+              <div id="qtyHelp" class="form-text">Somente números inteiros positivos.</div>
+              {{ field_error(form.quantity) }}
+            </div>
+
+            <div class="col-12 col-md-4">
+              <label for="{{ form.unit_cost.id }}" class="form-label fw-semibold mb-1">Custo unitário</label>
+              <div class="input-group">
+                <span class="input-group-text">R$</span>
+                {{ form.unit_cost(class="form-control text-end number", placeholder="0,00", inputmode="decimal", step="0.01", aria_describedby="costHelp") }}
+              </div>
+              <div id="costHelp" class="form-text">Para entradas, informe o custo unitário.</div>
+              {{ field_error(form.unit_cost) }}
+            </div>
+          </div>
+
+          <div>
+            {{ form.note.label(class="form-label fw-semibold mb-1") }}
+            {{ form.note(class="form-control", rows=2, maxlength=240, placeholder="Ex.: NF, motivo da saída, etc.") }}
+            <div class="form-text">Máx. 240 caracteres.</div>
+            {{ field_error(form.note) }}
+          </div>
+
+          <div class="d-flex justify-content-between pt-1">
+            <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline-light">
+              <i class="bi bi-arrow-left"></i> Voltar
+            </a>
+            {{ form.submit(class="btn btn-primary") }}
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section class="col-12 col-lg-7">
+    <div class="card shadow-sm h-100 d-flex">
+      <div class="card-header card-header-min">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+          <span class="d-flex align-items-center gap-2">
+            <i class="bi bi-clock-history text-success"></i>
+            <span class="fw-semibold">Histórico</span>
+          </span>
+          <div class="d-flex flex-wrap align-items-center toolbar-gap">
+            <form method="get" action="{{ url_for('movements.list_and_new') }}" class="d-flex flex-wrap align-items-center toolbar-gap" role="search">
+              <div class="input-group input-group-sm" style="width:240px">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" name="q" value="{{ request.args.get('q','') }}" class="form-control" placeholder="Buscar produto/obs" aria-label="Buscar" />
+              </div>
+              <select class="form-select form-select-sm" name="type" aria-label="Filtrar por tipo" style="max-width:130px">
+                <option value="">Tipo: Todos</option>
+                <option value="IN" {{ 'selected' if request.args.get('type') == 'IN' else '' }}>Somente Entradas</option>
+                <option value="OUT" {{ 'selected' if request.args.get('type') == 'OUT' else '' }}>Somente Saídas</option>
+              </select>
+              <input type="date" class="form-control form-control-sm" name="start" value="{{ request.args.get('start','') }}" aria-label="Início"/>
+              <input type="date" class="form-control form-control-sm" name="end" value="{{ request.args.get('end','') }}" aria-label="Fim"/>
+              <button class="btn btn-sm btn-outline-light" type="submit" title="Aplicar filtros"><i class="bi bi-funnel"></i></button>
+              <a class="btn btn-sm btn-outline-light" href="{{ url_for('movements.list_and_new') }}" title="Limpar filtros"><i class="bi bi-x-lg"></i></a>
+            </form>
+            {% if pagination and pagination.total is defined %}
+              <span class="badge bg-success-subtle text-success" title="Total de registros">{{ pagination.total }} no total</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="legend small mt-2 text-muted">
+          <i class="bi bi-arrow-down-circle text-success me-1"></i> Entrada &nbsp;•&nbsp; <i class="bi bi-arrow-up-circle text-danger me-1"></i> Saída
+        </div>
+      </div>
+
+      {% if items and items|length > 0 %}
+      <div class="card-body d-flex flex-column">
+        <div class="history-wrap flex-grow-1">
+          <table class="table table-sm table-hover align-middle table-fit">
+            <thead class="sticky-head">
+              <tr>
+                <th class="text-nowrap" style="min-width:140px">Data</th>
+                <th class="text-nowrap" style="min-width:90px">SKU</th>
+                <th>Produto</th>
+                <th class="text-center" style="width:120px">Tipo</th>
+                <th class="text-end" style="width:100px">Qtd</th>
+                <th class="text-end" style="width:120px">Custo</th>
+                <th class="text-nowrap" style="min-width:160px">Usuário</th>
+                <th class="text-nowrap" style="min-width:180px">Obs</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% set tot = namespace(entrada=0, saida=0) %}
+              {% for m in items %}
+              <tr>
+                <td class="text-nowrap number">{{ m.created_at.strftime('%Y-%m-%d %H:%M') if m.created_at else '' }}</td>
+                <td class="text-nowrap font-monospace">{{ m.product.sku }}</td>
+                <td class="text-truncate" style="max-width:260px" title="{{ m.product.name }}">{{ m.product.name }}</td>
+                <td class="text-center">{{ movement_badge(m.movement_type) }}</td>
+                <td class="text-end number">{{ m.quantity }}</td>
+                <td class="text-end number">{% if m.unit_cost %}R$ {{ '%.2f'|format(m.unit_cost) }}{% else %}-{% endif %}</td>
+                <td class="text-nowrap">{{ movement_user(m) }}</td>
+                <td class="text-truncate" style="max-width:220px" title="{{ m.note or '' }}">{{ m.note or '-' }}</td>
+              </tr>
+              {% set tot.entrada = tot.entrada + (m.quantity if m.movement_type == 'IN' else 0) %}
+              {% set tot.saida   = tot.saida   + (m.quantity if m.movement_type != 'IN' else 0) %}
+              {% endfor %}
+            </tbody>
+            <tfoot class="sticky-foot">
+              <tr>
+                {# Ajuste dos colspans: agora temos 8 colunas #}
+                <th colspan="3" class="text-end">Totais desta página:</th>
+                <th class="text-center">
+                  <span class="badge bg-success-subtle text-success">Entradas: <span class="number">{{ tot.entrada }}</span></span>
+                  <span class="badge bg-danger-subtle text-danger ms-1">Saídas: <span class="number">{{ tot.saida }}</span></span>
+                </th>
+                <th class="text-end number" colspan="4">
+                  <small class="text-muted">Saldo (Entradas - Saídas): {{ (tot.entrada - tot.saida) }}</small>
+                </th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        {% if pagination.pages > 1 %}
+        <nav class="mt-3" aria-label="Paginação de movimentações">
+          <ul class="pagination justify-content-between align-items-center mb-0">
+            <li class="page-item {{ 'disabled' if not pagination.has_prev else '' }}">
+              <a class="page-link" href="{{ url_for('movements.list_and_new', page=pagination.prev_num, q=request.args.get('q'), type=request.args.get('type'), start=request.args.get('start'), end=request.args.get('end')) if pagination.has_prev else '#' }}" tabindex="-1"><i class="bi bi-chevron-left"></i> Anterior</a>
+            </li>
+            <li class="page-item disabled"><span class="page-link">Página {{ pagination.page }} de {{ pagination.pages }}</span></li>
+            <li class="page-item {{ 'disabled' if not pagination.has_next else '' }}">
+              <a class="page-link" href="{{ url_for('movements.list_and_new', page=pagination.next_num, q=request.args.get('q'), type=request.args.get('type'), start=request.args.get('start'), end=request.args.get('end')) if pagination.has_next else '#' }}">Próxima <i class="bi bi-chevron-right"></i></a>
+            </li>
+          </ul>
+        </nav>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="card-body d-flex align-items-center">
+        <i class="bi bi-inboxes me-3 fs-3 text-success"></i>
+        <div>
+          <div class="fw-semibold">Nenhuma movimentação encontrada.</div>
+          <small class="text-muted">Registre uma entrada/saída ou ajuste os filtros acima.</small>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+</div>
+{% endblock %}

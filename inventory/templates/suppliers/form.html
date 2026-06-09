@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<style>
+  /* centraliza verticalmente e limita largura do card */
+  .form-wrap{min-height:calc(100vh - 140px)} /* ajusta conforme seu header/footer */
+  .form-card{max-width:720px}
+  .number{font-variant-numeric:tabular-nums}
+</style>
+
+<div class="container form-wrap d-flex align-items-center justify-content-center py-4">
+  <div class="card shadow-sm form-card w-100">
+    <div class="card-header d-flex align-items-center justify-content-between">
+      <span class="fw-semibold">{{ title }}</span>
+      {# opcional: atalho para voltar #}
+      <a href="{{ url_for('dashboard.index') }}" class="btn btn-sm btn-outline-light">
+        <i class="bi bi-arrow-left"></i> Voltar
+      </a>
+    </div>
+
+    <div class="card-body">
+      <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+
+        <div class="row g-3">
+          <!-- Nome -->
+          <div class="col-12">
+            {{ form.name.label(class="form-label fw-semibold") }}
+            {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""), placeholder="Nome completo", autofocus=True, autocomplete="name") }}
+            {% if form.name.errors %}<div class="invalid-feedback">{{ form.name.errors[0] }}</div>{% endif %}
+          </div>
+
+          <!-- Email e Telefone lado a lado em telas médias+ -->
+          <div class="col-12 col-md-6">
+            {{ form.email.label(class="form-label fw-semibold") }}
+            {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), placeholder="nome@dominio.com", autocomplete="email") }}
+            {% if form.email.errors %}<div class="invalid-feedback">{{ form.email.errors[0] }}</div>{% endif %}
+          </div>
+
+          <div class="col-12 col-md-6">
+            {{ form.phone.label(class="form-label fw-semibold") }}
+            {{ form.phone(class="form-control" + (" is-invalid" if form.phone.errors else ""), placeholder="(00) 00000-0000", autocomplete="tel") }}
+            {% if form.phone.errors %}<div class="invalid-feedback">{{ form.phone.errors[0] }}</div>{% endif %}
+          </div>
+
+          <!-- Notas -->
+          <div class="col-12">
+            {{ form.notes.label(class="form-label fw-semibold") }}
+            {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else ""), rows=3, placeholder="Observações...") }}
+            {% if form.notes.errors %}<div class="invalid-feedback">{{ form.notes.errors[0] }}</div>{% endif %}
+            <div class="form-text">Dica: descreva qualquer detalhe relevante.</div>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-4">
+          <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline-light">
+            Cancelar
+          </a>
+          {{ form.submit(class="btn btn-primary") }}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

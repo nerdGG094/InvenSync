@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Produtos{% endblock %}
+{% block content %}
+
+{# Mapa para exibir rótulo amigável da unidade #}
+{% set unit_labels = {
+  'UN':'Unidade','PC':'Peça','CX':'Caixa','DZ':'Dúzia','PCT':'Pacote','JG':'Jogo','PAR':'Par','RL':'Rolo',
+  'KG':'Quilo (kg)','G':'Grama (g)','MG':'Miligramas (mg)',
+  'L':'Litro (L)','ML':'Mililitro (mL)',
+  'M':'Metro (m)','CM':'Centímetro (cm)','MM':'Milímetro (mm)',
+  'M2':'Metro quadrado (m²)','M3':'Metro cúbico (m³)',
+  'KIT':'Kit/Conjunto','HR':'Hora','MIN':'Minuto'
+} %}
+
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-grid"></i></span>
+    Produtos
+    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ items|length }}</span>
+  </h1>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('kanban.board') }}" class="btn btn-outline-light"><i class="bi bi-kanban"></i> Kanban</a>
+    <a href="{{ url_for('reports.export_products') }}" class="btn btn-outline-light"><i class="bi bi-filetype-csv"></i> Exportar</a>
+    <a href="{{ url_for('products.new') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Novo Produto</a>
+  </div>
+</div>
+
+<div class="table-card">
+  <div class="table-card-tools">
+    <form class="d-flex search-box" method="get" role="search">
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input class="form-control" type="search" placeholder="Buscar por nome ou SKU..." name="q" value="{{ q }}">
+      </div>
+      {% if q %}
+      <a href="{{ url_for('products.list_view') }}" class="btn btn-outline-light ms-2" title="Limpar"><i class="bi bi-x-lg"></i></a>
+      {% endif %}
+    </form>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead>
+        <tr>
+          <th>SKU</th>
+          <th>Produto</th>
+          <th>Unidade</th>
+          <th>Categoria</th>
+          <th>Fornecedor</th>
+          <th class="text-end">Preço</th>
+          <th class="text-end">Estoque</th>
+          <th class="text-end">Mínimo</th>
+          <th class="text-end" style="width:120px">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in items %}
+        {% set est = current_stock(p) %}
+        {% set mn = p.min_stock or 0 %}
+        <tr class="{% if est <= mn %}table-warning{% endif %}">
+          <td class="text-nowrap font-monospace">{{ p.sku }}</td>
+          <td class="fw-semibold">{{ p.name }}</td>
+          <td class="text-nowrap">
+            <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ p.unit or 'UN' }}</span>
+            <span class="d-none d-xl-inline text-muted small">{{ unit_labels.get(p.unit) or '' }}</span>
+          </td>
+          <td>{% if p.category %}{{ p.category.name }}{% else %}<span class="contact-muted">—</span>{% endif %}</td>
+          <td>{% if p.supplier %}{{ p.supplier.name }}{% else %}<span class="contact-muted">—</span>{% endif %}</td>
+          <td class="text-end number">R$ {{ '%.2f'|format(p.price) }}</td>
+          <td class="text-end number">
+            {{ est }}
+            {% if est <= 0 %}
+              <span class="badge bg-danger-subtle text-danger ms-1">Sem estoque</span>
+            {% elif est <= mn %}
+              <span class="badge bg-warning-subtle text-warning-emphasis ms-1">Baixo</span>
+            {% endif %}
+          </td>
+          <td class="text-end number">{{ mn }}</td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('products.edit', pid=p.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
+            <form action="{{ url_for('products.delete', pid=p.id) }}" method="post" class="d-inline" onsubmit="return confirm('Excluir o produto “{{ p.name }}”?');">
+              <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="9">
+            <div class="empty-state">
+              <i class="bi bi-grid"></i>
+              {% if q %}Nenhum produto encontrado para “{{ q }}”.{% else %}Nenhum produto cadastrado ainda.{% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

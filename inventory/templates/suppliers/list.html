@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Fornecedores{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-truck"></i></span>
+    Fornecedores
+    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ items|length }}</span>
+  </h1>
+  <a href="{{ url_for('suppliers.new') }}" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> Novo Fornecedor
+  </a>
+</div>
+
+<div class="table-card">
+  <div class="table-card-tools">
+    <form class="d-flex search-box" method="get" role="search">
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input class="form-control" type="search" placeholder="Buscar fornecedor..." name="q" value="{{ q }}">
+      </div>
+      {% if q %}
+      <a href="{{ url_for('suppliers.list_view') }}" class="btn btn-outline-light ms-2" title="Limpar"><i class="bi bi-x-lg"></i></a>
+      {% endif %}
+    </form>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead>
+        <tr>
+          <th style="min-width:220px">Fornecedor</th>
+          <th style="min-width:220px">E-mail</th>
+          <th style="min-width:160px">Telefone</th>
+          <th class="text-end" style="width:140px">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in items %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <span class="avatar-circle">{{ s.name[:2] }}</span>
+              <span class="fw-semibold">{{ s.name }}</span>
+            </div>
+          </td>
+          <td>
+            {% if s.email %}
+              <a class="contact-chip text-decoration-none" href="mailto:{{ s.email }}"><i class="bi bi-envelope"></i>{{ s.email }}</a>
+            {% else %}<span class="contact-muted">—</span>{% endif %}
+          </td>
+          <td>
+            {% if s.phone %}
+              <span class="contact-chip"><i class="bi bi-telephone"></i>{{ s.phone }}</span>
+            {% else %}<span class="contact-muted">—</span>{% endif %}
+          </td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('suppliers.edit', sid=s.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
+            <form action="{{ url_for('suppliers.delete', sid=s.id) }}" method="post" class="d-inline" onsubmit="return confirm('Excluir o fornecedor “{{ s.name }}”?');">
+              <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="4">
+            <div class="empty-state">
+              <i class="bi bi-truck"></i>
+              {% if q %}Nenhum fornecedor encontrado para “{{ q }}”.{% else %}Nenhum fornecedor cadastrado ainda.{% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

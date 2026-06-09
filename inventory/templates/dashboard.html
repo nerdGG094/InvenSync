@@ -1,0 +1,385 @@
+{% extends "base.html" %}
+{% block title %}Painel{% endblock %}
+
+{% block content %}
+<style>
+  .stat-card .display-6 { line-height: 1.1; }
+  .chart-card { min-height: 360px; }
+  .chart-wrap { position: relative; height: 260px; }
+</style>
+
+<div class="row g-3">
+  <!-- Card: Itens em estoque -->
+  <div class="col-12 col-md-4">
+    <div class="card stat-card h-100">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <h6 class="text-muted mb-1">Itens em estoque</h6>
+          <div class="display-6">{{ total_items }}</div>
+        </div>
+        <div class="ms-3">
+          <i class="bi bi-box-seam fs-1 text-success"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card: Produtos cadastrados -->
+  <div class="col-12 col-md-4">
+    <div class="card stat-card h-100">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <h6 class="text-muted mb-1">Produtos cadastrados</h6>
+          <div class="display-6">{{ total_products }}</div>
+        </div>
+        <div class="ms-3">
+          <i class="bi bi-grid fs-1 text-success"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card: Baixo estoque -->
+  <div class="col-12 col-md-4">
+    <div class="card stat-card h-100">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <h6 class="text-muted mb-1">Produtos com baixo estoque</h6>
+          <div class="display-6">{{ low_stock|length }}</div>
+        </div>
+        <div class="ms-3">
+          <i class="bi bi-exclamation-triangle fs-1 text-warning"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Atalhos rápidos -->
+<div class="d-flex flex-wrap gap-2 mt-4">
+  <a href="{{ url_for('products.new') }}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-circle"></i> Novo produto
+  </a>
+  <a href="{{ url_for('movements.list_and_new') }}" class="btn btn-outline-light btn-sm">
+    <i class="bi bi-arrow-left-right"></i> Registrar movimentação
+  </a>
+  <a href="{{ url_for('kanban.board') }}" class="btn btn-outline-light btn-sm">
+    <i class="bi bi-kanban"></i> Kanban de estoque
+  </a>
+  <a href="{{ url_for('reports.stock') }}" class="btn btn-outline-light btn-sm">
+    <i class="bi bi-clipboard-data"></i> Relatório de estoque
+  </a>
+</div>
+
+{# ===================== SEÇÃO: GRÁFICOS ===================== #}
+<div class="row g-3 mt-1">
+  {% if low_stock and low_stock|length > 0 %}
+  <!-- Gráfico de barras: Estoque vs Mínimo (Top 10 críticos) -->
+  <div class="col-12 col-lg-8">
+    <div class="card chart-card h-100">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <span class="fw-semibold d-flex align-items-center gap-2">
+          <i class="bi bi-bar-chart"></i> Top 10 itens críticos (Estoque x Mínimo)
+        </span>
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap">
+          <canvas id="chartLowStockBar" aria-label="Estoque atual versus mínimo" role="img"></canvas>
+        </div>
+        <small class="text-muted d-block mt-2">
+          Mostrando até 10 produtos com menor cobertura percentual em relação ao mínimo.
+        </small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gráfico de rosca: Distribuição dos críticos -->
+  <div class="col-12 col-lg-4">
+    <div class="card chart-card h-100">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <span class="fw-semibold d-flex align-items-center gap-2">
+          <i class="bi bi-pie-chart"></i> Distribuição dos críticos
+        </span>
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap">
+          <canvas id="chartLowStockPie" aria-label="Distribuição dos itens críticos" role="img"></canvas>
+        </div>
+        <small class="text-muted d-block mt-2">
+          Sem estoque vs. Abaixo do mínimo (com estoque positivo).
+        </small>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- NOVO: Top 10 Itens mais movimentados (linha) -->
+  <div class="col-12 col-lg-8">
+    <div class="card chart-card h-100">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <span class="fw-semibold d-flex align-items-center gap-2">
+          <i class="bi bi-activity"></i> Top 10 itens mais movimentados
+        </span>
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap">
+          <canvas id="chartTopItems" aria-label="Itens mais movimentados" role="img"></canvas>
+        </div>
+        <small class="text-muted d-block mt-2">
+          Soma de quantidades (entradas + saídas).
+        </small>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOVO: Top 10 Usuários que mais movimentaram (linha) -->
+  <div class="col-12 col-lg-4">
+    <div class="card chart-card h-100">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <span class="fw-semibold d-flex align-items-center gap-2">
+          <i class="bi bi-people"></i> Top 10 usuários que mais movimentaram
+        </span>
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap">
+          <canvas id="chartTopUsers" aria-label="Usuários que mais movimentaram" role="img"></canvas>
+        </div>
+        <small class="text-muted d-block mt-2">
+          Linhas: quantidade total movimentada e nº de movimentações.
+        </small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCRIPTS dos gráficos -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Paleta (alinhada ao tema)
+  const COLORS = {
+    green: 'rgb(0,200,83)',          // #00c853
+    greenAlpha: 'rgba(0,200,83,.25)',
+    teal: 'rgb(0,184,148)',          // teal
+    tealAlpha: 'rgba(0,184,148,.25)',
+    amber: 'rgb(255,193,7)',
+    amberAlpha: 'rgba(255,193,7,.35)',
+    red: 'rgb(244,67,54)',
+    redAlpha: 'rgba(244,67,54,.30)',
+    tick: 'rgba(255,255,255,.80)',
+    grid: 'rgba(255,255,255,.10)'
+  };
+
+  // Dados prontos do backend
+  const CHART_DATA = {{ (chart_data or {})|tojson }};
+  const TOP_ITEMS   = {{ (top_items_data or {})|tojson }};
+  const TOP_USERS   = {{ (top_users_data or {})|tojson }};
+
+  // Se não vier chart_data, gerar fallback a partir de low_stock
+  {% if not chart_data and low_stock and low_stock|length > 0 %}
+    (function buildFallbackLow(){
+      const LOW = [
+        {% for p in low_stock %}
+          { sku: {{ p.sku|tojson }}, name: {{ p.name|tojson }}, estoque: {{ (current_stock(p) or 0)|int }}, minimo: {{ (p.min_stock or 0)|int }} },
+        {% endfor %}
+      ];
+      const sorted = LOW.map(m => ({...m, pct: (m.minimo>0 && m.estoque>0) ? (m.estoque/m.minimo*100) : 0}))
+                        .sort((a,b)=>a.pct-b.pct).slice(0,10);
+      CHART_DATA.labels = sorted.map(m => `${m.sku} - ${m.name}`);
+      CHART_DATA.estoque = sorted.map(m => m.estoque);
+      CHART_DATA.minimo = sorted.map(m => m.minimo);
+      CHART_DATA.zeroCount = LOW.filter(m => m.estoque <= 0).length;
+      CHART_DATA.belowCount = LOW.filter(m => m.estoque > 0 && m.estoque < m.minimo).length;
+    })();
+  {% endif %}
+
+  const hasBars = CHART_DATA.labels && CHART_DATA.labels.length > 0;
+  const hasPie  = ((CHART_DATA.zeroCount ?? 0) + (CHART_DATA.belowCount ?? 0)) > 0;
+  const hasTopItems = TOP_ITEMS.labels && TOP_ITEMS.labels.length > 0;
+  const hasTopUsers = TOP_USERS.labels && TOP_USERS.labels.length > 0;
+
+  // === Baixo estoque (Barras) ===
+  (function initBars(){
+    if (!hasBars) return;
+    const el = document.getElementById('chartLowStockBar');
+    if (!el) return;
+    new Chart(el, {
+      type: 'bar',
+      data: {
+        labels: CHART_DATA.labels,
+        datasets: [
+          { label: 'Estoque', data: CHART_DATA.estoque || [],
+            backgroundColor: COLORS.greenAlpha, borderColor: COLORS.green, borderWidth: 2 },
+          { label: 'Mínimo', data: CHART_DATA.minimo || [],
+            backgroundColor: COLORS.redAlpha, borderColor: COLORS.red, borderWidth: 2 }
+        ]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        scales:{
+          x:{ticks:{autoSkip:true,maxRotation:0,color:COLORS.tick},grid:{color:COLORS.grid}},
+          y:{beginAtZero:true,ticks:{precision:0,color:COLORS.tick},grid:{color:COLORS.grid}}
+        },
+        plugins:{legend:{position:'top',labels:{color:COLORS.tick}},tooltip:{mode:'index',intersect:false}}
+      }
+    });
+  })();
+
+  // === Baixo estoque (Rosca) ===
+  (function initPie(){
+    if (!hasPie) return;
+    const el = document.getElementById('chartLowStockPie');
+    if (!el) return;
+    new Chart(el, {
+      type: 'doughnut',
+      data: {
+        labels: ['Sem estoque', 'Abaixo do mínimo'],
+        datasets: [{
+          data: [CHART_DATA.zeroCount || 0, CHART_DATA.belowCount || 0],
+          backgroundColor: [COLORS.redAlpha, COLORS.amberAlpha],
+          borderColor: [COLORS.red, COLORS.amber],
+          borderWidth: 2
+        }]
+      },
+      options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
+        plugins:{legend:{position:'bottom',labels:{color:COLORS.tick}}}
+      }
+    });
+  })();
+
+  // === Top 10 Itens mais movimentados (Linha) ===
+  (function initTopItems(){
+    if (!hasTopItems) return;
+    const el = document.getElementById('chartTopItems');
+    if (!el) return;
+    new Chart(el, {
+      type: 'line',
+      data: {
+        labels: TOP_ITEMS.labels,
+        datasets: [{
+          label: 'Quantidade total movimentada',
+          data: TOP_ITEMS.data || [],
+          borderColor: COLORS.teal,
+          backgroundColor: COLORS.tealAlpha,
+          tension: 0.3,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: {
+          x: { ticks: { color: COLORS.tick, maxRotation: 0, autoSkip: true }, grid: { color: COLORS.grid } },
+          y: { beginAtZero: true, ticks: { color: COLORS.tick, precision: 0 }, grid: { color: COLORS.grid } }
+        },
+        plugins: { legend: { position: 'top', labels: { color: COLORS.tick } } }
+      }
+    });
+  })();
+
+  // === Top 10 Usuários que mais movimentaram (Linha, 2 séries) ===
+  (function initTopUsers(){
+    if (!hasTopUsers) return;
+    const el = document.getElementById('chartTopUsers');
+    if (!el) return;
+    new Chart(el, {
+      type: 'line',
+      data: {
+        labels: TOP_USERS.labels,
+        datasets: [
+          {
+            label: 'Qtd. movimentada',
+            data: TOP_USERS.qty || [],
+            borderColor: COLORS.green,
+            backgroundColor: COLORS.greenAlpha,
+            tension: 0.3, pointRadius: 3, pointHoverRadius: 5, fill: true
+          },
+          {
+            label: 'Nº de movimentações',
+            data: TOP_USERS.movs || [],
+            borderColor: COLORS.amber,
+            backgroundColor: COLORS.amberAlpha,
+            tension: 0.3, pointRadius: 3, pointHoverRadius: 5, fill: true
+          }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: {
+          x: { ticks: { color: COLORS.tick, maxRotation: 0, autoSkip: true }, grid: { color: COLORS.grid } },
+          y: { beginAtZero: true, ticks: { color: COLORS.tick, precision: 0 }, grid: { color: COLORS.grid } }
+        },
+        plugins: { legend: { position: 'top', labels: { color: COLORS.tick } } }
+      }
+    });
+  })();
+</script>
+{# =================== FIM SEÇÃO: GRÁFICOS =================== #}
+
+<h2 class="h5 mt-4 d-flex align-items-center gap-2">
+  <i class="bi bi-battery-half text-warning"></i>
+  Atenção: baixo estoque
+  {% if low_stock %}
+    <span class="badge bg-warning-subtle text-warning-soft">{{ low_stock|length }}</span>
+  {% endif %}
+</h2>
+
+{% if low_stock and low_stock|length > 0 %}
+  <div class="table-responsive">
+    <table class="table table-sm table-hover align-middle">
+      <thead>
+        <tr>
+          <th style="min-width:100px">SKU</th>
+          <th>Produto</th>
+          <th style="width:220px">Estoque vs. Mínimo</th>
+          <th class="text-end" style="width:120px">Estoque</th>
+          <th class="text-end" style="width:120px">Mínimo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in low_stock %}
+          {% set estoque = current_stock(p) %}
+          {% set minimo = p.min_stock or 0 %}
+          {% set pct = 0 %}
+          {% if minimo > 0 %}
+            {% set pct = (estoque / minimo * 100) if estoque > 0 else 0 %}
+            {% if pct > 100 %}{% set pct = 100 %}{% endif %}
+          {% endif %}
+          <tr>
+            <td class="text-nowrap">{{ p.sku }}</td>
+            <td>
+              <a href="{{ url_for('products.list_view') }}?q={{ p.sku }}" class="link-offset-1">
+                {{ p.name }}
+              </a>
+              {% if estoque <= 0 %}
+                <span class="badge bg-danger-subtle text-danger ms-2">Sem estoque</span>
+              {% elif estoque < minimo %}
+                <span class="badge bg-warning-subtle text-warning-emphasis ms-2">Abaixo do mínimo</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="progress" role="progressbar" aria-label="Nível de estoque" aria-valuenow="{{ pct|int }}" aria-valuemin="0" aria-valuemax="100" style="height: 10px;">
+                <div class="progress-bar {% if estoque <= 0 %}bg-danger{% elif estoque < minimo %}bg-warning{% else %}bg-success{% endif %}" style="width: {{ pct }}%"></div>
+              </div>
+              <small class="text-muted d-block mt-1">
+                {% if minimo > 0 %}
+                  {{ estoque if estoque>0 else 0 }} / {{ minimo }} ({{ pct|round(0) }}%)
+                {% else %}
+                  mínimo não definido
+                {% endif %}
+              </small>
+            </td>
+            <td class="text-end">{{ estoque }}</td>
+            <td class="text-end">{{ minimo }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="alert alert-success d-flex align-items-center mt-2" role="alert">
+    <i class="bi bi-check-circle me-2"></i>
+    Nenhum produto abaixo do mínimo. Excelente!
+  </div>
+{% endif %}
+{% endblock %}

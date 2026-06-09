@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Categorias{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-tags"></i></span>
+    Categorias
+    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ items|length }}</span>
+  </h1>
+  <a href="{{ url_for('categories.new') }}" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> Nova Categoria
+  </a>
+</div>
+
+<div class="table-card">
+  <div class="table-card-tools">
+    <form class="d-flex search-box" method="get" role="search">
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input class="form-control" type="search" placeholder="Buscar categoria..." name="q" value="{{ q }}">
+      </div>
+      {% if q %}
+      <a href="{{ url_for('categories.list_view') }}" class="btn btn-outline-light ms-2" title="Limpar"><i class="bi bi-x-lg"></i></a>
+      {% endif %}
+    </form>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead>
+        <tr>
+          <th style="min-width:200px">Nome</th>
+          <th>Descrição</th>
+          <th class="text-end" style="width:140px">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in items %}
+        <tr>
+          <td class="fw-semibold">
+            <i class="bi bi-tag-fill text-success me-1 small"></i> {{ c.name }}
+          </td>
+          <td>{% if c.description %}{{ c.description }}{% else %}<span class="contact-muted">sem descrição</span>{% endif %}</td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('categories.edit', cid=c.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
+            <form action="{{ url_for('categories.delete', cid=c.id) }}" method="post" class="d-inline" onsubmit="return confirm('Excluir a categoria “{{ c.name }}”?');">
+              <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="3">
+            <div class="empty-state">
+              <i class="bi bi-tags"></i>
+              {% if q %}Nenhuma categoria encontrada para “{{ q }}”.{% else %}Nenhuma categoria cadastrada ainda.{% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

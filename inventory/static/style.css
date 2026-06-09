@@ -1,0 +1,181 @@
+/* Fundo escuro geral */
+body {
+  background-color: #121212;
+  color: #e0e0e0;
+  font-family: "Segoe UI", Roboto, sans-serif;
+  line-height: 1.6;
+}
+
+/* Cartões de estatísticas com borda verde neon */
+.stat-card {
+  border-left: 4px solid #00c853;
+  background: #1e1e1e;
+  color: #d0ffd6;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 200, 83, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 200, 83, 0.4);
+}
+
+/* Tabelas escuras */
+.table {
+  background-color: #1e1e1e;
+  color: #cfcfcf;
+}
+.table th {
+  background-color: #2a2a2a;
+  color: #a5d6a7;
+}
+.table td {
+  border-color: #2f2f2f;
+}
+
+/* Destaque em tom de verde suave em vez de amarelo */
+.table-warning {
+  --bs-table-bg: #1b2b1b;
+  --bs-table-color: #b9f6ca;
+}
+
+/* Links e botões */
+a, .btn-link {
+  color: #00e676;
+  text-decoration: none;
+}
+a:hover, .btn-link:hover {
+  color: #69f0ae;
+}
+
+/* Botão primário verde */
+.btn-primary {
+  background-color: #00c853;
+  border-color: #00c853;
+  color: #fff;
+}
+.btn-primary:hover {
+  background-color: #00e676;
+  border-color: #00e676;
+}
+
+/* Ajuste nos inputs/formulários */
+.form-control {
+  background-color: #1e1e1e;
+  border: 1px solid #2f2f2f;
+  color: #e0e0e0;
+}
+.form-control:focus {
+  border-color: #00c853;
+  box-shadow: 0 0 0 0.2rem rgba(0, 200, 83, 0.25);
+}
+/* Alinhamento numérico consistente */
+.number {
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+/* Tabela mais alinhada */
+.table th, .table td { vertical-align: middle; }
+
+/* Cabeçalho fixo da tabela dentro do card-body rolável */
+.sticky-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #17261c; /* combine com seu tema escuro */
+}
+
+.text-warning-soft { color: #ffeb99 !important; } /* amarelo claro */
+
+/* =====================================================================
+   UI compartilhada — padroniza cabeçalhos, cards de tabela e detalhes
+   ===================================================================== */
+
+/* Cabeçalho de página: ícone + título + contador à esquerda, ações à direita */
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  margin-bottom: 1.25rem;
+}
+.page-header .ph-title {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #e6ffe9;
+}
+.page-header .ph-title .ph-icon {
+  width: 40px; height: 40px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #00c853, #0f5132);
+  color: #fff; font-size: 1.1rem;
+  box-shadow: 0 2px 8px rgba(0, 200, 83, .28);
+}
+.page-header .ph-count {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Card que envolve uma tabela com cabeçalho/rodapé limpos */
+.table-card {
+  background: #1e1e1e;
+  border: 1px solid #243024;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.table-card > .table-card-tools {
+  padding: .85rem 1rem;
+  border-bottom: 1px solid #243024;
+  background: #17261c;
+}
+.table-card .table { margin-bottom: 0; }
+.table-card .table thead th {
+  position: sticky; top: 0;
+  border-bottom: 1px solid #2a3d30;
+  text-transform: uppercase;
+  font-size: .72rem;
+  letter-spacing: .04em;
+}
+.table-card .table tbody tr { transition: background .12s ease; }
+
+/* Barra de busca compacta com ícone */
+.search-box { max-width: 360px; }
+.search-box .input-group-text {
+  background: #15211a; border-color: #2f2f2f; color: #8fcaa6;
+}
+
+/* Avatar circular com iniciais */
+.avatar-circle {
+  width: 34px; height: 34px; flex: 0 0 34px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: #15211a; border: 1px solid #2e4b3b;
+  color: #7ee0a4; font-weight: 600; font-size: .8rem;
+  text-transform: uppercase;
+}
+
+/* Estado vazio padronizado */
+.empty-state {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: #7d9b8a;
+}
+.empty-state i { font-size: 2.2rem; opacity: .7; display: block; margin-bottom: .5rem; }
+
+/* Botões de ação em ícone dentro das tabelas */
+.btn-icon {
+  width: 32px; height: 32px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+
+/* Chip de contato (e-mail/telefone) */
+.contact-chip { color: #b9d8c6; font-size: .86rem; }
+.contact-chip i { color: #6fae8a; margin-right: .3rem; }
+.contact-muted { color: #6f8a7a; font-style: italic; font-size: .84rem; }

@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+{% macro field_error(field) -%}
+  {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors[0] }}</div>{% endif %}
+{%- endmacro %}
+
+<style>
+  .form-wrap{min-height:calc(100vh - 140px)} /* ajuste se seu header/footer tiver altura diferente */
+  .form-card{max-width:880px}
+</style>
+
+<div class="container form-wrap d-flex align-items-center justify-content-center py-4">
+  <div class="card shadow-sm w-100 form-card">
+    <div class="card-header d-flex align-items-center justify-content-between">
+      <span class="fw-semibold">{{ title }}</span>
+      <a href="{{ url_for('products.list_view') }}" class="btn btn-sm btn-outline-light">
+        <i class="bi bi-arrow-left"></i> Voltar
+      </a>
+    </div>
+
+    <div class="card-body">
+      <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+
+        <!-- Linha 1: SKU + Nome -->
+        <div class="row g-3">
+          <div class="col-12 col-md-4">
+            {{ form.sku.label(class="form-label fw-semibold") }}
+            {{ form.sku(class="form-control" + (" is-invalid" if form.sku.errors else ""), placeholder="Ex.: ABC-001", autofocus=True, autocomplete="off") }}
+            <div class="form-text">Código único do produto.</div>
+            {{ field_error(form.sku) }}
+          </div>
+
+          <div class="col-12 col-md-8">
+            {{ form.name.label(class="form-label fw-semibold") }}
+            {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""), placeholder="Nome do produto", autocomplete="off") }}
+            {{ field_error(form.name) }}
+          </div>
+        </div>
+
+        <!-- Linha 2: Tipo + Unidade -->
+        <div class="row g-3 mt-1">
+          <div class="col-12 col-md-6">
+            {{ form.item_type.label(class="form-label fw-semibold") }}
+            {{ form.item_type(class="form-select" + (" is-invalid" if form.item_type.errors else "")) }}
+            <div class="form-text">Ex.: Produto, Insumo, Kit/Combo ou Serviço.</div>
+            {{ field_error(form.item_type) }}
+          </div>
+
+          <div class="col-12 col-md-6">
+            {{ form.unit.label(class="form-label fw-semibold") }}
+            {{ form.unit(class="form-select" + (" is-invalid" if form.unit.errors else "")) }}
+            <div class="form-text">Selecione a unidade de medida (UN, KG, L, M, CX, etc.).</div>
+            {{ field_error(form.unit) }}
+          </div>
+        </div>
+
+        <!-- Descrição -->
+        <div class="mt-3">
+          {{ form.description.label(class="form-label fw-semibold") }}
+          {{ form.description(class="form-control" + (" is-invalid" if form.description.errors else ""), rows=2, placeholder="Descrição breve (opcional)") }}
+          {{ field_error(form.description) }}
+        </div>
+
+        <!-- Linha 3: Categoria + Fornecedor -->
+        <div class="row g-3 mt-1">
+          <div class="col-12 col-md-6">
+            {{ form.category_id.label(class="form-label fw-semibold") }}
+            {{ form.category_id(class="form-select" + (" is-invalid" if form.category_id.errors else "")) }}
+            {{ field_error(form.category_id) }}
+          </div>
+
+          <div class="col-12 col-md-6">
+            {{ form.supplier_id.label(class="form-label fw-semibold") }}
+            {{ form.supplier_id(class="form-select" + (" is-invalid" if form.supplier_id.errors else "")) }}
+            {{ field_error(form.supplier_id) }}
+          </div>
+        </div>
+
+        <!-- Linha 4: Mínimo + Preço -->
+        <div class="row g-3 mt-1">
+          <div class="col-6 col-md-3">
+            {{ form.min_stock.label(class="form-label fw-semibold") }}
+            {{ form.min_stock(class="form-control text-end" + (" is-invalid" if form.min_stock.errors else ""), inputmode="numeric", min="0", placeholder="0", aria_describedby="minStockHelp") }}
+            <div id="minStockHelp" class="form-text">
+              Quantidade mínima para alerta (na unidade escolhida).
+            </div>
+            {{ field_error(form.min_stock) }}
+          </div>
+
+          <div class="col-6 col-md-3">
+            {{ form.price.label(class="form-label fw-semibold") }}
+            <div class="input-group">
+              <span class="input-group-text">R$</span>
+              {{ form.price(class="form-control text-end" + (" is-invalid" if form.price.errors else ""), inputmode="decimal", step="0.01", placeholder="0,00", aria_describedby="priceHelp") }}
+            </div>
+            <div id="priceHelp" class="form-text">Preço de venda sugerido.</div>
+            {{ field_error(form.price) }}
+          </div>
+
+          <!-- Espaço flex para alinhamento em telas largas -->
+          <div class="col-12 col-md-6 d-flex align-items-end">
+            <div class="text-muted small">
+              Dica: defina **Tipo** e **Unidade** corretamente — isso melhora relatórios e movimentações.
+            </div>
+          </div>
+        </div>
+
+        <!-- Ações -->
+        <div class="d-flex justify-content-end gap-2 mt-4">
+          <a href="{{ url_for('products.list_view') }}" class="btn btn-outline-light">Cancelar</a>
+          {{ form.submit(class="btn btn-primary") }}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

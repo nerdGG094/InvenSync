@@ -1,0 +1,39 @@
+# === Segredos / ambiente ===
+.env
+*.env
+!.env.example
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# === Ambientes virtuais ===
+.venv/
+venv/
+env/
+ENV/
+
+# === Banco de dados local (SQLite legado) ===
+instance/*.db
+instance/*.sqlite
+instance/*.sqlite3
+!instance/.keep
+
+# === Logs ===
+*.log
+flask_output.log
+
+# === IDEs / Editores ===
+.idea/
+.vscode/
+*.swp
+*~
+
+# === Sistema ===
+.DS_Store
+Thumbs.db
