@@ -24,19 +24,24 @@
       <form method="post" novalidate>
         {{ form.hidden_tag() }}
 
-        <!-- Linha 1: SKU + Nome -->
+        <!-- Linha 1: Nome + SKU -->
         <div class="row g-3">
-          <div class="col-12 col-md-4">
-            {{ form.sku.label(class="form-label fw-semibold") }}
-            {{ form.sku(class="form-control" + (" is-invalid" if form.sku.errors else ""), placeholder="Ex.: ABC-001", autofocus=True, autocomplete="off") }}
-            <div class="form-text">Código único do produto.</div>
-            {{ field_error(form.sku) }}
+          <div class="col-12 col-md-7">
+            {{ form.name.label(class="form-label fw-semibold") }}
+            {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""), placeholder="Nome do produto", autofocus=True, autocomplete="off") }}
+            {{ field_error(form.name) }}
           </div>
 
-          <div class="col-12 col-md-8">
-            {{ form.name.label(class="form-label fw-semibold") }}
-            {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""), placeholder="Nome do produto", autocomplete="off") }}
-            {{ field_error(form.name) }}
+          <div class="col-12 col-md-5">
+            {{ form.sku.label(class="form-label fw-semibold") }}
+            <div class="input-group">
+              {{ form.sku(class="form-control" + (" is-invalid" if form.sku.errors else ""), placeholder="Gerado automaticamente", autocomplete="off") }}
+              <button class="btn btn-outline-light" type="button" id="btnGenSku" title="Gerar SKU novamente">
+                <i class="bi bi-arrow-repeat"></i>
+              </button>
+            </div>
+            <div class="form-text">Gerado a partir da categoria/tipo + sequência. Você pode editar.</div>
+            {{ field_error(form.sku) }}
           </div>
         </div>
 
@@ -170,4 +175,46 @@
     </div>
   </div>
 </div>
+
+<script>
+  (function(){
+    const SUGGEST_URL = "{{ url_for('products.suggest_sku') }}";
+    const nameEl = document.getElementById('name');
+    const skuEl  = document.getElementById('sku');
+    const typeEl = document.getElementById('item_type');
+    const catEl  = document.getElementById('category_id');
+    const genBtn = document.getElementById('btnGenSku');
+    if (!skuEl) return;
+
+    // Em edição (SKU já preenchido) não auto-sobrescreve.
+    let skuTouched = (skuEl.value || '').trim() !== '';
+    let setting = false;
+
+    function setSku(v){ setting = true; skuEl.value = v; setting = false; }
+
+    let timer = null;
+    function suggest(force){
+      if (!force && skuTouched) return;
+      if (!nameEl || !nameEl.value.trim()) return;   // só após digitar o nome
+      const params = new URLSearchParams();
+      if (typeEl) params.set('item_type', typeEl.value || 'product');
+      if (catEl && catEl.value && catEl.value !== '0') params.set('category_id', catEl.value);
+      fetch(SUGGEST_URL + '?' + params.toString(), {headers: {'Accept':'application/json'}})
+        .then(r => r.ok ? r.json() : null)
+        .then(d => { if (d && d.sku && (force || !skuTouched)) setSku(d.sku); })
+        .catch(() => {});
+    }
+    function debounced(){ clearTimeout(timer); timer = setTimeout(() => suggest(false), 350); }
+
+    if (nameEl) nameEl.addEventListener('input', debounced);
+    if (typeEl) typeEl.addEventListener('change', () => suggest(false));
+    if (catEl)  catEl.addEventListener('change', () => suggest(false));
+
+    // Marca como "editado manualmente" se o usuário digitar no SKU.
+    skuEl.addEventListener('input', function(e){ if (!setting && e.isTrusted) skuTouched = true; });
+
+    // Botão: força nova geração e volta ao modo automático.
+    if (genBtn) genBtn.addEventListener('click', function(){ skuTouched = false; suggest(true); });
+  })();
+</script>
 {% endblock %}

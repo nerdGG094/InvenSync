@@ -1,7 +1,11 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+import re
+import unicodedata
+
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required
 from sqlalchemy.exc import IntegrityError
 
+from ..extensions import db
 from ..repositories import product_repo
 from ..forms.catalog import ProductForm
 from ..models.product import Product
@@ -9,6 +13,53 @@ from ..models.category import Category
 from ..models.supplier import Supplier
 
 bp = Blueprint("products", __name__)
+
+# Prefixo de SKU por tipo de item (usado quando não há categoria escolhida)
+TYPE_PREFIX = {"product": "PRD", "raw_material": "INS", "kit": "KIT", "service": "SRV"}
+
+
+def _slug_prefix(text: str, fallback: str = "ITM") -> str:
+    """3 letras maiúsculas, sem acento, a partir de um texto."""
+    if not text:
+        return fallback
+    t = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode()
+    t = re.sub(r"[^A-Za-z0-9]", "", t).upper()
+    return t[:3] or fallback
+
+
+def _sku_prefix(category_id, item_type) -> str:
+    """Prefixo do SKU: pela categoria (melhor p/ TI) ou, na falta, pelo tipo."""
+    if category_id:
+        c = Category.query.get(int(category_id))
+        if c:
+            return _slug_prefix(c.name)
+    return TYPE_PREFIX.get(item_type or "product", "ITM")
+
+
+def _next_sku(prefix: str) -> str:
+    """Próximo SKU livre no formato PREFIXO-0001 para o prefixo informado."""
+    rows = (
+        Product.query.filter(Product.sku.like(f"{prefix}-%"))
+        .with_entities(Product.sku)
+        .all()
+    )
+    pat = re.compile(rf"^{re.escape(prefix)}-(\d+)$")
+    mx = 0
+    for (sku,) in rows:
+        m = pat.match(sku or "")
+        if m:
+            mx = max(mx, int(m.group(1)))
+    return f"{prefix}-{mx + 1:04d}"
+
+
+@bp.route("/suggest-sku")
+@login_required
+def suggest_sku():
+    """Sugere o próximo SKO para (categoria/tipo) — consumido via JS no form."""
+    item_type = request.args.get("item_type") or "product"
+    category_id = request.args.get("category_id", type=int) or None
+    prefix = _sku_prefix(category_id, item_type)
+    return jsonify(sku=_next_sku(prefix), prefix=prefix)
 
 # ===== CHOICES padronizados =====
 TYPE_CHOICES = [
@@ -99,14 +150,27 @@ def new():
             form.unit.data = "UN"
 
     if form.validate_on_submit():
-        try:
-            product_repo.create_product(**_form_to_kwargs(form))
-            flash("Produto criado!", "success")
-            return redirect(url_for("products.list_view"))
-        except IntegrityError:
-            flash("Erro: SKU deve ser único.", "danger")
-        except Exception:
-            flash("Erro ao criar produto.", "danger")
+        # SKU automático: se vier vazio, gera a partir da categoria/tipo.
+        auto_sku = not (form.sku.data or "").strip()
+        for attempt in range(6):
+            if auto_sku:
+                form.sku.data = _next_sku(
+                    _sku_prefix(form.category_id.data or None, form.item_type.data)
+                )
+            try:
+                product_repo.create_product(**_form_to_kwargs(form))
+                flash(f"Produto criado! SKU: {form.sku.data}", "success")
+                return redirect(url_for("products.list_view"))
+            except IntegrityError:
+                db.session.rollback()
+                if auto_sku and attempt < 5:
+                    continue  # colisão de corrida: tenta o próximo número
+                flash("Erro: SKU deve ser único.", "danger")
+                break
+            except Exception:
+                db.session.rollback()
+                flash("Erro ao criar produto.", "danger")
+                break
 
     return render_template("products/form.html", form=form, title="Novo Produto")
 

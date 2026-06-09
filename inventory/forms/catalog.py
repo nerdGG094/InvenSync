@@ -19,7 +19,7 @@ class SupplierForm(FlaskForm):
     submit = SubmitField("Salvar")
 
 class ProductForm(FlaskForm):
-    sku = StringField("SKU", validators=[DataRequired(), Length(min=1, max=120)])
+    sku = StringField("SKU", validators=[Optional(), Length(min=1, max=120)])
     name = StringField("Nome", validators=[DataRequired(), Length(min=2, max=200)])
     description = TextAreaField("Descrição", validators=[Optional()])
     # novos campos:
