@@ -1,39 +1,72 @@
 {% extends "base.html" %}
-{% block title %}Login{% endblock %}
+{% block title %}Entrar{% endblock %}
+
+{% block extra_head %}
+<style>
+  .auth-wrap{ min-height: calc(100vh - 120px); }
+  /* Fundo com brilho verde sutil */
+  .auth-bg{
+    position: fixed; inset: 0; z-index: -1;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(0,200,83,.10), transparent 60%),
+      radial-gradient(900px 500px at 110% 120%, rgba(0,230,118,.08), transparent 55%),
+      #0d120f;
+  }
+  .auth-card{
+    background: linear-gradient(180deg, #15211a 0%, #131913 100%);
+    border: 1px solid #24382b; border-radius: 18px;
+    box-shadow: 0 20px 50px rgba(0,0,0,.45);
+    overflow: hidden;
+  }
+  .auth-head{ padding: 1.6rem 1.6rem 0; text-align: center; }
+  .auth-logo{
+    width: 70px; height: 70px; margin: 0 auto .8rem;
+    border-radius: 18px; display: flex; align-items: center; justify-content: center;
+    background: #0e1a13; border: 1px solid #2e4b3b;
+    box-shadow: 0 6px 18px rgba(0,200,83,.22);
+  }
+  .auth-logo img{ height: 42px; width: auto; object-fit: contain; }
+  .auth-title{ font-size: 1.5rem; font-weight: 700; letter-spacing: .3px; margin: 0; }
+  .auth-title .sync{ color: var(--brand-2); }
+  .auth-sub{ color: #7fa890; font-size: .86rem; margin-top: .15rem; }
+  .auth-body{ padding: 1.4rem 1.6rem 1.7rem; }
+  .auth-card .input-group-text{ background:#0e1a13; border-color:#2f3f34; color:#7ee0a4; }
+  .auth-card .form-control{ background:#0e1a13; border-color:#2f3f34; }
+  .auth-card .form-control:focus{ background:#0e1a13; }
+  .pwd-toggle{ border-color:#2f3f34 !important; color:#7ee0a4 !important; }
+  .auth-foot{
+    text-align:center; padding:.9rem 1rem; border-top:1px solid #20322799;
+    color:#5f8f72; font-size:.76rem; background:#0e1611;
+  }
+  .auth-badge{ font-size:.7rem; color:#6f8a7a; }
+</style>
+{% endblock %}
 
 {% block content %}
 {% macro field_error(field) -%}
   {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors[0] }}</div>{% endif %}
 {%- endmacro %}
 
-<style>
-  .auth-wrap{min-height:calc(100vh - 120px)}
-  .brand-mark{
-    width:48px;height:48px;display:inline-flex;align-items:center;justify-content:center;
-    border-radius:12px;background:linear-gradient(135deg,var(--bs-success),#198754);
-    color:#fff;
-  }
-</style>
+<div class="auth-bg"></div>
 
 <div class="container auth-wrap d-flex align-items-center justify-content-center">
-  <div class="col-12 col-sm-10 col-md-8 col-lg-5 col-xl-4">
-    <div class="card shadow-sm">
-      <div class="card-body p-4">
-        <div class="d-flex align-items-center gap-3 mb-3">
-          <span class="brand-mark">
-            <i class="bi bi-box-seam"></i>
-          </span>
-          <div>
-            <h1 class="h4 mb-0">Acessar</h1>
-            <small class="text-muted">Entre com suas credenciais</small>
-          </div>
+  <div class="col-12 col-sm-10 col-md-7 col-lg-5 col-xl-4">
+    <div class="auth-card">
+      <div class="auth-head">
+        <div class="auth-logo">
+          <img src="{{ url_for('static', filename='logo.png') }}" alt="InvenSync">
         </div>
+        <h1 class="auth-title">Inven<span class="sync">Sync</span></h1>
+        <div class="auth-sub"><i class="bi bi-box-seam me-1"></i>Controle de Almoxarifado</div>
+      </div>
 
-        {# mensagens flash (success, warning, danger...) #}
+      <div class="auth-body">
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
             {% for cat, msg in messages %}
-              <div class="alert alert-{{ 'warning' if cat=='message' else cat }} py-2">{{ msg }}</div>
+              <div class="alert alert-{{ 'warning' if cat=='message' else cat }} py-2 d-flex align-items-center gap-2">
+                <i class="bi bi-info-circle"></i><span>{{ msg }}</span>
+              </div>
             {% endfor %}
           {% endif %}
         {% endwith %}
@@ -41,63 +74,58 @@
         <form method="post" novalidate id="loginForm" class="d-grid gap-3">
           {{ form.hidden_tag() }}
 
-          <!-- Email -->
           <div>
-            {{ form.email.label(class="form-label fw-semibold") }}
+            {{ form.email.label(class="form-label fw-semibold small") }}
             <div class="input-group">
               <span class="input-group-text"><i class="bi bi-envelope"></i></span>
               {{ form.email(
                   class="form-control" + (" is-invalid" if form.email.errors else ""),
                   placeholder="voce@refrigerantesjaboti.com.br",
-                  autocomplete="username",
-                  autofocus=True
+                  autocomplete="username", autofocus=True
               ) }}
             </div>
             {{ field_error(form.email) }}
           </div>
 
-          <!-- Senha -->
           <div>
-            {{ form.password.label(class="form-label fw-semibold") }}
+            {{ form.password.label(class="form-label fw-semibold small") }}
             <div class="input-group">
               <span class="input-group-text"><i class="bi bi-lock"></i></span>
               {{ form.password(
                   class="form-control" + (" is-invalid" if form.password.errors else ""),
                   placeholder="Sua senha",
-                  autocomplete="current-password",
-                  id="passwordInput"
+                  autocomplete="current-password", id="passwordInput"
               ) }}
-              <button class="btn btn-outline-light" type="button" id="togglePwd" aria-label="Mostrar/ocultar senha">
+              <button class="btn btn-outline-light pwd-toggle" type="button" id="togglePwd" aria-label="Mostrar/ocultar senha">
                 <i class="bi bi-eye"></i>
               </button>
             </div>
             {{ field_error(form.password) }}
           </div>
 
-          <!-- Lembrar-me (se existir no form) -->
           {% if form.remember is defined %}
           <div class="form-check">
             {{ form.remember(class="form-check-input", id="rememberCheck") }}
-            <label class="form-check-label" for="rememberCheck">Manter conectado</label>
+            <label class="form-check-label small" for="rememberCheck">Manter conectado</label>
           </div>
           {% endif %}
 
-          <!-- Ação -->
-          <button class="btn btn-primary w-100 d-inline-flex align-items-center justify-content-center gap-2" type="submit" id="submitBtn">
+          <button class="btn btn-primary w-100 d-inline-flex align-items-center justify-content-center gap-2 py-2" type="submit" id="submitBtn">
             <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" id="btnSpinner"></span>
+            <i class="bi bi-box-arrow-in-right"></i>
             <span>Entrar</span>
           </button>
-
-          <p class="mt-2 text-muted small mb-0">
-            Desenvolvido pelo time de tecnologia Refrigerantes Jaboti
-          </p>
         </form>
+      </div>
+
+      <div class="auth-foot">
+        <i class="bi bi-shield-lock me-1"></i>Acesso restrito · Refrigerantes Jaboti
+        <div class="auth-badge mt-1">Desenvolvido pelo time de Tecnologia</div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- JS leve: mostrar/ocultar senha + spinner ao enviar -->
 <script>
   (function(){
     const pwd = document.getElementById('passwordInput');
@@ -113,7 +141,6 @@
         this.innerHTML = isText ? '<i class="bi bi-eye"></i>' : '<i class="bi bi-eye-slash"></i>';
       });
     }
-
     if (form && btn && spinner) {
       form.addEventListener('submit', function(){
         btn.setAttribute('disabled', 'disabled');

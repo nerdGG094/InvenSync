@@ -33,6 +33,10 @@ class Config:
 
     SQLALCHEMY_DATABASE_URI = DATABASE_URL
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # Recarrega templates alterados sem precisar reiniciar o servidor
+    # (conveniente mesmo rodando em produção via waitress).
+    TEMPLATES_AUTO_RELOAD = True
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_pre_ping": True,   # evita conexões mortas após ociosidade
         "pool_recycle": 1800,    # recicla conexões a cada 30 min
