@@ -1,6 +1,37 @@
 {% extends "base.html" %}
 {% block title %}Usuários{% endblock %}
+
+{% block extra_head %}
+<style>
+  .user-card{
+    background:#1e1e1e; border:1px solid #243024; border-radius:14px;
+    padding:1.1rem; height:100%; display:flex; flex-direction:column; gap:.85rem;
+    transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+  }
+  .user-card:hover{ transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,0,0,.35); border-color:#2e4b3b; }
+  .user-card.inactive{ opacity:.62; }
+  .user-card.inactive .avatar-lg{ filter:grayscale(.7); }
+  .avatar-lg{
+    width:52px; height:52px; flex:0 0 52px; border-radius:50%;
+    display:inline-flex; align-items:center; justify-content:center;
+    background:linear-gradient(135deg,#0f5132,#00c853); color:#fff;
+    font-weight:700; font-size:1.05rem; text-transform:uppercase;
+  }
+  .user-card .uname{ font-weight:600; color:#e6ffe9; line-height:1.2; }
+  .user-card .uemail{ font-size:.82rem; color:#9bb6a6; word-break:break-all; }
+  .switch-row{
+    display:flex; align-items:center; justify-content:space-between;
+    background:#15211a; border:1px solid #243024; border-radius:10px; padding:.5rem .75rem;
+  }
+  .switch-row .form-check-input{ width:2.4em; height:1.2em; cursor:pointer; }
+  .switch-row .form-check-input:checked{ background-color:#00c853; border-color:#00c853; }
+  .status-chip{ font-size:.78rem; font-weight:600; }
+</style>
+{% endblock %}
+
 {% block content %}
+
+{% set ativos = users|selectattr('is_active')|list|length %}
 
 <div class="page-header">
   <h1 class="ph-title">
@@ -13,8 +44,8 @@
   </a>
 </div>
 
-<div class="table-card">
-  <div class="table-card-tools">
+<div class="table-card mb-3">
+  <div class="table-card-tools d-flex flex-wrap align-items-center justify-content-between gap-2">
     <form class="d-flex search-box" method="get" role="search">
       <div class="input-group">
         <span class="input-group-text"><i class="bi bi-search"></i></span>
@@ -24,55 +55,71 @@
       <a href="{{ url_for('users.list_view') }}" class="btn btn-outline-light ms-2" title="Limpar"><i class="bi bi-x-lg"></i></a>
       {% endif %}
     </form>
-  </div>
-
-  <div class="table-responsive">
-    <table class="table table-hover align-middle">
-      <thead>
-        <tr>
-          <th style="min-width:220px">Nome</th>
-          <th style="min-width:240px">E-mail</th>
-          <th>Perfil</th>
-          <th class="text-end" style="width:140px">Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for u in users %}
-        <tr>
-          <td>
-            <div class="d-flex align-items-center gap-2">
-              <span class="avatar-circle">{{ u.name[:2] }}</span>
-              <span class="fw-semibold">{{ u.name }}</span>
-            </div>
-          </td>
-          <td><a class="contact-chip text-decoration-none" href="mailto:{{ u.email }}"><i class="bi bi-envelope"></i>{{ u.email }}</a></td>
-          <td>
-            {% if u.is_admin %}
-              <span class="badge bg-success-subtle text-success"><i class="bi bi-shield-check me-1"></i>Admin</span>
-            {% else %}
-              <span class="badge bg-secondary-subtle text-secondary"><i class="bi bi-person me-1"></i>Usuário</span>
-            {% endif %}
-          </td>
-          <td class="text-end">
-            <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('users.edit', uid=u.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
-            <form class="d-inline" method="post" action="{{ url_for('users.delete', uid=u.id) }}"
-                  onsubmit="return confirm('Excluir o usuário “{{ u.name }}”?');">
-              <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
-            </form>
-          </td>
-        </tr>
-        {% else %}
-        <tr>
-          <td colspan="4">
-            <div class="empty-state">
-              <i class="bi bi-people"></i>
-              {% if q %}Nenhum usuário encontrado para “{{ q }}”.{% else %}Nenhum usuário cadastrado ainda.{% endif %}
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div class="d-flex gap-2">
+      <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>{{ ativos }} ativos</span>
+      <span class="badge bg-secondary-subtle text-secondary"><i class="bi bi-slash-circle me-1"></i>{{ users|length - ativos }} inativos</span>
+    </div>
   </div>
 </div>
+
+{% if users %}
+<div class="row g-3">
+  {% for u in users %}
+  <div class="col-12 col-md-6 col-xl-4">
+    <article class="user-card {{ '' if u.is_active else 'inactive' }}">
+      <div class="d-flex align-items-center gap-3">
+        <span class="avatar-lg">{{ u.name[:2] }}</span>
+        <div class="flex-grow-1 min-w-0">
+          <div class="uname">{{ u.name }}</div>
+          <a class="uemail text-decoration-none" href="mailto:{{ u.email }}">{{ u.email }}</a>
+        </div>
+        {% if u.is_admin %}
+          <span class="badge bg-success-subtle text-success" title="Administrador"><i class="bi bi-shield-check me-1"></i>Admin</span>
+        {% else %}
+          <span class="badge bg-secondary-subtle text-secondary" title="Usuário comum"><i class="bi bi-person me-1"></i>Usuário</span>
+        {% endif %}
+      </div>
+
+      {# ===== Switch ativo/inativo ===== #}
+      <form method="post" action="{{ url_for('users.toggle_active', uid=u.id) }}" class="switch-row">
+        {% set is_self = (current_user.is_authenticated and u.id == current_user.id) %}
+        <label class="form-check form-switch mb-0 d-flex align-items-center gap-2" for="sw{{ u.id }}">
+          <input class="form-check-input mt-0" type="checkbox" role="switch" id="sw{{ u.id }}"
+                 {{ 'checked' if u.is_active else '' }}
+                 {{ 'disabled' if is_self else '' }}
+                 onchange="this.form.submit()">
+          <span class="status-chip {{ 'text-success' if u.is_active else 'text-secondary' }}">
+            {{ 'Ativo' if u.is_active else 'Inativo' }}
+          </span>
+        </label>
+        {% if is_self %}
+          <span class="mov-meta" title="Você não pode desativar a si mesmo"><i class="bi bi-lock"></i> você</span>
+        {% else %}
+          <i class="bi bi-toggle2-{{ 'on text-success' if u.is_active else 'off text-secondary' }} fs-5"></i>
+        {% endif %}
+      </form>
+
+      <div class="d-flex gap-2 mt-auto">
+        <a class="btn btn-sm btn-outline-light flex-grow-1" href="{{ url_for('users.edit', uid=u.id) }}">
+          <i class="bi bi-pencil"></i> Editar
+        </a>
+        {% if not is_self %}
+        <form method="post" action="{{ url_for('users.delete', uid=u.id) }}"
+              onsubmit="return confirm('Excluir o usuário “{{ u.name }}”?');">
+          <button class="btn btn-sm btn-outline-danger" title="Excluir"><i class="bi bi-trash"></i></button>
+        </form>
+        {% endif %}
+      </div>
+    </article>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="table-card">
+  <div class="empty-state">
+    <i class="bi bi-people"></i>
+    {% if q %}Nenhum usuário encontrado para “{{ q }}”.{% else %}Nenhum usuário cadastrado ainda.{% endif %}
+  </div>
+</div>
+{% endif %}
 {% endblock %}

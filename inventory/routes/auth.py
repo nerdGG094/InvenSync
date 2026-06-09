@@ -16,6 +16,9 @@ def login():
         email = form.email.data.strip().lower()
         user = User.query.filter_by(email=email).first()
         if user and user.check_password(form.password.data):
+            if not user.is_active:
+                flash("Usuário desativado. Procure um administrador.", "warning")
+                return render_template("login.html", form=form)
             login_user(user)
             return redirect(url_for("dashboard.index"))
         flash("Credenciais inválidas", "danger")

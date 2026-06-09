@@ -37,9 +37,19 @@
           {{ field_error(form.password) }}
         </div>
 
-        <div class="form-check form-switch mb-3">
-          {{ form.is_admin(class="form-check-input", role="switch", id="isAdminSwitch") }}
-          <label class="form-check-label" for="isAdminSwitch">Administrador</label>
+        <div class="d-flex flex-wrap gap-4 mb-3">
+          <div class="form-check form-switch">
+            {{ form.is_admin(class="form-check-input", role="switch", id="isAdminSwitch") }}
+            <label class="form-check-label" for="isAdminSwitch">
+              <i class="bi bi-shield-check me-1"></i>Administrador
+            </label>
+          </div>
+          <div class="form-check form-switch">
+            {{ form.is_active(class="form-check-input", role="switch", id="isActiveSwitch") }}
+            <label class="form-check-label" for="isActiveSwitch">
+              <i class="bi bi-power me-1"></i>Ativo (pode acessar)
+            </label>
+          </div>
         </div>
 
         <div class="d-flex justify-content-end gap-2">

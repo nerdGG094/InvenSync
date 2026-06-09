@@ -32,9 +32,11 @@ def create_app():
         db.create_all()
         # Semente de categoria/fornecedor padrão desativada — a base é mantida
         # limpa intencionalmente; cadastre categorias/fornecedores pela interface.
-        admin = User.query.filter_by(email="admin@local").first()
-        if not admin:
-            admin = User(name="Administrador", email="admin@local")
+        #
+        # Cria o admin padrão APENAS quando não existe NENHUM usuário, evitando
+        # recriar "admin@local" caso ele seja renomeado/excluído pela interface.
+        if not User.query.first():
+            admin = User(name="Administrador", email="admin@local", is_admin=True)
             admin.set_password("admin")
             db.session.add(admin)
         db.session.commit()

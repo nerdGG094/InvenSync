@@ -42,6 +42,7 @@ def new():
                 name=form.name.data.strip(),
                 email=form.email.data.strip(),
                 is_admin=bool(form.is_admin.data),
+                is_active=bool(form.is_active.data),
             )
             if form.password.data:
                 u.set_password(form.password.data)
@@ -69,12 +70,31 @@ def edit(uid):
             u.name = form.name.data.strip()
             u.email = form.email.data.strip()
             u.is_admin = bool(form.is_admin.data)
+            # Não permite o próprio admin se autodesativar
+            if u.id == current_user.id and not form.is_active.data:
+                flash("Você não pode desativar a si mesmo.", "warning")
+            else:
+                u.is_active = bool(form.is_active.data)
             if form.password.data:
                 u.set_password(form.password.data)
             db.session.commit()
             flash("Usuário atualizado!", "success")
             return redirect(url_for("users.list_view"))
     return render_template("users/form.html", form=form, title="Editar Usuário")
+
+@bp.route("/<int:uid>/toggle-active", methods=["POST"])
+@login_required
+@admin_required
+def toggle_active(uid):
+    u = User.query.get_or_404(uid)
+    if u.id == current_user.id:
+        flash("Você não pode desativar a si mesmo.", "warning")
+        return redirect(url_for("users.list_view"))
+    u.is_active = not bool(u.is_active)
+    db.session.commit()
+    estado = "ativado" if u.is_active else "desativado"
+    flash(f"Usuário “{u.name}” {estado}.", "success")
+    return redirect(url_for("users.list_view"))
 
 @bp.route("/<int:uid>/delete", methods=["POST"])
 @login_required

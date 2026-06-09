@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Inventário{% endblock %}</title>
+  <title>{% block title %}InvenSync{% endblock %} · InvenSync</title>
 
   <!-- Cor do tema p/ mobile e dark mode -->
   <meta name="theme-color" content="#0f5132">
@@ -34,8 +34,20 @@
     }
     body { background-color: var(--bg-1); color: var(--text-1); }
     .navbar { background: #0b1a12; border-bottom: 1px solid #183224; }
-    .navbar .nav-link.active { color: var(--brand-2) !important; }
-    .navbar-brand { color: var(--text-2) !important; }
+    .navbar-brand { color: var(--text-2) !important; font-weight: 700; letter-spacing: .2px; }
+    .brand-name { font-size: 1.15rem; }
+    .brand-name .sync { color: var(--brand-2); }
+    .brand-tag { font-size: .62rem; letter-spacing: .14em; text-transform: uppercase; color: #5f8f72; line-height: 1; }
+    .navbar .nav-link {
+      display: flex; align-items: center; gap: .4rem;
+      border-radius: 8px; padding: .45rem .7rem !important;
+      color: #b9d8c6 !important; transition: background .12s ease, color .12s ease;
+    }
+    .navbar .nav-link:hover { background: #14271c; color: #e7ffe9 !important; }
+    .navbar .nav-link.active {
+      color: var(--brand-2) !important; background: #14271c;
+      box-shadow: inset 0 -2px 0 var(--brand);
+    }
     .btn-outline-light { border-color: #2e4b3b; color: #e7ffe9; }
     .btn-outline-light:hover { background: #1a3427; border-color: #3c6b52; }
     .stat-card { border-left: 4px solid var(--brand); background: var(--bg-2); color: #d0ffd6; }
@@ -62,9 +74,11 @@
 <nav class="navbar navbar-expand-lg" aria-label="Main navigation">
   <div class="container-fluid">
     <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('dashboard.index') }}">
-      <i class="bi bi-box-seam"></i>
-      Inventário
-      <img class="brand-logo ms-1" src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+      <img class="brand-logo" src="{{ url_for('static', filename='logo.png') }}" alt="InvenSync">
+      <span class="d-flex flex-column">
+        <span class="brand-name">Inven<span class="sync">Sync</span></span>
+        <span class="brand-tag">> Tech-Almox</span>
+      </span>
     </a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarsMain" aria-controls="navbarsMain" aria-expanded="false" aria-label="Alternar navegação">
       <span class="navbar-toggler-icon"></span>
@@ -72,7 +86,12 @@
 
     <div class="collapse navbar-collapse" id="navbarsMain">
       {% if current_user.is_authenticated %}
-      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-lg-1">
+        <li class="nav-item">
+          <a class="nav-link {% if request.endpoint == 'dashboard.index' %}active{% endif %}" href="{{ url_for('dashboard.index') }}">
+            <i class="bi bi-speedometer2"></i> Painel
+          </a>
+        </li>
         <li class="nav-item">
           <a class="nav-link {% if request.endpoint and request.endpoint.startswith('products.') %}active{% endif %}" href="{{ url_for('products.list_view') }}">
             <i class="bi bi-grid"></i> Produtos
