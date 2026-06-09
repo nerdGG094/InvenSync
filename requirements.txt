@@ -8,3 +8,4 @@ psycopg[binary]==3.3.3
 python-dotenv==1.2.2
 waitress==3.0.2
 PyQt5==5.15.11
+Pillow==12.2.0
