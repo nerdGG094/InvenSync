@@ -179,3 +179,76 @@ a:hover, .btn-link:hover {
 .contact-chip { color: #b9d8c6; font-size: .86rem; }
 .contact-chip i { color: #6fae8a; margin-right: .3rem; }
 .contact-muted { color: #6f8a7a; font-style: italic; font-size: .84rem; }
+
+/* =====================================================================
+   Responsivo — celulares e tablets
+   ===================================================================== */
+
+/* Tablet e abaixo (menu colapsado) */
+@media (max-width: 991.98px) {
+  .navbar-collapse { padding-top: .5rem; }
+  .navbar .navbar-nav { gap: .1rem; }
+  /* Indicador de ativo vira barra à esquerda no menu vertical */
+  .navbar .nav-link.active { box-shadow: inset 3px 0 0 var(--brand, #00c853); }
+  .navbar .navbar-text { padding-left: .15rem; }
+  .navbar-collapse > .d-flex.align-items-center { margin-top: .35rem; }
+  /* Formulário de movimentações deixa de ser "sticky" ao empilhar */
+  .mov-form-sticky { position: static !important; }
+}
+
+/* Celular landscape / tablet pequeno */
+@media (max-width: 767.98px) {
+  main.container { padding-left: .85rem; padding-right: .85rem; }
+
+  /* Cabeçalho de página compacto e empilhável */
+  .page-header { margin-bottom: 1rem; gap: .6rem; }
+  .page-header .ph-title { font-size: 1.18rem; gap: .45rem; }
+  .page-header .ph-icon { width: 34px; height: 34px; font-size: 1rem; border-radius: 9px; }
+  /* Grupo de botões de ação ocupa a linha inteira e distribui */
+  .page-header > .d-flex { width: 100%; flex-wrap: wrap; }
+  .page-header > .d-flex > .btn { flex: 1 1 auto; }
+
+  /* Busca ocupa largura total */
+  .search-box { max-width: 100%; width: 100%; }
+  .table-card-tools { padding: .7rem .8rem; }
+
+  /* Tabelas: rolagem horizontal suave + fonte/padding menores */
+  .table-responsive { -webkit-overflow-scrolling: touch; }
+  .table-card .table { font-size: .82rem; }
+  .table-card .table td, .table-card .table th { padding: .5rem .5rem; }
+
+  /* Cartões de número menores */
+  .stat-card .display-6 { font-size: 1.6rem; }
+  .stat-card .h3 { font-size: 1.35rem; }
+
+  /* Filtros do histórico de movimentações: inputs fluidos */
+  .mov-filters { width: 100%; }
+  .mov-filters .input-group,
+  .mov-filters .form-select,
+  .mov-filters input[type="date"] {
+    flex: 1 1 auto; min-width: 0; width: auto !important; max-width: none !important;
+  }
+
+  /* Kanban: colunas mais largas no swipe horizontal */
+  .kanban-wrap { grid-auto-columns: 88% !important; }
+}
+
+/* Celular pequeno */
+@media (max-width: 575.98px) {
+  .brand-tag { display: none; }            /* esconde tagline para caber a marca */
+  .brand-name { font-size: 1rem; }
+  .brand-logo { height: 24px; }
+
+  /* Botões de ação do cabeçalho empilham 100% */
+  .page-header > .d-flex { flex-direction: column; }
+  .page-header > .d-flex > .btn { width: 100%; }
+
+  /* Cards de usuário 1 por linha já é padrão (col-12); reduz avatar grande */
+  .avatar-lg { width: 46px; height: 46px; flex-basis: 46px; font-size: .95rem; }
+
+  /* Reduz alturas de gráfico para caber na viewport do celular */
+  .chart-wrap { height: 220px !important; }
+
+  /* Paginação e toolbars quebram melhor */
+  .table-card .d-flex.justify-content-between { gap: .5rem; }
+}
