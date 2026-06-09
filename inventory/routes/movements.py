@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
 from sqlalchemy.orm import joinedload
-from sqlalchemy import or_
+from sqlalchemy import or_, func, case
 
 from ..repositories import movement_repo
 from ..forms.catalog import MovementForm
@@ -97,10 +97,21 @@ def list_and_new():
 
     items = pagination.items
 
-    # ===== Totais dos cards (com base nos itens exibidos na página) =====
-    in_total = sum((m.quantity or 0) for m in items if m.movement_type == "IN")
-    out_total = sum((m.quantity or 0) for m in items if m.movement_type != "IN")
-    totals = {"in_total": in_total, "out_total": out_total}
+    # ===== Totais dos cards (sobre TODO o filtro, não só a página atual) =====
+    in_sum = func.coalesce(
+        func.sum(case((StockMovement.movement_type == "IN", StockMovement.quantity), else_=0)), 0
+    )
+    out_sum = func.coalesce(
+        func.sum(case((StockMovement.movement_type != "IN", StockMovement.quantity), else_=0)), 0
+    )
+    in_total, out_total, mov_count = query.with_entities(
+        in_sum, out_sum, func.count(StockMovement.id)
+    ).one()
+    totals = {
+        "in_total": int(in_total or 0),
+        "out_total": int(out_total or 0),
+        "count": int(mov_count or 0),
+    }
 
     return render_template(
         "movements/list.html",
