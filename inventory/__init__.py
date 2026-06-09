@@ -30,10 +30,8 @@ def create_app():
     # Cria tabelas e semente inicial
     with app.app_context():
         db.create_all()
-        if not Category.query.first():
-            db.session.add(Category(name="Geral", description="Categoria padrão"))
-        if not Supplier.query.first():
-            db.session.add(Supplier(name="Fornecedor Padrão"))
+        # Semente de categoria/fornecedor padrão desativada — a base é mantida
+        # limpa intencionalmente; cadastre categorias/fornecedores pela interface.
         admin = User.query.filter_by(email="admin@local").first()
         if not admin:
             admin = User(name="Administrador", email="admin@local")
