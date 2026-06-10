@@ -92,30 +92,28 @@
             <i class="bi bi-speedometer2"></i> Painel
           </a>
         </li>
-        <li class="nav-item">
-          <a class="nav-link {% if request.endpoint and request.endpoint.startswith('products.') %}active{% endif %}" href="{{ url_for('products.list_view') }}">
-            <i class="bi bi-grid"></i> Produtos
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle {% if request.endpoint and (request.endpoint.startswith('products.') or request.endpoint.startswith('movements.') or request.endpoint.startswith('kanban.') or request.endpoint.startswith('reports.')) %}active{% endif %}"
+             href="#" id="ddEstoque" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-box-seam"></i> Estoque
           </a>
+          <ul class="dropdown-menu" aria-labelledby="ddEstoque">
+            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('products.') %}active{% endif %}" href="{{ url_for('products.list_view') }}"><i class="bi bi-grid me-2"></i> Produtos</a></li>
+            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('movements.') %}active{% endif %}" href="{{ url_for('movements.list_and_new') }}"><i class="bi bi-arrow-left-right me-2"></i> Movimentações</a></li>
+            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('kanban.') %}active{% endif %}" href="{{ url_for('kanban.board') }}"><i class="bi bi-kanban me-2"></i> Kanban</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('reports.') %}active{% endif %}" href="{{ url_for('reports.stock') }}"><i class="bi bi-clipboard-data me-2"></i> Relatório de Estoque</a></li>
+          </ul>
         </li>
-        <li class="nav-item">
-          <a class="nav-link {% if request.endpoint and request.endpoint.startswith('categories.') %}active{% endif %}" href="{{ url_for('categories.list_view') }}">
-            <i class="bi bi-tags"></i> Categorias
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle {% if request.endpoint and (request.endpoint.startswith('categories.') or request.endpoint.startswith('suppliers.')) %}active{% endif %}"
+             href="#" id="ddCadastros" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-journal-text"></i> Cadastros
           </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {% if request.endpoint and request.endpoint.startswith('suppliers.') %}active{% endif %}" href="{{ url_for('suppliers.list_view') }}">
-            <i class="bi bi-truck"></i> Fornecedores
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {% if request.endpoint and request.endpoint.startswith('movements.') %}active{% endif %}" href="{{ url_for('movements.list_and_new') }}">
-            <i class="bi bi-arrow-left-right"></i> Movimentações
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {% if request.endpoint and request.endpoint.startswith('kanban.') %}active{% endif %}" href="{{ url_for('kanban.board') }}">
-            <i class="bi bi-kanban"></i> Kanban
-          </a>
+          <ul class="dropdown-menu" aria-labelledby="ddCadastros">
+            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('categories.') %}active{% endif %}" href="{{ url_for('categories.list_view') }}"><i class="bi bi-tags me-2"></i> Categorias</a></li>
+            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('suppliers.') %}active{% endif %}" href="{{ url_for('suppliers.list_view') }}"><i class="bi bi-truck me-2"></i> Fornecedores</a></li>
+          </ul>
         </li>
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle {% if request.endpoint and (request.endpoint.startswith('machines.') or request.endpoint.startswith('cleanings.')) %}active{% endif %}"
@@ -135,13 +133,7 @@
             </li>
           </ul>
         </li>
-        <li class="nav-item">
-          <a class="nav-link {% if request.endpoint and request.endpoint.startswith('reports.') %}active{% endif %}" href="{{ url_for('reports.stock') }}">
-            <i class="bi bi-clipboard-data"></i> Relatórios
-          </a>
-        </li>
-
-        {# ====== NOVO: menu Usuários (somente Admin) ====== #}
+        {# ====== Usuários (somente Admin) ====== #}
         {% if current_user.is_authenticated and current_user.is_admin %}
         <li class="nav-item">
           <a class="nav-link {% if request.endpoint and request.endpoint.startswith('users.') %}active{% endif %}" href="{{ url_for('users.list_view') }}">
