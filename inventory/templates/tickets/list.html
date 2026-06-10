@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Chamados{% endblock %}
+{% block content %}
+
+{% set st_meta = {
+  'aberto': ('Aberto','info'), 'em_andamento': ('Em andamento','warning'),
+  'resolvido': ('Resolvido','success'), 'cancelado': ('Cancelado','secondary') } %}
+{% set pr_meta = {
+  'baixa': ('Baixa','secondary'), 'media': ('Média','info'),
+  'alta': ('Alta','warning'), 'urgente': ('Urgente','danger') } %}
+{% set cat_lbl = {
+  'hardware':'Hardware','software':'Software','rede':'Rede',
+  'impressora':'Impressora','acesso':'Acesso/Senha','outro':'Outro' } %}
+
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-headset"></i></span>
+    Chamados
+    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ totals.total }}</span>
+  </h1>
+  <a href="{{ url_for('tickets.new') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Novo Chamado</a>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <a href="{{ url_for('tickets.list_view', status='aberto') }}" class="text-decoration-none">
+      <div class="card stat-card h-100" style="border-left-color:#0dcaf0"><div class="card-body d-flex align-items-center justify-content-between">
+        <div><div class="text-muted small">Abertos</div><div class="h3 mb-0 number text-info">{{ totals.aberto }}</div></div>
+        <i class="bi bi-envelope-open fs-2 text-info"></i>
+      </div></div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{{ url_for('tickets.list_view', status='em_andamento') }}" class="text-decoration-none">
+      <div class="card stat-card h-100" style="border-left-color:#ffc107"><div class="card-body d-flex align-items-center justify-content-between">
+        <div><div class="text-muted small">Em andamento</div><div class="h3 mb-0 number text-warning">{{ totals.em_andamento }}</div></div>
+        <i class="bi bi-hourglass-split fs-2 text-warning"></i>
+      </div></div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{{ url_for('tickets.list_view', status='resolvido') }}" class="text-decoration-none">
+      <div class="card stat-card h-100"><div class="card-body d-flex align-items-center justify-content-between">
+        <div><div class="text-muted small">Resolvidos</div><div class="h3 mb-0 number text-success">{{ totals.resolvido }}</div></div>
+        <i class="bi bi-check2-circle fs-2 text-success"></i>
+      </div></div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{{ url_for('tickets.list_view') }}" class="text-decoration-none">
+      <div class="card stat-card h-100"><div class="card-body d-flex align-items-center justify-content-between">
+        <div><div class="text-muted small">Total</div><div class="h3 mb-0 number">{{ totals.total }}</div></div>
+        <i class="bi bi-headset fs-2 text-success"></i>
+      </div></div>
+    </a>
+  </div>
+</div>
+
+<div class="table-card">
+  <div class="table-card-tools d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <form class="d-flex gap-2 mov-filters" method="get" role="search">
+      <div class="input-group search-box">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input class="form-control" type="search" placeholder="Código, título, solicitante..." name="q" value="{{ q }}">
+      </div>
+      <select class="form-select" name="status" style="max-width:160px" onchange="this.form.submit()">
+        <option value="">Status: todos</option>
+        {% for k, m in st_meta.items() %}<option value="{{ k }}" {{ 'selected' if status==k }}>{{ m[0] }}</option>{% endfor %}
+      </select>
+      <select class="form-select" name="priority" style="max-width:150px" onchange="this.form.submit()">
+        <option value="">Prioridade: todas</option>
+        {% for k, m in pr_meta.items() %}<option value="{{ k }}" {{ 'selected' if priority==k }}>{{ m[0] }}</option>{% endfor %}
+      </select>
+      <button class="btn btn-primary btn-icon" type="submit"><i class="bi bi-search"></i></button>
+      {% if q or status or priority %}<a href="{{ url_for('tickets.list_view') }}" class="btn btn-outline-light btn-icon" title="Limpar"><i class="bi bi-x-lg"></i></a>{% endif %}
+    </form>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead>
+        <tr>
+          <th>Código</th><th>Título</th><th>Categoria</th>
+          <th>Prioridade</th><th>Status</th><th>Responsável</th><th>Aberto</th>
+          <th class="text-end" style="width:120px">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in items %}
+        <tr>
+          <td class="text-nowrap font-monospace">
+            <a href="{{ url_for('tickets.detail', tid=t.id) }}" class="fw-semibold">{{ t.code }}</a>
+          </td>
+          <td>
+            <a href="{{ url_for('tickets.detail', tid=t.id) }}" class="fw-semibold text-reset">{{ t.title }}</a>
+            <small class="text-muted d-block">
+              {% if t.requester %}<i class="bi bi-person"></i> {{ t.requester }}{% endif %}
+              {% if t.sector %} · {{ t.sector }}{% endif %}
+            </small>
+          </td>
+          <td><span class="badge bg-secondary-subtle text-secondary-emphasis">{{ cat_lbl.get(t.category, t.category) }}</span></td>
+          <td>{% set pm = pr_meta.get(t.priority, ('—','secondary')) %}<span class="badge bg-{{ pm[1] }}-subtle text-{{ pm[1] }}-emphasis">{{ pm[0] }}</span></td>
+          <td>{% set sm = st_meta.get(t.status, ('—','secondary')) %}<span class="badge bg-{{ sm[1] }}-subtle text-{{ sm[1] }}-emphasis">{{ sm[0] }}</span></td>
+          <td>{% if t.assigned_to %}{{ t.assigned_to.name }}{% else %}<span class="contact-muted">— não atribuído</span>{% endif %}</td>
+          <td class="text-nowrap number"><small>{{ t.created_at.strftime('%d/%m/%Y %H:%M') if t.created_at else '' }}</small></td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('tickets.detail', tid=t.id) }}" title="Abrir"><i class="bi bi-eye"></i></a>
+            <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('tickets.edit', tid=t.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8"><div class="empty-state"><i class="bi bi-headset"></i>
+          {% if q or status or priority %}Nenhum chamado para o filtro.{% else %}Nenhum chamado registrado ainda.{% endif %}
+        </div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -28,6 +28,7 @@ def create_app():
     from .models.movement import StockMovement
     from .models.machine import Machine
     from .models.machine_cleaning import MachineCleaning
+    from .models.ticket import Ticket, TicketComment
 
     # Cria tabelas e semente inicial
     with app.app_context():
@@ -64,6 +65,7 @@ def create_app():
     from .routes.health import bp as health_bp  # ⬅️ NOVO: endpoint /health (launcher)
     from .routes.machines import bp as machines_bp  # ⬅️ NOVO: cadastro de máquinas
     from .routes.cleanings import bp as cleanings_bp  # ⬅️ NOVO: limpeza de máquinas
+    from .routes.tickets import bp as tickets_bp  # ⬅️ NOVO: controlador de chamados
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -77,6 +79,7 @@ def create_app():
     app.register_blueprint(health_bp)  # ⬅️ NOVO: /health (sem login, para o launcher)
     app.register_blueprint(machines_bp, url_prefix="/machines")  # ⬅️ NOVO: rota /machines
     app.register_blueprint(cleanings_bp, url_prefix="/machines/cleanings")  # ⬅️ NOVO: limpezas
+    app.register_blueprint(tickets_bp, url_prefix="/tickets")  # ⬅️ NOVO: chamados
 
     # Handlers de erro
     @app.errorhandler(404)

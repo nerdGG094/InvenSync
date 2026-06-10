@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}{{ t.code }} — {{ t.title }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .meta-list dt { color:#8fb0a0; font-size:.72rem; text-transform:uppercase; letter-spacing:.04em; }
+  .meta-list dd { margin-bottom:.7rem; color:#e6ffe9; }
+  .timeline { position:relative; padding-left:26px; }
+  .timeline:before { content:""; position:absolute; left:8px; top:4px; bottom:4px; width:2px; background:#243024; }
+  .tl-item { position:relative; margin-bottom:1rem; }
+  .tl-item:before { content:""; position:absolute; left:-22px; top:4px; width:12px; height:12px; border-radius:50%;
+                    background:#00c853; box-shadow:0 0 0 3px #0f1a13; }
+  .tl-meta { font-size:.76rem; color:#8fb0a0; }
+  .tl-body { background:#15211a; border:1px solid #243024; border-radius:10px; padding:.6rem .8rem; margin-top:.3rem; white-space:pre-wrap; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set st_meta = {'aberto':('Aberto','info'),'em_andamento':('Em andamento','warning'),'resolvido':('Resolvido','success'),'cancelado':('Cancelado','secondary')} %}
+{% set pr_meta = {'baixa':('Baixa','secondary'),'media':('Média','info'),'alta':('Alta','warning'),'urgente':('Urgente','danger')} %}
+{% set cat_lbl = {'hardware':'Hardware','software':'Software','rede':'Rede','impressora':'Impressora','acesso':'Acesso/Senha','outro':'Outro'} %}
+{% set sm = st_meta.get(t.status, ('—','secondary')) %}
+{% set pm = pr_meta.get(t.priority, ('—','secondary')) %}
+
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-headset"></i></span>
+    <span class="font-monospace">{{ t.code }}</span>
+    <span class="badge bg-{{ sm[1] }}-subtle text-{{ sm[1] }}-emphasis">{{ sm[0] }}</span>
+  </h1>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('tickets.list_view') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Voltar</a>
+    <a href="{{ url_for('tickets.edit', tid=t.id) }}" class="btn btn-outline-light btn-sm"><i class="bi bi-pencil"></i> Editar</a>
+    <form action="{{ url_for('tickets.delete', tid=t.id) }}" method="post" onsubmit="return confirm('Excluir o chamado {{ t.code }}?');">
+      <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+    </form>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Coluna principal -->
+  <div class="col-12 col-lg-8">
+    <div class="table-card p-3 mb-3">
+      <h2 class="h5 mb-2">{{ t.title }}</h2>
+      <div class="d-flex flex-wrap gap-2 mb-3">
+        <span class="badge bg-secondary-subtle text-secondary-emphasis"><i class="bi bi-tag me-1"></i>{{ cat_lbl.get(t.category, t.category) }}</span>
+        <span class="badge bg-{{ pm[1] }}-subtle text-{{ pm[1] }}-emphasis"><i class="bi bi-flag me-1"></i>{{ pm[0] }}</span>
+      </div>
+      {% if t.description %}<p class="mb-0" style="white-space:pre-wrap">{{ t.description }}</p>{% else %}<p class="contact-muted mb-0">Sem descrição.</p>{% endif %}
+
+      {% if t.resolution %}
+      <div class="alert alert-success mt-3 mb-0">
+        <strong><i class="bi bi-check2-circle me-1"></i>Resolução:</strong>
+        <div style="white-space:pre-wrap">{{ t.resolution }}</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Andamentos -->
+    <div class="table-card p-3">
+      <h3 class="h6 mb-3 d-flex align-items-center gap-2"><i class="bi bi-clock-history text-success"></i> Andamentos
+        <span class="badge bg-success-subtle text-success-emphasis">{{ t.comments|length }}</span>
+      </h3>
+
+      {% if t.comments %}
+      <div class="timeline">
+        {% for c in t.comments %}
+        <div class="tl-item">
+          <div class="tl-meta">
+            <strong class="text-success-emphasis">{{ c.author.name if c.author else 'Sistema' }}</strong>
+            · {{ c.created_at.strftime('%d/%m/%Y %H:%M') if c.created_at else '' }}
+            {% if c.status_to %}
+              · <span class="badge bg-{{ st_meta.get(c.status_to,('','secondary'))[1] }}-subtle text-{{ st_meta.get(c.status_to,('','secondary'))[1] }}-emphasis">
+                  status → {{ st_meta.get(c.status_to, (c.status_to,''))[0] }}</span>
+            {% endif %}
+          </div>
+          <div class="tl-body">{{ c.body }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="contact-muted mb-3">Nenhum andamento ainda.</p>
+      {% endif %}
+
+      <!-- Novo andamento -->
+      <form method="post" action="{{ url_for('tickets.comment', tid=t.id) }}" class="mt-3">
+        {{ comment_form.hidden_tag() }}
+        <div class="mb-2">
+          {{ comment_form.body.label(class="form-label fw-semibold") }}
+          {{ comment_form.body(class="form-control", rows=2, placeholder="Descreva o que foi feito / próximos passos...") }}
+        </div>
+        <div class="d-flex flex-wrap align-items-end gap-2">
+          <div>
+            {{ comment_form.new_status.label(class="form-label fw-semibold mb-1") }}
+            {{ comment_form.new_status(class="form-select form-select-sm", style="min-width:170px") }}
+          </div>
+          <button class="btn btn-primary"><i class="bi bi-send"></i> Adicionar andamento</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Coluna lateral: metadados -->
+  <div class="col-12 col-lg-4">
+    <div class="table-card p-3">
+      <h3 class="h6 mb-3"><i class="bi bi-info-circle text-success me-1"></i> Detalhes</h3>
+      <dl class="meta-list mb-0">
+        <dt>Solicitante</dt><dd>{{ t.requester or '—' }}{% if t.sector %} <span class="text-muted">· {{ t.sector }}</span>{% endif %}</dd>
+        <dt>Responsável</dt><dd>{{ t.assigned_to.name if t.assigned_to else 'Não atribuído' }}</dd>
+        <dt>Máquina</dt>
+        <dd>
+          {% if t.machine %}
+            <a href="{{ url_for('machines.edit', mid=t.machine.id) }}" class="text-decoration-none">
+              {{ t.machine.model or '—' }}{% if t.machine.ip_address %} <span class="font-monospace text-muted">({{ t.machine.ip_address }})</span>{% endif %}
+            </a>
+          {% else %}—{% endif %}
+        </dd>
+        <dt>Aberto por</dt><dd>{{ t.opened_by.name if t.opened_by else '—' }}</dd>
+        <dt>Criado em</dt><dd class="number">{{ t.created_at.strftime('%d/%m/%Y %H:%M') if t.created_at else '—' }}</dd>
+        <dt>Atualizado</dt><dd class="number">{{ t.updated_at.strftime('%d/%m/%Y %H:%M') if t.updated_at else '—' }}</dd>
+        {% if t.resolved_at %}<dt>Resolvido em</dt><dd class="number text-success">{{ t.resolved_at.strftime('%d/%m/%Y %H:%M') }}</dd>{% endif %}
+      </dl>
+    </div>
+  </div>
+</div>
+{% endblock %}
