@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Máquinas{% endblock %}
+{% block content %}
+
+{% set kinds = {
+  'computador': ('bi-pc-display', 'Computador', 'success'),
+  'notebook':   ('bi-laptop',     'Notebook',   'info'),
+  'impressora': ('bi-printer',    'Impressora', 'warning')
+} %}
+{% macro kind_badge(k) -%}
+  {% set meta = kinds.get(k, ('bi-hdd','—','secondary')) %}
+  <span class="badge bg-{{ meta[2] }}-subtle text-{{ meta[2] }}-emphasis"><i class="bi {{ meta[0] }} me-1"></i>{{ meta[1] }}</span>
+{%- endmacro %}
+
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-pc-display"></i></span>
+    Máquinas
+    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ totals.total }}</span>
+  </h1>
+  <a href="{{ url_for('machines.new') }}" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> Nova Máquina
+  </a>
+</div>
+
+<!-- Cartões por tipo (clicáveis = filtro) -->
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <a href="{{ url_for('machines.list_view') }}" class="text-decoration-none">
+      <div class="card stat-card h-100"><div class="card-body d-flex align-items-center justify-content-between">
+        <div><div class="text-muted small">Total</div><div class="h3 mb-0 number">{{ totals.total }}</div></div>
+        <i class="bi bi-hdd-stack fs-2 text-success"></i>
+      </div></div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{{ url_for('machines.list_view', kind='computador') }}" class="text-decoration-none">
+      <div class="card stat-card h-100"><div class="card-body d-flex align-items-center justify-content-between">
+        <div><div class="text-muted small">Computadores</div><div class="h3 mb-0 number">{{ totals.computador }}</div></div>
+        <i class="bi bi-pc-display fs-2 text-success"></i>
+      </div></div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{{ url_for('machines.list_view', kind='notebook') }}" class="text-decoration-none">
+      <div class="card stat-card h-100" style="border-left-color:#0dcaf0"><div class="card-body d-flex align-items-center justify-content-between">
+        <div><div class="text-muted small">Notebooks</div><div class="h3 mb-0 number text-info">{{ totals.notebook }}</div></div>
+        <i class="bi bi-laptop fs-2 text-info"></i>
+      </div></div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{{ url_for('machines.list_view', kind='impressora') }}" class="text-decoration-none">
+      <div class="card stat-card h-100" style="border-left-color:#ffc107"><div class="card-body d-flex align-items-center justify-content-between">
+        <div><div class="text-muted small">Impressoras</div><div class="h3 mb-0 number text-warning">{{ totals.impressora }}</div></div>
+        <i class="bi bi-printer fs-2 text-warning"></i>
+      </div></div>
+    </a>
+  </div>
+</div>
+
+<div class="table-card">
+  <div class="table-card-tools d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <form class="d-flex gap-2 mov-filters" method="get" role="search">
+      <div class="input-group search-box">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input class="form-control" type="search" placeholder="Usuário, modelo, IP, setor..." name="q" value="{{ q }}">
+      </div>
+      <select class="form-select" name="kind" style="max-width:160px" onchange="this.form.submit()">
+        <option value="">Todos os tipos</option>
+        <option value="computador" {{ 'selected' if kind=='computador' }}>Computadores</option>
+        <option value="notebook" {{ 'selected' if kind=='notebook' }}>Notebooks</option>
+        <option value="impressora" {{ 'selected' if kind=='impressora' }}>Impressoras</option>
+      </select>
+      <button class="btn btn-primary btn-icon" type="submit" title="Buscar"><i class="bi bi-search"></i></button>
+      {% if q or kind %}<a href="{{ url_for('machines.list_view') }}" class="btn btn-outline-light btn-icon" title="Limpar"><i class="bi bi-x-lg"></i></a>{% endif %}
+    </form>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead>
+        <tr>
+          <th>Tipo</th>
+          <th>Identificação / Modelo</th>
+          <th>Usuário</th>
+          <th>IP</th>
+          <th>Setor</th>
+          <th class="text-center">Status</th>
+          <th class="text-end" style="width:120px">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in items %}
+        <tr class="{{ '' if m.is_active else 'opacity-50' }}">
+          <td>{{ kind_badge(m.kind) }}</td>
+          <td>
+            <div class="fw-semibold">{{ m.model or '—' }}</div>
+            <small class="text-muted">
+              {% if m.brand %}{{ m.brand }}{% endif %}
+              {% if m.name %}{% if m.brand %} · {% endif %}{{ m.name }}{% endif %}
+            </small>
+          </td>
+          <td>{% if m.assigned_user %}{{ m.assigned_user }}{% else %}<span class="contact-muted">—</span>{% endif %}</td>
+          <td class="number font-monospace">{% if m.ip_address %}{{ m.ip_address }}{% else %}<span class="contact-muted">—</span>{% endif %}</td>
+          <td>{% if m.sector %}{{ m.sector }}{% else %}<span class="contact-muted">—</span>{% endif %}</td>
+          <td class="text-center">
+            {% if m.is_active %}
+              <span class="badge bg-success-subtle text-success">Em uso</span>
+            {% else %}
+              <span class="badge bg-secondary-subtle text-secondary">Inativa</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('machines.edit', mid=m.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
+            <form action="{{ url_for('machines.delete', mid=m.id) }}" method="post" class="d-inline" onsubmit="return confirm('Excluir esta máquina?');">
+              <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7">
+            <div class="empty-state">
+              <i class="bi bi-pc-display"></i>
+              {% if q or kind %}Nenhuma máquina encontrada para o filtro.{% else %}Nenhuma máquina cadastrada ainda.{% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

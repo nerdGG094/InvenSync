@@ -118,6 +118,11 @@
           </a>
         </li>
         <li class="nav-item">
+          <a class="nav-link {% if request.endpoint and request.endpoint.startswith('machines.') %}active{% endif %}" href="{{ url_for('machines.list_view') }}">
+            <i class="bi bi-pc-display"></i> Máquinas
+          </a>
+        </li>
+        <li class="nav-item">
           <a class="nav-link {% if request.endpoint and request.endpoint.startswith('reports.') %}active{% endif %}" href="{{ url_for('reports.stock') }}">
             <i class="bi bi-clipboard-data"></i> Relatórios
           </a>
