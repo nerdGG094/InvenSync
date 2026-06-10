@@ -117,10 +117,23 @@
             <i class="bi bi-kanban"></i> Kanban
           </a>
         </li>
-        <li class="nav-item">
-          <a class="nav-link {% if request.endpoint and request.endpoint.startswith('machines.') %}active{% endif %}" href="{{ url_for('machines.list_view') }}">
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle {% if request.endpoint and (request.endpoint.startswith('machines.') or request.endpoint.startswith('cleanings.')) %}active{% endif %}"
+             href="#" id="ddMaquinas" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             <i class="bi bi-pc-display"></i> Máquinas
           </a>
+          <ul class="dropdown-menu" aria-labelledby="ddMaquinas">
+            <li>
+              <a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('machines.') %}active{% endif %}" href="{{ url_for('machines.list_view') }}">
+                <i class="bi bi-pc-display me-2"></i> Cadastro de Máquinas
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('cleanings.') %}active{% endif %}" href="{{ url_for('cleanings.list_view') }}">
+                <i class="bi bi-droplet-half me-2"></i> Limpeza de Máquinas
+              </a>
+            </li>
+          </ul>
         </li>
         <li class="nav-item">
           <a class="nav-link {% if request.endpoint and request.endpoint.startswith('reports.') %}active{% endif %}" href="{{ url_for('reports.stock') }}">

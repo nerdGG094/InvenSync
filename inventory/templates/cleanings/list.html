@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Limpeza de Máquinas{% endblock %}
+{% block content %}
+
+{% set kind_icon = {'computador':'bi-pc-display','notebook':'bi-laptop','impressora':'bi-printer'} %}
+
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-droplet-half"></i></span>
+    Limpeza de Máquinas
+    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ items|length }}</span>
+  </h1>
+  <a href="{{ url_for('cleanings.new') }}" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> Nova Limpeza
+  </a>
+</div>
+
+<div class="table-card">
+  <div class="table-card-tools">
+    <form class="d-flex search-box" method="get" role="search">
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input class="form-control" type="search" placeholder="Máquina, usuário, setor, executor..." name="q" value="{{ q }}">
+      </div>
+      {% if q or machine_id %}
+      <a href="{{ url_for('cleanings.list_view') }}" class="btn btn-outline-light ms-2" title="Limpar"><i class="bi bi-x-lg"></i></a>
+      {% endif %}
+    </form>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead>
+        <tr>
+          <th>Máquina</th>
+          <th>Início</th>
+          <th>Fim</th>
+          <th class="text-end">Duração</th>
+          <th>Executado por</th>
+          <th>Próxima limpeza</th>
+          <th class="text-end" style="width:120px">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in items %}
+        <tr>
+          <td>
+            <div class="fw-semibold">
+              <i class="bi {{ kind_icon.get(c.machine.kind, 'bi-hdd') }} text-success me-1"></i>
+              {{ c.machine.model or '—' }}
+            </div>
+            <small class="text-muted">
+              {{ c.machine.assigned_user or 's/ usuário' }}{% if c.machine.sector %} · {{ c.machine.sector }}{% endif %}
+            </small>
+          </td>
+          <td class="text-nowrap number">{{ c.started_at.strftime('%d/%m/%Y %H:%M') if c.started_at else '—' }}</td>
+          <td class="text-nowrap number">{{ c.finished_at.strftime('%d/%m/%Y %H:%M') if c.finished_at else '—' }}</td>
+          <td class="text-end number">
+            {% set dm = c.duration_min %}
+            {% if dm is not none %}
+              {% if dm >= 60 %}{{ dm // 60 }}h {{ '%02d'|format(dm % 60) }}min{% else %}{{ dm }} min{% endif %}
+            {% else %}<span class="contact-muted">—</span>{% endif %}
+          </td>
+          <td>{% if c.executed_by %}{{ c.executed_by }}{% else %}<span class="contact-muted">—</span>{% endif %}</td>
+          <td>
+            {% if c.next_date %}
+              {% set dias = (c.next_date - hoje).days %}
+              {% if dias < 0 %}
+                <span class="badge bg-danger-subtle text-danger"><i class="bi bi-exclamation-triangle me-1"></i>{{ c.next_date.strftime('%d/%m/%Y') }} (vencida)</span>
+              {% elif dias == 0 %}
+                <span class="badge bg-warning-subtle text-warning-emphasis"><i class="bi bi-clock me-1"></i>Hoje</span>
+              {% elif dias <= 7 %}
+                <span class="badge bg-info-subtle text-info-emphasis"><i class="bi bi-clock-history me-1"></i>{{ c.next_date.strftime('%d/%m/%Y') }} ({{ dias }}d)</span>
+              {% else %}
+                <span class="badge bg-success-subtle text-success">{{ c.next_date.strftime('%d/%m/%Y') }}</span>
+              {% endif %}
+            {% else %}<span class="contact-muted">—</span>{% endif %}
+          </td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('cleanings.edit', cid=c.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
+            <form action="{{ url_for('cleanings.delete', cid=c.id) }}" method="post" class="d-inline" onsubmit="return confirm('Excluir este registro de limpeza?');">
+              <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7">
+            <div class="empty-state">
+              <i class="bi bi-droplet"></i>
+              {% if q or machine_id %}Nenhuma limpeza encontrada para o filtro.{% else %}Nenhuma limpeza registrada ainda.{% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -175,6 +175,19 @@ a:hover, .btn-link:hover {
   display: inline-flex; align-items: center; justify-content: center;
 }
 
+/* Dropdown do menu (submenu Máquinas) no tema verde escuro */
+.navbar .dropdown-menu {
+  background: #0b1a12; border: 1px solid #183224; border-radius: 10px;
+  padding: .35rem; box-shadow: 0 8px 24px rgba(0,0,0,.4);
+}
+.navbar .dropdown-item {
+  color: #b9d8c6; border-radius: 7px; padding: .5rem .7rem; display: flex; align-items: center;
+}
+.navbar .dropdown-item:hover, .navbar .dropdown-item:focus { background: #14271c; color: #e7ffe9; }
+.navbar .dropdown-item.active, .navbar .dropdown-item:active {
+  background: #14271c; color: var(--brand-2, #00e676);
+}
+
 /* Chip de contato (e-mail/telefone) */
 .contact-chip { color: #b9d8c6; font-size: .86rem; }
 .contact-chip i { color: #6fae8a; margin-right: .3rem; }
