@@ -13,18 +13,34 @@ from ..models.machine import Machine
 bp = Blueprint("tickets", __name__)
 
 
+KIND_LABELS = {"computador": "Computador", "notebook": "Notebook", "impressora": "Impressora"}
+
+
 def _machine_label(m: Machine) -> str:
-    kinds = {"computador": "Computador", "notebook": "Notebook", "impressora": "Impressora"}
-    label = f"{kinds.get(m.kind, m.kind)} · {m.model or '—'}"
-    if m.assigned_user:
-        label += f" ({m.assigned_user})"
-    return label
+    # Lidera pelo usuário (depois modelo e tipo), para facilitar a escolha.
+    user = m.assigned_user or "s/ usuário"
+    return f"{user} · {m.model or '—'} · {KIND_LABELS.get(m.kind, m.kind)}"
+
+
+def _machines_info() -> dict:
+    """Dados das máquinas para auto-preencher o chamado ao selecionar."""
+    info = {}
+    for m in Machine.query.all():
+        info[m.id] = {
+            "user": m.assigned_user or "",
+            "sector": m.sector or "",
+            "ip": m.ip_address or "",
+            "model": m.model or "",
+            "kind": KIND_LABELS.get(m.kind, m.kind),
+        }
+    return info
 
 
 def _populate(form: TicketForm):
     users = User.query.filter_by(is_active=True).order_by(User.name).all()
     form.assigned_to_id.choices = [(0, "— Não atribuído —")] + [(u.id, u.name) for u in users]
-    machines = Machine.query.order_by(Machine.model).all()
+    machines = Machine.query.order_by(Machine.assigned_user.asc().nullslast(),
+                                      Machine.model.asc()).all()
     form.machine_id.choices = [(0, "— Nenhuma —")] + [(m.id, _machine_label(m)) for m in machines]
 
 
@@ -80,7 +96,8 @@ def new():
         t = ticket_repo.create_ticket(opened_by_id=current_user.id, **_to_kwargs(form))
         flash(f"Chamado {t.code} criado!", "success")
         return redirect(url_for("tickets.detail", tid=t.id))
-    return render_template("tickets/form.html", form=form, title="Novo Chamado")
+    return render_template("tickets/form.html", form=form, title="Novo Chamado",
+                           machines_info=_machines_info())
 
 
 @bp.route("/<int:tid>")
@@ -119,7 +136,8 @@ def edit(tid):
         ticket_repo.update_ticket(t, **_to_kwargs(form))
         flash("Chamado atualizado!", "success")
         return redirect(url_for("tickets.detail", tid=t.id))
-    return render_template("tickets/form.html", form=form, title=f"Editar {t.code}")
+    return render_template("tickets/form.html", form=form, title=f"Editar {t.code}",
+                           machines_info=_machines_info())
 
 
 @bp.route("/<int:tid>/delete", methods=["POST"])

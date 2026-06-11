@@ -23,6 +23,15 @@
           {{ field_error(form.title) }}
         </div>
 
+        <div class="mb-3">
+          {{ form.machine_id.label(class="form-label fw-semibold") }}
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-pc-display"></i></span>
+            {{ form.machine_id(class="form-select", id="machine_id") }}
+          </div>
+          <div id="machineInfo" class="form-text">Selecione a máquina do usuário — o solicitante e o setor são preenchidos automaticamente.</div>
+        </div>
+
         <div class="row g-3">
           <div class="col-12 col-md-6">
             {{ form.requester.label(class="form-label fw-semibold") }}
@@ -59,15 +68,6 @@
         </div>
 
         <div class="mt-3">
-          {{ form.machine_id.label(class="form-label fw-semibold") }}
-          <div class="input-group">
-            <span class="input-group-text"><i class="bi bi-pc-display"></i></span>
-            {{ form.machine_id(class="form-select") }}
-          </div>
-          <div class="form-text">Vincule a máquina envolvida, se houver.</div>
-        </div>
-
-        <div class="mt-3">
           {{ form.description.label(class="form-label fw-semibold") }}
           {{ form.description(class="form-control", rows=3, placeholder="Detalhes do chamado") }}
         </div>
@@ -85,4 +85,36 @@
     </div>
   </div>
 </div>
+
+<script>
+  (function(){
+    const MINFO = {{ (machines_info or {})|tojson }};
+    const sel = document.getElementById('machine_id');
+    const req = document.getElementById('requester');
+    const sec = document.getElementById('sector');
+    const box = document.getElementById('machineInfo');
+    if (!sel) return;
+
+    function describe(info){
+      if (!info) { box.textContent = 'Selecione a máquina do usuário — o solicitante e o setor são preenchidos automaticamente.'; return; }
+      let txt = info.kind + ' · ' + (info.model || '—');
+      if (info.user)   txt += ' · ' + info.user;
+      if (info.sector) txt += ' · ' + info.sector;
+      if (info.ip)     txt += ' · IP ' + info.ip;
+      box.innerHTML = '<i class="bi bi-info-circle me-1"></i>' + txt;
+    }
+
+    sel.addEventListener('change', function(){
+      const info = MINFO[this.value];
+      if (info){
+        if (req && info.user)   req.value = info.user;     // solicitante = usuário da máquina
+        if (sec && info.sector) sec.value = info.sector;   // setor = dpto da máquina
+      }
+      describe(info);
+    });
+
+    // Mostra a info se já houver máquina selecionada (ex.: edição)
+    if (sel.value && MINFO[sel.value]) describe(MINFO[sel.value]);
+  })();
+</script>
 {% endblock %}
