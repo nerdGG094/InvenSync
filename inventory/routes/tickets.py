@@ -1,5 +1,5 @@
 # inventory/routes/tickets.py
-from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy import func
 
@@ -92,6 +92,31 @@ def list_view():
     }
     return render_template("tickets/list.html", items=items, q=q, status=status,
                            priority=priority, totals=totals, is_admin=current_user.is_admin)
+
+
+@bp.route("/api/recent")
+@login_required
+def api_recent():
+    """Polling de novos chamados — usado pela notificação da equipe de TI."""
+    if not current_user.is_admin:
+        return jsonify(tickets=[], latest_id=0, open_count=0)
+    since = request.args.get("since_id", type=int) or 0
+    open_count = Ticket.query.filter_by(status="aberto").count()
+    recent = Ticket.query.order_by(Ticket.id.desc()).limit(10).all()
+    latest_id = recent[0].id if recent else 0
+    novos = [t for t in recent if t.id > since] if since else []
+    return jsonify(
+        latest_id=latest_id,
+        open_count=open_count,
+        tickets=[{
+            "id": t.id,
+            "code": t.code,
+            "title": t.title,
+            "requester": t.requester or "",
+            "sector": t.sector or "",
+            "priority": t.priority,
+        } for t in novos],
+    )
 
 
 @bp.route("/new", methods=["GET", "POST"])
