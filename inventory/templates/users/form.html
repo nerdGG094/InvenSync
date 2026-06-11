@@ -30,18 +30,26 @@
           {{ field_error(form.email) }}
         </div>
 
-        <div class="mb-3">
-          {{ form.password.label(class="form-label fw-semibold") }}
-          {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""), autocomplete="new-password") }}
-          <div class="form-text">Deixe em branco para manter a senha atual.</div>
-          {{ field_error(form.password) }}
+        <div class="row g-3 mb-3">
+          <div class="col-12 col-md-6">
+            {{ form.password.label(class="form-label fw-semibold") }}
+            {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""), autocomplete="new-password") }}
+            <div class="form-text">Deixe em branco para manter a senha atual.</div>
+            {{ field_error(form.password) }}
+          </div>
+          <div class="col-12 col-md-6">
+            {{ form.sector.label(class="form-label fw-semibold") }}
+            {{ form.sector(class="form-control" + (" is-invalid" if form.sector.errors else ""), placeholder="Ex.: Compras") }}
+            <div class="form-text">Usado no chamado quando o próprio usuário abre.</div>
+            {{ field_error(form.sector) }}
+          </div>
         </div>
 
         <div class="d-flex flex-wrap gap-4 mb-3">
           <div class="form-check form-switch">
             {{ form.is_admin(class="form-check-input", role="switch", id="isAdminSwitch") }}
             <label class="form-check-label" for="isAdminSwitch">
-              <i class="bi bi-shield-check me-1"></i>Administrador
+              <i class="bi bi-shield-check me-1"></i>Administrador (TI)
             </label>
           </div>
           <div class="form-check form-switch">

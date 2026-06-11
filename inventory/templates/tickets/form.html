@@ -17,12 +17,22 @@
       <form method="post" novalidate>
         {{ form.hidden_tag() }}
 
+        {% set is_admin = is_admin if is_admin is defined else True %}
+
+        {% if not is_admin %}
+        <div class="alert alert-info py-2 d-flex align-items-center gap-2">
+          <i class="bi bi-person-badge"></i>
+          <span>Você abrirá o chamado em seu nome: <strong>{{ current_user.name }}</strong>{% if current_user.sector %} · {{ current_user.sector }}{% endif %}.</span>
+        </div>
+        {% endif %}
+
         <div class="mb-3">
           {{ form.title.label(class="form-label fw-semibold") }}
           {{ form.title(class="form-control" + (" is-invalid" if form.title.errors else ""), placeholder="Resumo do problema/solicitação", autofocus=True) }}
           {{ field_error(form.title) }}
         </div>
 
+        {% if is_admin %}
         <div class="mb-3">
           {{ form.machine_id.label(class="form-label fw-semibold") }}
           <div class="input-group">
@@ -49,6 +59,7 @@
             {{ field_error(form.sector) }}
           </div>
         </div>
+        {% endif %}
 
         <div class="row g-3 mt-1">
           <div class="col-6 col-md-3">
@@ -59,6 +70,7 @@
             {{ form.priority.label(class="form-label fw-semibold") }}
             {{ form.priority(class="form-select") }}
           </div>
+          {% if is_admin %}
           <div class="col-6 col-md-3">
             {{ form.status.label(class="form-label fw-semibold") }}
             {{ form.status(class="form-select") }}
@@ -67,6 +79,7 @@
             {{ form.assigned_to_id.label(class="form-label fw-semibold") }}
             {{ form.assigned_to_id(class="form-select") }}
           </div>
+          {% endif %}
         </div>
 
         <div class="mt-3">
@@ -74,10 +87,12 @@
           {{ form.description(class="form-control", rows=3, placeholder="Detalhes do chamado") }}
         </div>
 
+        {% if is_admin %}
         <div class="mt-3">
           {{ form.resolution.label(class="form-label fw-semibold") }}
           {{ form.resolution(class="form-control", rows=2, placeholder="Preencha quando resolver") }}
         </div>
+        {% endif %}
 
         <div class="d-flex justify-content-end gap-2 mt-4">
           <a href="{{ url_for('tickets.list_view') }}" class="btn btn-outline-light">Cancelar</a>

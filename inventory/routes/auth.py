@@ -6,13 +6,17 @@ from ..models.user import User
 
 bp = Blueprint("auth", __name__)
 
+def _home_for(user):
+    """Tela inicial conforme o perfil: admin -> painel, comum -> chamados."""
+    return url_for("dashboard.index") if user.is_admin else url_for("tickets.list_view")
+
+
 @bp.route("/login", methods=["GET","POST"])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for("dashboard.index"))
+        return redirect(_home_for(current_user))
     form = LoginForm()
     if form.validate_on_submit():
-        print("[LOGIN] POST received")
         email = form.email.data.strip().lower()
         user = User.query.filter_by(email=email).first()
         if user and user.check_password(form.password.data):
@@ -20,7 +24,7 @@ def login():
                 flash("Usuário desativado. Procure um administrador.", "warning")
                 return render_template("login.html", form=form)
             login_user(user)
-            return redirect(url_for("dashboard.index"))
+            return redirect(_home_for(user))
         flash("Credenciais inválidas", "danger")
     return render_template("login.html", form=form)
 

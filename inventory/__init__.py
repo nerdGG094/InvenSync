@@ -1,7 +1,13 @@
 import os
-from flask import Flask, render_template
+from flask import Flask, render_template, request, redirect, url_for
+from flask_login import current_user
 from .extensions import db, login_manager
 from .config import Config
+
+# Endpoints liberados para usuários NÃO administradores (perfil "comum").
+# Eles só acessam Chamados, o próprio Perfil, autenticação e estáticos.
+NON_ADMIN_PREFIXES = ("tickets.", "profile.", "auth.")
+NON_ADMIN_ENDPOINTS = ("static", "health.health")
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
@@ -68,6 +74,7 @@ def create_app():
     from .routes.cleanings import bp as cleanings_bp  # ⬅️ NOVO: limpeza de máquinas
     from .routes.tickets import bp as tickets_bp  # ⬅️ NOVO: controlador de chamados
     from .routes.mobile import bp as mobile_bp  # ⬅️ NOVO: cadastro de celulares
+    from .routes.profile import bp as profile_bp  # ⬅️ NOVO: meu perfil
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -83,8 +90,35 @@ def create_app():
     app.register_blueprint(cleanings_bp, url_prefix="/machines/cleanings")  # ⬅️ NOVO: limpezas
     app.register_blueprint(tickets_bp, url_prefix="/tickets")  # ⬅️ NOVO: chamados
     app.register_blueprint(mobile_bp, url_prefix="/mobile")  # ⬅️ NOVO: celulares
+    app.register_blueprint(profile_bp, url_prefix="/profile")  # ⬅️ NOVO: meu perfil
+
+    # ===== Controle de acesso por módulo =====
+    # Usuários comuns (não-admin) só acessam Chamados e o próprio Perfil.
+    @app.before_request
+    def _gate_non_admins():
+        if not current_user.is_authenticated or current_user.is_admin:
+            return
+        ep = request.endpoint or ""
+        if ep in NON_ADMIN_ENDPOINTS or ep.startswith(NON_ADMIN_PREFIXES):
+            return
+        # Bloqueia o resto: manda para a área de chamados
+        return redirect(url_for("tickets.list_view"))
+
+    # Disponibiliza helper de avatar nos templates
+    @app.context_processor
+    def _inject_helpers():
+        def avatar_url(user):
+            if user and getattr(user, "photo", None):
+                return url_for("static", filename="uploads/avatars/" + user.photo)
+            return None
+        return {"avatar_url": avatar_url}
 
     # Handlers de erro
+    @app.errorhandler(403)
+    def forbidden(e):
+        return render_template("error.html", title="Acesso negado",
+                               message="Você não tem permissão para acessar esta página."), 403
+
     @app.errorhandler(404)
     def not_found(e):
         return render_template("error.html", title="404", message="Página não encontrada"), 404

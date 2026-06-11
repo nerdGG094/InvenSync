@@ -68,15 +68,20 @@
   <div class="col-12 col-md-6 col-xl-4">
     <article class="user-card {{ '' if u.is_active else 'inactive' }}">
       <div class="d-flex align-items-center gap-3">
-        <span class="avatar-lg">{{ u.name[:2] }}</span>
+        {% if u.photo %}
+          <img class="avatar-lg" src="{{ url_for('static', filename='uploads/avatars/' ~ u.photo) }}" alt="" style="object-fit:cover">
+        {% else %}
+          <span class="avatar-lg">{{ u.name[:2] }}</span>
+        {% endif %}
         <div class="flex-grow-1 min-w-0">
           <div class="uname">{{ u.name }}</div>
           <a class="uemail text-decoration-none" href="mailto:{{ u.email }}">{{ u.email }}</a>
+          {% if u.sector %}<div class="text-muted small"><i class="bi bi-diagram-3"></i> {{ u.sector }}</div>{% endif %}
         </div>
         {% if u.is_admin %}
-          <span class="badge bg-success-subtle text-success" title="Administrador"><i class="bi bi-shield-check me-1"></i>Admin</span>
+          <span class="badge bg-success-subtle text-success" title="Equipe de TI (acesso total)"><i class="bi bi-shield-check me-1"></i>TI</span>
         {% else %}
-          <span class="badge bg-secondary-subtle text-secondary" title="Usuário comum"><i class="bi bi-person me-1"></i>Usuário</span>
+          <span class="badge bg-secondary-subtle text-secondary" title="Usuário comum (só Chamados)"><i class="bi bi-person me-1"></i>Usuário</span>
         {% endif %}
       </div>
 

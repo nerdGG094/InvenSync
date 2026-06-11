@@ -35,12 +35,13 @@ def new():
     form = UserForm()
     if form.validate_on_submit():
         # checa e-mail único
-        if User.query.filter_by(email=form.email.data.strip()).first():
+        if User.query.filter_by(email=form.email.data.strip().lower()).first():
             flash("E-mail já cadastrado.", "warning")
         else:
             u = User(
                 name=form.name.data.strip(),
-                email=form.email.data.strip(),
+                email=form.email.data.strip().lower(),
+                sector=(form.sector.data or "").strip() or None,
                 is_admin=bool(form.is_admin.data),
                 is_active=bool(form.is_active.data),
             )
@@ -63,12 +64,13 @@ def edit(uid):
     form = UserForm(obj=u)
     if form.validate_on_submit():
         # e-mail único (permitindo o mesmo do próprio usuário)
-        existing = User.query.filter_by(email=form.email.data.strip()).first()
+        existing = User.query.filter_by(email=form.email.data.strip().lower()).first()
         if existing and existing.id != u.id:
             flash("E-mail já em uso por outro usuário.", "warning")
         else:
             u.name = form.name.data.strip()
-            u.email = form.email.data.strip()
+            u.email = form.email.data.strip().lower()
+            u.sector = (form.sector.data or "").strip() or None
             u.is_admin = bool(form.is_admin.data)
             # Não permite o próprio admin se autodesativar
             if u.id == current_user.id and not form.is_active.data:

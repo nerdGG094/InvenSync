@@ -14,6 +14,12 @@ class User(db.Model, UserMixin):
     is_active = db.Column(
         db.Boolean, nullable=False, default=True, server_default=db.text("true")
     )
+    sector = db.Column(db.String(120), nullable=True)   # setor do usuário
+    photo = db.Column(db.String(255), nullable=True)    # caminho da foto (avatar)
+
+    @property
+    def initials(self) -> str:
+        return (self.name or "?")[:2].upper()
 
     def set_password(self, password: str):
         self.password_hash = generate_password_hash(password)

@@ -24,6 +24,10 @@ instance/*.sqlite
 instance/*.sqlite3
 !instance/.keep
 
+# === Uploads (fotos de perfil) ===
+inventory/static/uploads/avatars/*
+!inventory/static/uploads/avatars/.keep
+
 # === Logs ===
 *.log
 flask_output.log

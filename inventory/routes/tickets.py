@@ -1,5 +1,5 @@
 # inventory/routes/tickets.py
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
 from flask_login import login_required, current_user
 from sqlalchemy import func
 
@@ -77,8 +77,12 @@ def list_view():
     priority = (request.args.get("priority") or "").strip()
     items = ticket_repo.list_tickets(q or None, status or None, priority or None)
 
-    counts = dict(db.session.query(Ticket.status, func.count(Ticket.id))
-                  .group_by(Ticket.status).all())
+    cnt = db.session.query(Ticket.status, func.count(Ticket.id))
+    # Usuário comum só vê os próprios chamados
+    if not current_user.is_admin:
+        items = [t for t in items if t.opened_by_id == current_user.id]
+        cnt = cnt.filter(Ticket.opened_by_id == current_user.id)
+    counts = dict(cnt.group_by(Ticket.status).all())
     totals = {
         "aberto": counts.get("aberto", 0),
         "em_andamento": counts.get("em_andamento", 0),
@@ -87,43 +91,61 @@ def list_view():
         "total": sum(counts.values()),
     }
     return render_template("tickets/list.html", items=items, q=q, status=status,
-                           priority=priority, totals=totals)
+                           priority=priority, totals=totals, is_admin=current_user.is_admin)
 
 
 @bp.route("/new", methods=["GET", "POST"])
 @login_required
 def new():
+    is_admin = current_user.is_admin
     form = TicketForm()
     _populate(form)
     if request.method == "GET":
         form.status.data = "aberto"
         form.priority.data = "media"
-        form.assigned_to_id.data = current_user.id   # por padrão, quem está registrando
+        if is_admin:
+            form.assigned_to_id.data = current_user.id   # admin: atribui a si por padrão
     if form.validate_on_submit():
-        t = ticket_repo.create_ticket(opened_by_id=current_user.id, **_to_kwargs(form))
-        flash(f"Chamado {t.code} criado!", "success")
+        data = _to_kwargs(form)
+        if not is_admin:
+            # Usuário comum abre em nome próprio; setor vem do seu cadastro
+            data["requester"] = current_user.name
+            data["sector"] = current_user.sector or None
+            data["status"] = "aberto"
+            data["assigned_to_id"] = None
+            data["resolution"] = None
+        t = ticket_repo.create_ticket(opened_by_id=current_user.id, **data)
+        flash(f"Chamado {t.code} aberto!", "success")
         return redirect(url_for("tickets.detail", tid=t.id))
     return render_template("tickets/form.html", form=form, title="Novo Chamado",
-                           machines_info=_machines_info(), users_info=_users_info())
+                           machines_info=_machines_info(), users_info=_users_info(),
+                           is_admin=is_admin)
 
 
 @bp.route("/<int:tid>")
 @login_required
 def detail(tid):
     t = ticket_repo.get_ticket(tid)
+    if not current_user.is_admin and t.opened_by_id != current_user.id:
+        abort(403)
     comment_form = CommentForm()
-    return render_template("tickets/detail.html", t=t, comment_form=comment_form)
+    return render_template("tickets/detail.html", t=t, comment_form=comment_form,
+                           is_admin=current_user.is_admin)
 
 
 @bp.route("/<int:tid>/comment", methods=["POST"])
 @login_required
 def comment(tid):
     t = ticket_repo.get_ticket(tid)
+    if not current_user.is_admin and t.opened_by_id != current_user.id:
+        abort(403)
     form = CommentForm()
     if form.validate_on_submit():
+        # Usuário comum não muda status (só a equipe de TI)
+        new_status = form.new_status.data if current_user.is_admin else None
         ticket_repo.add_comment(t, body=form.body.data.strip(),
                                 author_id=current_user.id,
-                                new_status=form.new_status.data or None)
+                                new_status=new_status or None)
         flash("Andamento adicionado.", "success")
     else:
         flash("Escreva o andamento antes de enviar.", "warning")
@@ -133,6 +155,8 @@ def comment(tid):
 @bp.route("/<int:tid>/edit", methods=["GET", "POST"])
 @login_required
 def edit(tid):
+    if not current_user.is_admin:
+        abort(403)
     t = ticket_repo.get_ticket(tid)
     form = TicketForm(obj=t)
     _populate(form)
@@ -155,6 +179,8 @@ def edit(tid):
 @bp.route("/<int:tid>/delete", methods=["POST"])
 @login_required
 def delete(tid):
+    if not current_user.is_admin:
+        abort(403)
     t = ticket_repo.get_ticket(tid)
     ticket_repo.delete_ticket(t)
     flash("Chamado excluído.", "success")

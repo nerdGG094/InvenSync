@@ -37,6 +37,10 @@ class Config:
     # Recarrega templates alterados sem precisar reiniciar o servidor
     # (conveniente mesmo rodando em produção via waitress).
     TEMPLATES_AUTO_RELOAD = True
+
+    # Upload de fotos de perfil (avatares)
+    MAX_CONTENT_LENGTH = 4 * 1024 * 1024  # 4 MB
+    AVATAR_FOLDER = os.path.join(BASE_DIR, "static", "uploads", "avatars")
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_pre_ping": True,   # evita conexões mortas após ociosidade
         "pool_recycle": 1800,    # recicla conexões a cada 30 min
