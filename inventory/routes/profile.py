@@ -43,6 +43,7 @@ def edit():
             current_user.name = form.name.data.strip()
             current_user.email = email
             current_user.sector = (form.sector.data or "").strip() or None
+            current_user.whatsapp = (form.whatsapp.data or "").strip() or None
             if form.photo.data:
                 current_user.photo = _save_avatar(form.photo.data)
             if form.new_password.data:

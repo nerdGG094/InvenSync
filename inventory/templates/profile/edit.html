@@ -53,6 +53,15 @@
             {{ form.sector(class="form-control" + (" is-invalid" if form.sector.errors else ""), placeholder="Ex.: Compras") }}
             {{ field_error(form.sector) }}
           </div>
+          <div class="col-12 col-md-6">
+            {{ form.whatsapp.label(class="form-label fw-semibold") }}
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-whatsapp text-success"></i></span>
+              {{ form.whatsapp(class="form-control" + (" is-invalid" if form.whatsapp.errors else ""), placeholder="Ex.: (44) 99999-9999") }}
+            </div>
+            <div class="form-text">Recebe avisos dos chamados por aqui.</div>
+            {{ field_error(form.whatsapp) }}
+          </div>
         </div>
 
         <hr class="my-4" style="border-color:#243024">

@@ -37,11 +37,17 @@
             <div class="form-text">Deixe em branco para manter a senha atual.</div>
             {{ field_error(form.password) }}
           </div>
-          <div class="col-12 col-md-6">
+          <div class="col-12 col-md-3">
             {{ form.sector.label(class="form-label fw-semibold") }}
             {{ form.sector(class="form-control" + (" is-invalid" if form.sector.errors else ""), placeholder="Ex.: Compras") }}
-            <div class="form-text">Usado no chamado quando o próprio usuário abre.</div>
+            <div class="form-text">Usado no chamado do próprio usuário.</div>
             {{ field_error(form.sector) }}
+          </div>
+          <div class="col-12 col-md-3">
+            {{ form.whatsapp.label(class="form-label fw-semibold") }}
+            {{ form.whatsapp(class="form-control" + (" is-invalid" if form.whatsapp.errors else ""), placeholder="(44) 99999-9999") }}
+            <div class="form-text">Avisos por WhatsApp.</div>
+            {{ field_error(form.whatsapp) }}
           </div>
         </div>
 

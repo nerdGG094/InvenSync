@@ -5,11 +5,13 @@ from sqlalchemy import func
 
 from ..extensions import db
 from ..repositories import ticket_repo
-from ..forms.tickets import TicketForm, CommentForm
+from ..forms.tickets import TicketForm, CommentForm, STATUS_CHOICES
 from ..models.ticket import Ticket
 from ..models.user import User
 from ..models.machine import Machine
-from ..services import people
+from ..services import people, whatsapp
+
+STATUS_LABELS = dict(STATUS_CHOICES)
 
 bp = Blueprint("tickets", __name__)
 
@@ -140,6 +142,14 @@ def new():
             data["assigned_to_id"] = None
             data["resolution"] = None
         t = ticket_repo.create_ticket(opened_by_id=current_user.id, **data)
+        # Notifica a equipe de TI por WhatsApp (best-effort)
+        whatsapp.notify_ti(
+            f"🆕 *Novo chamado {t.code}*\n"
+            f"Aberto por: {t.requester or current_user.name}"
+            f"{(' · ' + t.sector) if t.sector else ''}\n"
+            f"Prioridade: {t.priority}\n"
+            f"{t.title}"
+        )
         flash(f"Chamado {t.code} aberto!", "success")
         return redirect(url_for("tickets.detail", tid=t.id))
     return render_template("tickets/form.html", form=form, title="Novo Chamado",
@@ -166,11 +176,22 @@ def comment(tid):
         abort(403)
     form = CommentForm()
     if form.validate_on_submit():
+        body = form.body.data.strip()
         # Usuário comum não muda status (só a equipe de TI)
         new_status = form.new_status.data if current_user.is_admin else None
-        ticket_repo.add_comment(t, body=form.body.data.strip(),
-                                author_id=current_user.id,
+        ticket_repo.add_comment(t, body=body, author_id=current_user.id,
                                 new_status=new_status or None)
+        # Notificações por WhatsApp (best-effort)
+        if current_user.is_admin:
+            whatsapp.notify_user(
+                t.opened_by,
+                f"🔔 *Chamado {t.code}* atualizado por {current_user.name}:\n{body}\n"
+                f"Status: {STATUS_LABELS.get(t.status, t.status)}"
+            )
+        else:
+            whatsapp.notify_ti(
+                f"💬 *{t.requester or current_user.name}* respondeu no chamado {t.code}:\n{body}"
+            )
         flash("Andamento adicionado.", "success")
     else:
         flash("Escreva o andamento antes de enviar.", "warning")

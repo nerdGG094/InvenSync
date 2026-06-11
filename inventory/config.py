@@ -41,6 +41,13 @@ class Config:
     # Upload de fotos de perfil (avatares)
     MAX_CONTENT_LENGTH = 4 * 1024 * 1024  # 4 MB
     AVATAR_FOLDER = os.path.join(BASE_DIR, "static", "uploads", "avatars")
+
+    # Notificações por WhatsApp (wppconnect-server) — desligado até configurar no .env
+    WHATSAPP_ENABLED = os.environ.get("WHATSAPP_ENABLED", "0") in ("1", "true", "True")
+    WHATSAPP_API_URL = os.environ.get("WHATSAPP_API_URL", "")        # ex.: http://127.0.0.1:21465
+    WHATSAPP_SESSION = os.environ.get("WHATSAPP_SESSION", "invensync")
+    WHATSAPP_TOKEN = os.environ.get("WHATSAPP_TOKEN", "")
+    WHATSAPP_TI_NUMBERS = [s.strip() for s in os.environ.get("WHATSAPP_TI_NUMBERS", "").split(",") if s.strip()]
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_pre_ping": True,   # evita conexões mortas após ociosidade
         "pool_recycle": 1800,    # recicla conexões a cada 30 min

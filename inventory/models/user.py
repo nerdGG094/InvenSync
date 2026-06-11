@@ -16,6 +16,7 @@ class User(db.Model, UserMixin):
     )
     sector = db.Column(db.String(120), nullable=True)   # setor do usuário
     photo = db.Column(db.String(255), nullable=True)    # caminho da foto (avatar)
+    whatsapp = db.Column(db.String(30), nullable=True)  # número p/ notificações
 
     @property
     def initials(self) -> str:

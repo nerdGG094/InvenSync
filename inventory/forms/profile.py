@@ -8,6 +8,7 @@ class ProfileForm(FlaskForm):
     name = StringField("Nome", validators=[DataRequired(), Length(min=2, max=120)])
     email = StringField("E-mail", validators=[DataRequired(), Email(check_deliverability=False)])
     sector = StringField("Setor", validators=[Optional(), Length(max=120)])
+    whatsapp = StringField("WhatsApp", validators=[Optional(), Length(max=30)])
     photo = FileField("Foto de perfil", validators=[
         Optional(),
         FileAllowed(["png", "jpg", "jpeg", "gif", "webp"], "Apenas imagens (png, jpg, gif, webp)."),

@@ -42,6 +42,7 @@ def new():
                 name=form.name.data.strip(),
                 email=form.email.data.strip().lower(),
                 sector=(form.sector.data or "").strip() or None,
+                whatsapp=(form.whatsapp.data or "").strip() or None,
                 is_admin=bool(form.is_admin.data),
                 is_active=bool(form.is_active.data),
             )
@@ -71,6 +72,7 @@ def edit(uid):
             u.name = form.name.data.strip()
             u.email = form.email.data.strip().lower()
             u.sector = (form.sector.data or "").strip() or None
+            u.whatsapp = (form.whatsapp.data or "").strip() or None
             u.is_admin = bool(form.is_admin.data)
             # Não permite o próprio admin se autodesativar
             if u.id == current_user.id and not form.is_active.data:
