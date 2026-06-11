@@ -11,6 +11,7 @@ from ..forms.catalog import ProductForm
 from ..models.product import Product
 from ..models.category import Category
 from ..models.supplier import Supplier
+from ..services import people
 
 bp = Blueprint("products", __name__)
 
@@ -128,6 +129,7 @@ def _populate_choices(form: ProductForm, segment: str = "equipamento") -> None:
     ]
     form.item_type.choices = TYPE_CHOICES
     form.unit.choices = UNIT_CHOICES
+    form.responsible_user.choices = people.user_choices("— Nenhum —")
 
 def _form_to_kwargs(form: ProductForm) -> dict:
     return dict(
@@ -148,6 +150,8 @@ def _form_to_kwargs(form: ProductForm) -> dict:
         location=(form.location.data or "").strip() or None,
         compatibility=(form.compatibility.data or "").strip() or None,
         expiry_date=form.expiry_date.data or None,
+        responsible_user=(form.responsible_user.data or "").strip() or None,
+        responsible_sector=(form.responsible_sector.data or "").strip() or None,
     )
 
 @bp.route("")
@@ -222,7 +226,8 @@ def new():
 
     title = "Novo Toner/Cilindro" if segment == "suprimento" else "Novo Produto"
     return render_template("products/form.html", form=form, title=title,
-                           back_url=seg["list_url"], seg=seg)
+                           back_url=seg["list_url"], seg=seg,
+                           users_info=people.users_sector_map())
 
 @bp.route("/<int:pid>/edit", methods=["GET", "POST"])
 @login_required
@@ -234,6 +239,10 @@ def edit(pid):
     # Para garantir que as choices existam ANTES de processar os dados do objeto:
     form = ProductForm()
     _populate_choices(form, segment)
+
+    # Garante que o responsável atual apareça no combobox
+    if p.responsible_user and p.responsible_user not in [c[0] for c in form.responsible_user.choices]:
+        form.responsible_user.choices.append((p.responsible_user, p.responsible_user))
 
     if request.method == "GET":
         # preenche o formulário com o objeto
@@ -256,7 +265,8 @@ def edit(pid):
 
     title = "Editar Toner/Cilindro" if segment == "suprimento" else "Editar Produto"
     return render_template("products/form.html", form=form, title=title,
-                           back_url=seg["list_url"], seg=seg)
+                           back_url=seg["list_url"], seg=seg,
+                           users_info=people.users_sector_map())
 
 @bp.route("/<int:pid>/delete", methods=["POST"])
 @login_required

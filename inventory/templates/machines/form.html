@@ -52,8 +52,12 @@
             {{ form.assigned_user.label(class="form-label fw-semibold") }}
             <div class="input-group">
               <span class="input-group-text"><i class="bi bi-person"></i></span>
-              {{ form.assigned_user(class="form-control" + (" is-invalid" if form.assigned_user.errors else ""), placeholder="Nome do usuário ou setor") }}
+              {{ form.assigned_user(class="form-control" + (" is-invalid" if form.assigned_user.errors else ""), placeholder="Nome do usuário", id="assigned_user", list="userList", autocomplete="off") }}
             </div>
+            <datalist id="userList">
+              {% for u in (user_names or []) %}<option value="{{ u }}">{% endfor %}
+            </datalist>
+            <div class="form-text">Escolha um existente ou digite um novo.</div>
             {{ field_error(form.assigned_user) }}
           </div>
           <div class="col-12 col-md-5">
@@ -69,7 +73,7 @@
         <div class="row g-3 mt-1">
           <div class="col-12 col-md-4">
             {{ form.sector.label(class="form-label fw-semibold") }}
-            {{ form.sector(class="form-control" + (" is-invalid" if form.sector.errors else ""), placeholder="Ex.: Financeiro") }}
+            {{ form.sector(class="form-control" + (" is-invalid" if form.sector.errors else ""), id="sector", placeholder="Ex.: Financeiro") }}
             {{ field_error(form.sector) }}
           </div>
           <div class="col-12 col-md-4">
@@ -103,4 +107,18 @@
     </div>
   </div>
 </div>
+
+<script>
+  (function(){
+    const UINFO = {{ (users_info or {})|tojson }};   // usuário -> setor
+    const usr = document.getElementById('assigned_user');
+    const sec = document.getElementById('sector');
+    if (!usr || !sec) return;
+    function fill(){
+      const setor = UINFO[(usr.value || '').trim()];
+      if (setor !== undefined && setor !== '') sec.value = setor;  // usuário conhecido
+    }
+    usr.addEventListener('change', fill);
+  })();
+</script>
 {% endblock %}

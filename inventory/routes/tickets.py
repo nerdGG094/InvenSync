@@ -9,6 +9,7 @@ from ..forms.tickets import TicketForm, CommentForm
 from ..models.ticket import Ticket
 from ..models.user import User
 from ..models.machine import Machine
+from ..services import people
 
 bp = Blueprint("tickets", __name__)
 
@@ -38,17 +39,7 @@ def _machines_info() -> dict:
 
 def _users_info() -> dict:
     """Mapa usuário (cadastrado em Máquinas) -> setor."""
-    info = {}
-    for m in Machine.query.all():
-        u = (m.assigned_user or "").strip()
-        if u and (u not in info or (not info[u] and m.sector)):
-            info[u] = m.sector or ""
-    return info
-
-
-def _requester_choices():
-    users = sorted(_users_info().keys(), key=lambda s: s.lower())
-    return [("", "— Selecione —")] + [(u, u) for u in users]
+    return people.users_sector_map()
 
 
 def _populate(form: TicketForm):
@@ -57,7 +48,7 @@ def _populate(form: TicketForm):
     machines = Machine.query.order_by(Machine.assigned_user.asc().nullslast(),
                                       Machine.model.asc()).all()
     form.machine_id.choices = [(0, "— Nenhuma —")] + [(m.id, _machine_label(m)) for m in machines]
-    form.requester.choices = _requester_choices()
+    form.requester.choices = people.user_choices()
 
 
 def _to_kwargs(form: TicketForm) -> dict:

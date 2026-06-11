@@ -35,13 +35,15 @@
             {{ form.assigned_employee.label(class="form-label fw-semibold") }}
             <div class="input-group">
               <span class="input-group-text"><i class="bi bi-person"></i></span>
-              {{ form.assigned_employee(class="form-control" + (" is-invalid" if form.assigned_employee.errors else ""), placeholder="Funcionário que recebeu") }}
+              {{ form.assigned_employee(class="form-select" + (" is-invalid" if form.assigned_employee.errors else ""), id="assigned_employee") }}
             </div>
+            <div class="form-text">Usuários cadastrados em Máquinas.</div>
             {{ field_error(form.assigned_employee) }}
           </div>
           <div class="col-12 col-md-5">
             {{ form.sector.label(class="form-label fw-semibold") }}
-            {{ form.sector(class="form-control" + (" is-invalid" if form.sector.errors else ""), placeholder="Ex.: Vendas") }}
+            {{ form.sector(class="form-control" + (" is-invalid" if form.sector.errors else ""), id="sector", placeholder="Automático") }}
+            <div class="form-text">Vem do cadastro da máquina.</div>
             {{ field_error(form.sector) }}
           </div>
         </div>
@@ -109,4 +111,17 @@
     </div>
   </div>
 </div>
+
+<script>
+  (function(){
+    const UINFO = {{ (users_info or {})|tojson }};   // usuário -> setor
+    const emp = document.getElementById('assigned_employee');
+    const sec = document.getElementById('sector');
+    if (!emp || !sec) return;
+    emp.addEventListener('change', function(){
+      const setor = UINFO[this.value];
+      if (setor) sec.value = setor;
+    });
+  })();
+</script>
 {% endblock %}

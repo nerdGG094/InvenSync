@@ -39,6 +39,10 @@ class ProductForm(FlaskForm):
     compatibility = TextAreaField("Compatibilidade", validators=[Optional()])
     expiry_date = DateField("Validade", validators=[Optional()])
 
+    # Usuário responsável (de Máquinas) + setor automático
+    responsible_user = SelectField("Usuário responsável", validators=[Optional()], choices=[])
+    responsible_sector = StringField("Setor", validators=[Optional(), Length(max=120)])
+
     submit = SubmitField("Salvar")
 
 class MovementForm(FlaskForm):
@@ -46,5 +50,8 @@ class MovementForm(FlaskForm):
     movement_type = SelectField("Tipo", choices=[("IN","Entrada"),("OUT","Saída")])
     quantity = IntegerField("Quantidade", validators=[DataRequired(), NumberRange(min=1)])
     unit_cost = DecimalField("Custo unitário (opcional)", places=2, validators=[Optional(), NumberRange(min=0)])
+    # Usuário responsável (de Máquinas) + setor automático
+    responsible_user = SelectField("Usuário responsável", validators=[Optional()], choices=[])
+    responsible_sector = StringField("Setor", validators=[Optional(), Length(max=120)])
     note = TextAreaField("Observação", validators=[Optional()])
     submit = SubmitField("Registrar")

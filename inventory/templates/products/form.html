@@ -166,6 +166,21 @@
           {{ field_error(form.compatibility) }}
         </div>
 
+        <div class="row g-3 mt-1">
+          <div class="col-12 col-md-7">
+            {{ form.responsible_user.label(class="form-label fw-semibold") }}
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-person"></i></span>
+              {{ form.responsible_user(class="form-select", id="responsible_user") }}
+            </div>
+            <div class="form-text">Usuário de Máquinas (opcional).</div>
+          </div>
+          <div class="col-12 col-md-5">
+            {{ form.responsible_sector.label(class="form-label fw-semibold") }}
+            {{ form.responsible_sector(class="form-control", id="responsible_sector", placeholder="Automático") }}
+          </div>
+        </div>
+
         <!-- Ações -->
         <div class="d-flex justify-content-end gap-2 mt-4">
           <a href="{{ back_url or url_for('products.list_view') }}" class="btn btn-outline-light">Cancelar</a>
@@ -215,6 +230,18 @@
 
     // Botão: força nova geração e volta ao modo automático.
     if (genBtn) genBtn.addEventListener('click', function(){ skuTouched = false; suggest(true); });
+  })();
+
+  // Responsável -> setor automático
+  (function(){
+    const UINFO = {{ (users_info or {})|tojson }};
+    const usr = document.getElementById('responsible_user');
+    const sec = document.getElementById('responsible_sector');
+    if (!usr || !sec) return;
+    usr.addEventListener('change', function(){
+      const setor = UINFO[this.value];
+      if (setor) sec.value = setor;
+    });
   })();
 </script>
 {% endblock %}

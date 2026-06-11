@@ -11,6 +11,10 @@ class StockMovement(db.Model):
     note = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, server_default=db.func.now(), index=True)
 
+    # Usuário responsável (de Máquinas) + setor — ex.: para quem foi o item
+    responsible_user = db.Column(db.String(150), nullable=True, index=True)
+    responsible_sector = db.Column(db.String(120), nullable=True)
+
     # quem fez a movimentação
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
     user = db.relationship("User", backref="stock_movements", lazy="joined")

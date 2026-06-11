@@ -18,7 +18,8 @@ class MobileForm(FlaskForm):
     plan = StringField("Plano / Pacote", validators=[Optional(), Length(max=80)])
     imei = StringField("IMEI", validators=[Optional(), Length(max=40)])
     serial_number = StringField("Nº de Série", validators=[Optional(), Length(max=120)])
-    assigned_employee = StringField("Funcionário", validators=[Optional(), Length(max=150)])
+    # choices preenchidas na rota com os usuários cadastrados em Máquinas
+    assigned_employee = SelectField("Funcionário", validators=[Optional()], choices=[])
     sector = StringField("Setor", validators=[Optional(), Length(max=120)])
     patrimony = StringField("Nº Patrimônio", validators=[Optional(), Length(max=60)])
     status = SelectField("Status", choices=STATUS_CHOICES, validators=[DataRequired()])

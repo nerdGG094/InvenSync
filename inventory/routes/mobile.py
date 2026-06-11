@@ -7,8 +7,13 @@ from ..extensions import db
 from ..repositories import mobile_repo
 from ..forms.mobile import MobileForm
 from ..models.mobile import MobileDevice
+from ..services import people
 
 bp = Blueprint("mobile", __name__)
+
+
+def _populate(form: MobileForm):
+    form.assigned_employee.choices = people.user_choices()
 
 
 def _to_kwargs(form: MobileForm) -> dict:
@@ -54,11 +59,13 @@ def list_view():
 @login_required
 def new():
     form = MobileForm()
+    _populate(form)
     if form.validate_on_submit():
         mobile_repo.create_mobile(**_to_kwargs(form))
         flash("Celular cadastrado!", "success")
         return redirect(url_for("mobile.list_view"))
-    return render_template("mobile/form.html", form=form, title="Novo Celular")
+    return render_template("mobile/form.html", form=form, title="Novo Celular",
+                           users_info=people.users_sector_map())
 
 
 @bp.route("/<int:mid>/edit", methods=["GET", "POST"])
@@ -66,11 +73,17 @@ def new():
 def edit(mid):
     m = mobile_repo.get_mobile(mid)
     form = MobileForm(obj=m)
+    _populate(form)
+    if m.assigned_employee and m.assigned_employee not in [c[0] for c in form.assigned_employee.choices]:
+        form.assigned_employee.choices.append((m.assigned_employee, m.assigned_employee))
+    if request.method == "GET":
+        form.assigned_employee.data = m.assigned_employee or ""
     if form.validate_on_submit():
         mobile_repo.update_mobile(m, **_to_kwargs(form))
         flash("Celular atualizado!", "success")
         return redirect(url_for("mobile.list_view"))
-    return render_template("mobile/form.html", form=form, title="Editar Celular")
+    return render_template("mobile/form.html", form=form, title="Editar Celular",
+                           users_info=people.users_sector_map())
 
 
 @bp.route("/<int:mid>/delete", methods=["POST"])

@@ -44,6 +44,10 @@ class Product(db.Model):
     compatibility = db.Column(db.Text, nullable=True)         # Compatibilidade (impressoras/modelos)
     expiry_date = db.Column(db.Date, nullable=True)           # Validade (toner/cilindro)
 
+    # Usuário responsável (de Máquinas) + setor automático
+    responsible_user = db.Column(db.String(150), nullable=True, index=True)
+    responsible_sector = db.Column(db.String(120), nullable=True)
+
     category = db.relationship("Category", backref=db.backref("products", lazy=True))
     supplier = db.relationship("Supplier", backref=db.backref("products", lazy=True))
 

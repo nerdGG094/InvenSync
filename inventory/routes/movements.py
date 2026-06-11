@@ -10,6 +10,7 @@ from ..repositories import movement_repo
 from ..forms.catalog import MovementForm
 from ..models.product import Product
 from ..models.movement import StockMovement  # para filtrar/consultar com joins
+from ..services import people
 
 
 bp = Blueprint("movements", __name__)
@@ -32,6 +33,7 @@ def list_and_new():
     form.product_id.choices = [
         (p.id, f"{p.sku} - {p.name}") for p in Product.query.order_by(Product.name).all()
     ]
+    form.responsible_user.choices = people.user_choices("— Nenhum —")
 
     if form.validate_on_submit():
         movement_repo.create_movement(
@@ -40,6 +42,8 @@ def list_and_new():
             quantity=form.quantity.data,
             unit_cost=form.unit_cost.data,
             note=form.note.data,
+            responsible_user=(form.responsible_user.data or "").strip() or None,
+            responsible_sector=(form.responsible_sector.data or "").strip() or None,
         )
         flash("Movimentação registrada!", "success")
         return redirect(url_for("movements.list_and_new"))
@@ -119,4 +123,5 @@ def list_and_new():
         items=items,
         pagination=pagination,
         totals=totals,
+        users_info=people.users_sector_map(),
     )

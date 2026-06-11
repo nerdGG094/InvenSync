@@ -25,6 +25,8 @@ _ALLOWED_FIELDS = {
     "location",
     "compatibility",
     "expiry_date",
+    "responsible_user",
+    "responsible_sector",
 }
 
 

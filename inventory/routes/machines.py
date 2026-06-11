@@ -7,6 +7,7 @@ from ..extensions import db
 from ..repositories import machine_repo
 from ..forms.machines import MachineForm
 from ..models.machine import Machine
+from ..services import people
 
 bp = Blueprint("machines", __name__)
 
@@ -61,7 +62,8 @@ def new():
         machine_repo.create_machine(**_form_to_kwargs(form))
         flash("Máquina cadastrada!", "success")
         return redirect(url_for("machines.list_view"))
-    return render_template("machines/form.html", form=form, title="Nova Máquina")
+    return render_template("machines/form.html", form=form, title="Nova Máquina",
+                           user_names=people.user_names(), users_info=people.users_sector_map())
 
 
 @bp.route("/<int:mid>/edit", methods=["GET", "POST"])
@@ -73,7 +75,8 @@ def edit(mid):
         machine_repo.update_machine(m, **_form_to_kwargs(form))
         flash("Máquina atualizada!", "success")
         return redirect(url_for("machines.list_view"))
-    return render_template("machines/form.html", form=form, title="Editar Máquina")
+    return render_template("machines/form.html", form=form, title="Editar Máquina",
+                           user_names=people.user_names(), users_info=people.users_sector_map())
 
 
 @bp.route("/<int:mid>/delete", methods=["POST"])

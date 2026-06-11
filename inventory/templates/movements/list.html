@@ -135,6 +135,21 @@
             {{ field_error(form.unit_cost) }}
           </div>
 
+          <div class="row g-2">
+            <div class="col-12 col-md-7">
+              {{ form.responsible_user.label(class="form-label fw-semibold mb-1") }}
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-person"></i></span>
+                {{ form.responsible_user(class="form-select", id="responsible_user") }}
+              </div>
+              <div class="form-text">Para quem foi (usuários de Máquinas).</div>
+            </div>
+            <div class="col-12 col-md-5">
+              {{ form.responsible_sector.label(class="form-label fw-semibold mb-1") }}
+              {{ form.responsible_sector(class="form-control", id="responsible_sector", placeholder="Automático") }}
+            </div>
+          </div>
+
           <div>
             {{ form.note.label(class="form-label fw-semibold mb-1") }}
             {{ form.note(class="form-control", rows=2, maxlength=240, placeholder="Ex.: NF, motivo, etc.") }}
@@ -241,4 +256,17 @@
     </div>
   </section>
 </div>
+
+<script>
+  (function(){
+    const UINFO = {{ (users_info or {})|tojson }};   // usuário -> setor
+    const usr = document.getElementById('responsible_user');
+    const sec = document.getElementById('responsible_sector');
+    if (!usr || !sec) return;
+    usr.addEventListener('change', function(){
+      const setor = UINFO[this.value];
+      if (setor) sec.value = setor;
+    });
+  })();
+</script>
 {% endblock %}
