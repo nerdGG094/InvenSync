@@ -36,12 +36,28 @@ def _machines_info() -> dict:
     return info
 
 
+def _users_info() -> dict:
+    """Mapa usuário (cadastrado em Máquinas) -> setor."""
+    info = {}
+    for m in Machine.query.all():
+        u = (m.assigned_user or "").strip()
+        if u and (u not in info or (not info[u] and m.sector)):
+            info[u] = m.sector or ""
+    return info
+
+
+def _requester_choices():
+    users = sorted(_users_info().keys(), key=lambda s: s.lower())
+    return [("", "— Selecione —")] + [(u, u) for u in users]
+
+
 def _populate(form: TicketForm):
     users = User.query.filter_by(is_active=True).order_by(User.name).all()
     form.assigned_to_id.choices = [(0, "— Não atribuído —")] + [(u.id, u.name) for u in users]
     machines = Machine.query.order_by(Machine.assigned_user.asc().nullslast(),
                                       Machine.model.asc()).all()
     form.machine_id.choices = [(0, "— Nenhuma —")] + [(m.id, _machine_label(m)) for m in machines]
+    form.requester.choices = _requester_choices()
 
 
 def _to_kwargs(form: TicketForm) -> dict:
@@ -97,7 +113,7 @@ def new():
         flash(f"Chamado {t.code} criado!", "success")
         return redirect(url_for("tickets.detail", tid=t.id))
     return render_template("tickets/form.html", form=form, title="Novo Chamado",
-                           machines_info=_machines_info())
+                           machines_info=_machines_info(), users_info=_users_info())
 
 
 @bp.route("/<int:tid>")
@@ -129,15 +145,20 @@ def edit(tid):
     t = ticket_repo.get_ticket(tid)
     form = TicketForm(obj=t)
     _populate(form)
+    # Garante que o solicitante atual apareça no combobox, mesmo que a máquina
+    # tenha sido removida/renomeada depois.
+    if t.requester and t.requester not in [c[0] for c in form.requester.choices]:
+        form.requester.choices.append((t.requester, t.requester))
     if request.method == "GET":
         form.assigned_to_id.data = t.assigned_to_id or 0
         form.machine_id.data = t.machine_id or 0
+        form.requester.data = t.requester or ""
     if form.validate_on_submit():
         ticket_repo.update_ticket(t, **_to_kwargs(form))
         flash("Chamado atualizado!", "success")
         return redirect(url_for("tickets.detail", tid=t.id))
     return render_template("tickets/form.html", form=form, title=f"Editar {t.code}",
-                           machines_info=_machines_info())
+                           machines_info=_machines_info(), users_info=_users_info())
 
 
 @bp.route("/<int:tid>/delete", methods=["POST"])

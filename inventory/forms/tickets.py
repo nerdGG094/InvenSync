@@ -28,7 +28,8 @@ STATUS_CHOICES = [
 
 class TicketForm(FlaskForm):
     title = StringField("Título / Assunto", validators=[DataRequired(), Length(min=2, max=200)])
-    requester = StringField("Solicitante", validators=[Optional(), Length(max=150)])
+    # choices são preenchidas na rota com os usuários cadastrados em Máquinas
+    requester = SelectField("Solicitante", validators=[Optional()], choices=[])
     sector = StringField("Setor", validators=[Optional(), Length(max=120)])
     category = SelectField("Categoria", choices=CATEGORY_CHOICES, validators=[DataRequired()])
     priority = SelectField("Prioridade", choices=PRIORITY_CHOICES, validators=[DataRequired()])
