@@ -11,6 +11,7 @@ Execução:
 """
 import json
 import os
+import shutil
 import socket
 import subprocess
 import sys
@@ -18,6 +19,12 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except Exception:
+    pass
 
 from PyQt5.QtCore import QThread, Qt, QTimer, QUrl, pyqtSignal
 from PyQt5.QtGui import (
@@ -33,6 +40,11 @@ from PyQt5.QtWidgets import (
 PROJECT_ROOT = Path(__file__).resolve().parent
 SERVE_SCRIPT = PROJECT_ROOT / "serve.py"
 ICON_PATH = PROJECT_ROOT / "inventory" / "static" / "favicon.ico"
+
+# wppconnect-server (WhatsApp) — sobe junto com o app
+WPP_DIR = PROJECT_ROOT / "wpp-server"
+WPP_BIN = WPP_DIR / "node_modules" / "@wppconnect" / "server-cli" / "bin" / "wppserver.js"
+WPP_CONFIG = WPP_DIR / "wppconfig.json"
 
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = "5090"
@@ -250,6 +262,7 @@ class LauncherWindow(QMainWindow):
 
         self.proc: subprocess.Popen | None = None
         self.reader: ServerReader | None = None
+        self.wpp_proc: subprocess.Popen | None = None
         self._intentional_stop = False
         self._url = ""
         self._started_at: float | None = None
@@ -270,6 +283,46 @@ class LauncherWindow(QMainWindow):
         # variável de ambiente INVENSYNC_NO_AUTOSTART=1.
         if os.environ.get("INVENSYNC_NO_AUTOSTART", "0") not in ("1", "true", "True"):
             QTimer.singleShot(600, self.start_server)
+
+        # Sobe o wppconnect-server (WhatsApp) junto, se instalado e habilitado.
+        QTimer.singleShot(900, self._start_wpp)
+
+    # ---------- WhatsApp (wppconnect-server) ----------
+    def _start_wpp(self):
+        if not WPP_BIN.exists():
+            self._log(">>> WhatsApp: wpp-server não instalado (pulando).")
+            return
+        if os.environ.get("WHATSAPP_ENABLED", "0") not in ("1", "true", "True"):
+            self._log(">>> WhatsApp: desativado (.env WHATSAPP_ENABLED=0).")
+            return
+        if self.wpp_proc and self.wpp_proc.poll() is None:
+            return  # já rodando
+        node = shutil.which("node") or "node"
+        port = os.environ.get("WPP_SERVER_PORT", "21465")
+        secret = os.environ.get("WPP_SERVER_SECRET", "")
+        cmd = [node, str(WPP_BIN), "--port", str(port), "--startAllSession"]
+        if WPP_CONFIG.exists():
+            cmd += ["-c", str(WPP_CONFIG)]
+        if secret:
+            cmd += ["--secretKey", secret]
+        creationflags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+        log_path = WPP_DIR / "wpp-server.log"
+        try:
+            self._wpp_log = open(log_path, "a", encoding="utf-8", errors="replace")
+            self.wpp_proc = subprocess.Popen(
+                cmd, cwd=str(WPP_DIR), stdout=self._wpp_log, stderr=subprocess.STDOUT,
+                creationflags=creationflags,
+            )
+            self._log(f">>> WhatsApp: wppconnect-server iniciado na porta {port}.")
+        except Exception as e:
+            self._log(f"[ERRO] WhatsApp: falha ao iniciar wpp-server: {e}")
+
+    def _stop_wpp(self):
+        if self.wpp_proc and self.wpp_proc.poll() is None:
+            try:
+                self.wpp_proc.terminate()
+            except Exception:
+                pass
 
     # ---------- UI ----------
     def _build_ui(self):
@@ -734,6 +787,7 @@ class LauncherWindow(QMainWindow):
                     self.proc.kill()
                 except Exception:
                     pass
+        self._stop_wpp()
         self.tray.hide()
         QApplication.quit()
 

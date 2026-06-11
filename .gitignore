@@ -28,6 +28,13 @@ instance/*.sqlite3
 inventory/static/uploads/avatars/*
 !inventory/static/uploads/avatars/.keep
 
+# === wppconnect-server (Node) ===
+wpp-server/node_modules/
+wpp-server/tokens/
+wpp-server/userDataDir/
+wpp-server/WhatsAppImages/
+wpp-server/*.log
+
 # === Logs ===
 *.log
 flask_output.log

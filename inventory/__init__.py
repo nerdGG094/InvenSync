@@ -75,6 +75,7 @@ def create_app():
     from .routes.tickets import bp as tickets_bp  # ⬅️ NOVO: controlador de chamados
     from .routes.mobile import bp as mobile_bp  # ⬅️ NOVO: cadastro de celulares
     from .routes.profile import bp as profile_bp  # ⬅️ NOVO: meu perfil
+    from .routes.wpp import bp as wpp_bp  # ⬅️ NOVO: conexão WhatsApp (admin)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -91,6 +92,7 @@ def create_app():
     app.register_blueprint(tickets_bp, url_prefix="/tickets")  # ⬅️ NOVO: chamados
     app.register_blueprint(mobile_bp, url_prefix="/mobile")  # ⬅️ NOVO: celulares
     app.register_blueprint(profile_bp, url_prefix="/profile")  # ⬅️ NOVO: meu perfil
+    app.register_blueprint(wpp_bp, url_prefix="/wpp")  # ⬅️ NOVO: conexão WhatsApp
 
     # ===== Controle de acesso por módulo =====
     # Usuários comuns (não-admin) só acessam Chamados e o próprio Perfil.

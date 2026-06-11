@@ -11,6 +11,7 @@ Pensado para o wppconnect-server (REST):
 """
 import json
 import re
+import threading
 import urllib.request
 
 from flask import current_app
@@ -34,18 +35,13 @@ def _enabled() -> bool:
     return bool(current_app.config.get("WHATSAPP_ENABLED"))
 
 
-def _send_one(target: str, text: str) -> bool:
-    base = current_app.config.get("WHATSAPP_API_URL")
-    session = current_app.config.get("WHATSAPP_SESSION")
-    token = current_app.config.get("WHATSAPP_TOKEN")
+def _send_raw(base, session, token, target: str, text: str) -> bool:
     if not base or not session:
         return False
-
     is_group = str(target).endswith("@g.us")
     phone = target if is_group else _normalize(target)
     if not phone:
         return False
-
     url = f"{base.rstrip('/')}/api/{session}/send-message"
     body = json.dumps({"phone": phone, "message": text, "isGroup": is_group}).encode("utf-8")
     headers = {"Content-Type": "application/json"}
@@ -55,8 +51,7 @@ def _send_one(target: str, text: str) -> bool:
     try:
         with urllib.request.urlopen(req, timeout=8) as r:
             return 200 <= r.status < 300
-    except Exception as e:  # noqa: BLE001
-        current_app.logger.warning("WhatsApp falhou (%s): %s", target, e)
+    except Exception:  # noqa: BLE001
         return False
 
 
@@ -73,14 +68,31 @@ def _ti_targets() -> set:
     return {t for t in targets if t}
 
 
+def _dispatch(targets, text: str):
+    """Envia em background (não bloqueia a requisição do chamado)."""
+    if not _enabled():
+        return
+    base = current_app.config.get("WHATSAPP_API_URL")
+    session = current_app.config.get("WHATSAPP_SESSION")
+    token = current_app.config.get("WHATSAPP_TOKEN")
+    nums = [t for t in targets if t]
+    if not nums:
+        return
+
+    def worker():
+        for t in nums:
+            try:
+                _send_raw(base, session, token, t, text)
+            except Exception:  # noqa: BLE001
+                pass
+
+    threading.Thread(target=worker, daemon=True).start()
+
+
 def notify_ti(text: str):
     if not _enabled():
         return
-    for t in _ti_targets():
-        try:
-            _send_one(t, text)
-        except Exception:  # noqa: BLE001
-            pass
+    _dispatch(_ti_targets(), text)
 
 
 def notify_user(user, text: str):
@@ -88,7 +100,40 @@ def notify_user(user, text: str):
         return
     num = getattr(user, "whatsapp", None)
     if num:
-        try:
-            _send_one(num, text)
-        except Exception:  # noqa: BLE001
-            pass
+        _dispatch([num], text)
+
+
+# ===== Sessão / conexão (usado pela página de QR no app) =====
+def _api(path: str, method: str = "GET", body: dict = None, timeout: int = 20):
+    base = current_app.config.get("WHATSAPP_API_URL")
+    session = current_app.config.get("WHATSAPP_SESSION")
+    token = current_app.config.get("WHATSAPP_TOKEN")
+    if not base or not session:
+        return None
+    url = f"{base.rstrip('/')}/api/{session}/{path}"
+    headers = {"Content-Type": "application/json"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    data = json.dumps(body).encode("utf-8") if body is not None else None
+    req = urllib.request.Request(url, data=data, method=method, headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return json.loads(r.read().decode("utf-8"))
+    except Exception as e:  # noqa: BLE001
+        current_app.logger.warning("WhatsApp API %s falhou: %s", path, e)
+        return None
+
+
+def status():
+    """Status da sessão (+ qrcode quando estiver aguardando leitura)."""
+    return _api("status-session") or {"status": "OFFLINE", "qrcode": None}
+
+
+def start():
+    """Inicia a sessão e retorna o QR (waitQrCode aguarda o QR ser gerado)."""
+    return _api("start-session", "POST", {"webhook": "", "waitQrCode": True}, timeout=40)
+
+
+def configured() -> bool:
+    return bool(current_app.config.get("WHATSAPP_API_URL")
+                and current_app.config.get("WHATSAPP_TOKEN"))

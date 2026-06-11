@@ -1,0 +1,11 @@
+{
+  "host": "http://localhost",
+  "deviceName": "InvenSync",
+  "poweredBy": "InvenSync",
+  "startAllSession": true,
+  "tokenStoreType": "file",
+  "createOptions": {
+    "autoClose": 0,
+    "waitForLogin": true
+  }
+}

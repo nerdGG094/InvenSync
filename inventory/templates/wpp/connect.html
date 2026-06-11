@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Conectar WhatsApp{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="ph-title"><span class="ph-icon" style="background:linear-gradient(135deg,#25d366,#128c7e)"><i class="bi bi-whatsapp"></i></span> Conectar WhatsApp</h1>
+</div>
+
+{% if not configured %}
+<div class="alert alert-warning">
+  <i class="bi bi-exclamation-triangle me-1"></i>
+  O WhatsApp ainda não está configurado. Preencha <code>WHATSAPP_API_URL</code> e <code>WHATSAPP_TOKEN</code> no <code>.env</code> e reinicie pelo launcher.
+</div>
+{% else %}
+<div class="container px-0" style="max-width:560px">
+  <div class="table-card p-4 text-center">
+    <div id="statusBox" class="mb-3">
+      <span class="badge bg-secondary-subtle text-secondary-emphasis" id="statusBadge"><i class="bi bi-hourglass-split me-1"></i>Verificando…</span>
+    </div>
+
+    <div id="qrArea" style="display:none">
+      <p class="text-muted">Abra o <strong>WhatsApp</strong> no celular do número robô → <strong>Aparelhos conectados</strong> → <strong>Conectar um aparelho</strong> e aponte para o QR:</p>
+      <img id="qrImg" alt="QR Code" style="width:280px;height:280px;background:#fff;border-radius:12px;padding:8px">
+      <p class="text-muted small mt-2">O QR atualiza sozinho. Mantenha esta tela aberta.</p>
+    </div>
+
+    <div id="connectedArea" style="display:none">
+      <div class="display-1 text-success"><i class="bi bi-check-circle-fill"></i></div>
+      <h2 class="h4 mt-2">WhatsApp conectado!</h2>
+      <p class="text-muted">As notificações de chamados já vão sair por aqui.</p>
+    </div>
+
+    <div class="mt-3">
+      <button id="btnReconnect" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-repeat"></i> Reconectar / novo QR</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    const STATUS_URL = "{{ url_for('wpp.status') }}";
+    const START_URL  = "{{ url_for('wpp.start') }}";
+    const badge = document.getElementById('statusBadge');
+    const qrArea = document.getElementById('qrArea');
+    const qrImg = document.getElementById('qrImg');
+    const connArea = document.getElementById('connectedArea');
+    const btn = document.getElementById('btnReconnect');
+    const CONNECTED = ['CONNECTED','inChat','isLogged','qrReadSuccess','chatsAvailable'];
+    let connected = false, refreshing = false, lastQr = 0;
+
+    function setBadge(html, cls){ badge.className = 'badge bg-'+cls+'-subtle text-'+cls+'-emphasis'; badge.innerHTML = html; }
+    function showConnected(){ connected=true; qrArea.style.display='none'; connArea.style.display='block';
+      setBadge('<i class="bi bi-check-circle me-1"></i>Conectado', 'success'); }
+
+    async function refreshQr(){
+      if (connected || refreshing) return;
+      refreshing = true;
+      setBadge('<i class="bi bi-hourglass-split me-1"></i>Gerando QR…', 'warning');
+      try{
+        const r = await fetch(START_URL, {method:'POST'}); const d = await r.json();
+        const st = (d.status||'').toString();
+        if (CONNECTED.includes(st)) { showConnected(); }
+        else if (d.qrcode){
+          qrImg.src = d.qrcode; qrArea.style.display='block'; lastQr = Date.now();
+          setBadge('<i class="bi bi-qr-code me-1"></i>Aguardando leitura do QR', 'info');
+        } else {
+          setBadge('<i class="bi bi-arrow-repeat me-1"></i>Aguardando QR… ('+(st||'—')+')', 'warning');
+        }
+      }catch(e){ setBadge('<i class="bi bi-x-circle me-1"></i>WhatsApp indisponível', 'danger'); }
+      refreshing = false;
+    }
+
+    async function pollStatus(){
+      try{
+        const r = await fetch(STATUS_URL); const d = await r.json();
+        if (CONNECTED.includes((d.status||'').toString())) { showConnected(); return; }
+        // QR expira ~a cada 30s: renova
+        if (!connected && (Date.now()-lastQr > 28000)) refreshQr();
+      }catch(e){}
+    }
+
+    btn.addEventListener('click', ()=>{ connected=false; lastQr=0; refreshQr(); });
+    refreshQr();
+    setInterval(pollStatus, 4000);
+  })();
+</script>
+{% endif %}
+{% endblock %}
