@@ -14,6 +14,7 @@
     "@wppconnect/server-cli": "^1.3.11"
   },
   "overrides": {
-    "@wppconnect/wa-js": "4.3.0"
+    "@wppconnect/wa-js": "latest",
+    "@wppconnect/server": "2.10.0"
   }
 }
