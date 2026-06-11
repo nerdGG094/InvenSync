@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+{% macro field_error(field) -%}
+  {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors[0] }}</div>{% endif %}
+{%- endmacro %}
+
+<div class="container d-flex justify-content-center py-2">
+  <div class="card shadow-sm w-100" style="max-width:860px">
+    <div class="card-header d-flex align-items-center justify-content-between">
+      <span class="fw-semibold d-flex align-items-center gap-2"><i class="bi bi-router text-success"></i> {{ title }}</span>
+      <a href="{{ url_for('routers.list_view') }}" class="btn btn-sm btn-outline-light"><i class="bi bi-arrow-left"></i> Voltar</a>
+    </div>
+
+    <div class="card-body">
+      <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+
+        {# ===== Equipamento ===== #}
+        <div class="row g-3">
+          <div class="col-12 col-md-5">
+            {{ form.label.label(class="form-label fw-semibold") }}
+            {{ form.label(class="form-control" + (" is-invalid" if form.label.errors else ""), placeholder="Ex.: AP Recepção") }}
+            {{ field_error(form.label) }}
+          </div>
+          <div class="col-6 col-md-3">
+            {{ form.brand.label(class="form-label fw-semibold") }}
+            {{ form.brand(class="form-control" + (" is-invalid" if form.brand.errors else ""), placeholder="TP-Link, Intelbras...") }}
+            {{ field_error(form.brand) }}
+          </div>
+          <div class="col-6 col-md-4">
+            {{ form.model.label(class="form-label fw-semibold") }}
+            {{ form.model(class="form-control" + (" is-invalid" if form.model.errors else ""), placeholder="Ex.: Archer C6", autofocus=True) }}
+            {{ field_error(form.model) }}
+          </div>
+        </div>
+
+        <div class="row g-3 mt-1">
+          <div class="col-12 col-md-6">
+            {{ form.location.label(class="form-label fw-semibold") }}
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-geo-alt"></i></span>
+              {{ form.location(class="form-control" + (" is-invalid" if form.location.errors else ""), placeholder="Ex.: Galpão / Administrativo") }}
+            </div>
+            {{ field_error(form.location) }}
+          </div>
+          <div class="col-6 col-md-3">
+            {{ form.serial_number.label(class="form-label fw-semibold") }}
+            {{ form.serial_number(class="form-control" + (" is-invalid" if form.serial_number.errors else "")) }}
+            {{ field_error(form.serial_number) }}
+          </div>
+          <div class="col-6 col-md-3">
+            {{ form.patrimony.label(class="form-label fw-semibold") }}
+            {{ form.patrimony(class="form-control" + (" is-invalid" if form.patrimony.errors else "")) }}
+            {{ field_error(form.patrimony) }}
+          </div>
+        </div>
+
+        {# ===== Acesso administrativo ===== #}
+        <hr class="my-3">
+        <div class="fw-semibold text-muted mb-2"><i class="bi bi-person-lock"></i> Acesso administrativo</div>
+        <div class="row g-3">
+          <div class="col-12 col-md-4">
+            {{ form.ip_address.label(class="form-label fw-semibold") }}
+            {{ form.ip_address(class="form-control number" + (" is-invalid" if form.ip_address.errors else ""), placeholder="Ex.: 192.168.0.1") }}
+            {{ field_error(form.ip_address) }}
+          </div>
+          <div class="col-12 col-md-4">
+            {{ form.admin_user.label(class="form-label fw-semibold") }}
+            {{ form.admin_user(class="form-control" + (" is-invalid" if form.admin_user.errors else ""), placeholder="Ex.: admin") }}
+            {{ field_error(form.admin_user) }}
+          </div>
+          <div class="col-12 col-md-4">
+            {{ form.admin_password.label(class="form-label fw-semibold") }}
+            <div class="input-group">
+              {{ form.admin_password(class="form-control" + (" is-invalid" if form.admin_password.errors else ""), placeholder="Senha de acesso", type="password", **{"data-pw":"1"}) }}
+              <button class="btn btn-outline-light btn-pw-toggle" type="button" tabindex="-1"><i class="bi bi-eye"></i></button>
+            </div>
+            {{ field_error(form.admin_password) }}
+          </div>
+          <div class="col-12 col-md-4">
+            {{ form.mac_address.label(class="form-label fw-semibold") }}
+            {{ form.mac_address(class="form-control number" + (" is-invalid" if form.mac_address.errors else ""), placeholder="00:11:22:33:44:55") }}
+            {{ field_error(form.mac_address) }}
+          </div>
+        </div>
+
+        {# ===== Wi-Fi ===== #}
+        <hr class="my-3">
+        <div class="fw-semibold text-muted mb-2"><i class="bi bi-wifi"></i> Rede Wi-Fi</div>
+        <div class="row g-3">
+          <div class="col-12 col-md-6">
+            {{ form.ssid.label(class="form-label fw-semibold") }}
+            {{ form.ssid(class="form-control" + (" is-invalid" if form.ssid.errors else ""), placeholder="Nome da rede principal") }}
+            {{ field_error(form.ssid) }}
+          </div>
+          <div class="col-12 col-md-6">
+            {{ form.wifi_password.label(class="form-label fw-semibold") }}
+            <div class="input-group">
+              {{ form.wifi_password(class="form-control" + (" is-invalid" if form.wifi_password.errors else ""), placeholder="Senha do Wi-Fi", type="password", **{"data-pw":"1"}) }}
+              <button class="btn btn-outline-light btn-pw-toggle" type="button" tabindex="-1"><i class="bi bi-eye"></i></button>
+            </div>
+            {{ field_error(form.wifi_password) }}
+          </div>
+          <div class="col-12 col-md-6">
+            {{ form.ssid_guest.label(class="form-label fw-semibold") }}
+            {{ form.ssid_guest(class="form-control" + (" is-invalid" if form.ssid_guest.errors else ""), placeholder="Rede de visitantes (opcional)") }}
+            {{ field_error(form.ssid_guest) }}
+          </div>
+          <div class="col-12 col-md-6">
+            {{ form.wifi_password_guest.label(class="form-label fw-semibold") }}
+            <div class="input-group">
+              {{ form.wifi_password_guest(class="form-control" + (" is-invalid" if form.wifi_password_guest.errors else ""), placeholder="Senha visitantes", type="password", **{"data-pw":"1"}) }}
+              <button class="btn btn-outline-light btn-pw-toggle" type="button" tabindex="-1"><i class="bi bi-eye"></i></button>
+            </div>
+            {{ field_error(form.wifi_password_guest) }}
+          </div>
+        </div>
+
+        {# ===== Controle por MAC ===== #}
+        <hr class="my-3">
+        <div class="form-check form-switch mb-2">
+          {{ form.mac_filtering(class="form-check-input", role="switch", id="mac_filtering") }}
+          {{ form.mac_filtering.label(class="form-check-label fw-semibold", for="mac_filtering") }}
+        </div>
+        <div>
+          {{ form.linked_macs.label(class="form-label fw-semibold") }}
+          {{ form.linked_macs(class="form-control number", rows=4, placeholder="Um por linha — ex.: 00:11:22:33:44:55  João (celular)") }}
+          <div class="form-text">Liste os MACs dos telefones/dispositivos autorizados quando o filtro estiver ativo.</div>
+        </div>
+
+        {# ===== Status / Observações ===== #}
+        <div class="row g-3 mt-1">
+          <div class="col-6 col-md-4">
+            {{ form.status.label(class="form-label fw-semibold") }}
+            {{ form.status(class="form-select") }}
+          </div>
+        </div>
+
+        <div class="mt-3">
+          {{ form.notes.label(class="form-label fw-semibold") }}
+          {{ form.notes(class="form-control", rows=2, placeholder="Observações (firmware, canal, configurações específicas, etc.)") }}
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-4">
+          <a href="{{ url_for('routers.list_view') }}" class="btn btn-outline-light">Cancelar</a>
+          {{ form.submit(class="btn btn-primary") }}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('.btn-pw-toggle').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var inp = this.parentElement.querySelector('[data-pw]');
+      if (!inp) return;
+      var isPw = inp.type === 'password';
+      inp.type = isPw ? 'text' : 'password';
+      var ic = this.querySelector('i');
+      if (ic){ ic.classList.toggle('bi-eye', !isPw); ic.classList.toggle('bi-eye-slash', isPw); }
+    });
+  });
+</script>
+{% endblock %}

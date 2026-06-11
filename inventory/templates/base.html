@@ -138,6 +138,11 @@
             </li>
           </ul>
         </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.endpoint and request.endpoint.startswith('routers.') %}active{% endif %}" href="{{ url_for('routers.list_view') }}">
+            <i class="bi bi-router"></i> Roteadores
+          </a>
+        </li>
         {% endif %}
         <li class="nav-item">
           <a class="nav-link {% if request.endpoint and request.endpoint.startswith('tickets.') %}active{% endif %}" href="{{ url_for('tickets.list_view') }}">
