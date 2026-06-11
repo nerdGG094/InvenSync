@@ -29,6 +29,7 @@ def create_app():
     from .models.machine import Machine
     from .models.machine_cleaning import MachineCleaning
     from .models.ticket import Ticket, TicketComment
+    from .models.mobile import MobileDevice
 
     # Cria tabelas e semente inicial
     with app.app_context():
@@ -66,6 +67,7 @@ def create_app():
     from .routes.machines import bp as machines_bp  # ⬅️ NOVO: cadastro de máquinas
     from .routes.cleanings import bp as cleanings_bp  # ⬅️ NOVO: limpeza de máquinas
     from .routes.tickets import bp as tickets_bp  # ⬅️ NOVO: controlador de chamados
+    from .routes.mobile import bp as mobile_bp  # ⬅️ NOVO: cadastro de celulares
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -80,6 +82,7 @@ def create_app():
     app.register_blueprint(machines_bp, url_prefix="/machines")  # ⬅️ NOVO: rota /machines
     app.register_blueprint(cleanings_bp, url_prefix="/machines/cleanings")  # ⬅️ NOVO: limpezas
     app.register_blueprint(tickets_bp, url_prefix="/tickets")  # ⬅️ NOVO: chamados
+    app.register_blueprint(mobile_bp, url_prefix="/mobile")  # ⬅️ NOVO: celulares
 
     # Handlers de erro
     @app.errorhandler(404)

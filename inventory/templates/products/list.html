@@ -12,16 +12,17 @@
   'KIT':'Kit/Conjunto','HR':'Hora','MIN':'Minuto'
 } %}
 
+{% set seg = seg or {'title':'Produtos','icon':'bi-grid','new_label':'Novo Produto','new_url':url_for('products.new'),'list_url':url_for('products.list_view')} %}
 <div class="page-header">
   <h1 class="ph-title">
-    <span class="ph-icon"><i class="bi bi-grid"></i></span>
-    Produtos
+    <span class="ph-icon"><i class="bi {{ seg.icon }}"></i></span>
+    {{ seg.title }}
     <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ items|length }}</span>
   </h1>
   <div class="d-flex gap-2">
     <a href="{{ url_for('kanban.board') }}" class="btn btn-outline-light"><i class="bi bi-kanban"></i> Kanban</a>
     <a href="{{ url_for('reports.export_products') }}" class="btn btn-outline-light"><i class="bi bi-filetype-csv"></i> Exportar</a>
-    <a href="{{ url_for('products.new') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Novo Produto</a>
+    <a href="{{ seg.new_url }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> {{ seg.new_label }}</a>
   </div>
 </div>
 
@@ -33,7 +34,7 @@
         <input class="form-control" type="search" placeholder="Buscar por nome ou SKU..." name="q" value="{{ q }}">
       </div>
       {% if q %}
-      <a href="{{ url_for('products.list_view') }}" class="btn btn-outline-light ms-2" title="Limpar"><i class="bi bi-x-lg"></i></a>
+      <a href="{{ seg.list_url }}" class="btn btn-outline-light ms-2" title="Limpar"><i class="bi bi-x-lg"></i></a>
       {% endif %}
     </form>
   </div>

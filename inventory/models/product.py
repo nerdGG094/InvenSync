@@ -9,6 +9,10 @@ class Product(db.Model):
     name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=True)
 
+    # Segmento do item: 'equipamento' (eletrônicos) ou 'suprimento' (toner/cilindro)
+    segment = db.Column(db.String(20), nullable=False, default="equipamento",
+                        server_default="equipamento", index=True)
+
     # NOVOS CAMPOS
     item_type = db.Column(
         db.String(20),

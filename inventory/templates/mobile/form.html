@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+{% macro field_error(field) -%}
+  {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors[0] }}</div>{% endif %}
+{%- endmacro %}
+
+<div class="container d-flex justify-content-center py-2">
+  <div class="card shadow-sm w-100" style="max-width:820px">
+    <div class="card-header d-flex align-items-center justify-content-between">
+      <span class="fw-semibold d-flex align-items-center gap-2"><i class="bi bi-phone text-success"></i> {{ title }}</span>
+      <a href="{{ url_for('mobile.list_view') }}" class="btn btn-sm btn-outline-light"><i class="bi bi-arrow-left"></i> Voltar</a>
+    </div>
+
+    <div class="card-body">
+      <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+
+        <div class="row g-3">
+          <div class="col-12 col-md-4">
+            {{ form.brand.label(class="form-label fw-semibold") }}
+            {{ form.brand(class="form-control" + (" is-invalid" if form.brand.errors else ""), placeholder="Ex.: Samsung, Motorola") }}
+            {{ field_error(form.brand) }}
+          </div>
+          <div class="col-12 col-md-8">
+            {{ form.model.label(class="form-label fw-semibold") }}
+            {{ form.model(class="form-control" + (" is-invalid" if form.model.errors else ""), placeholder="Ex.: Galaxy A15", autofocus=True) }}
+            {{ field_error(form.model) }}
+          </div>
+        </div>
+
+        <div class="row g-3 mt-1">
+          <div class="col-12 col-md-7">
+            {{ form.assigned_employee.label(class="form-label fw-semibold") }}
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-person"></i></span>
+              {{ form.assigned_employee(class="form-control" + (" is-invalid" if form.assigned_employee.errors else ""), placeholder="Funcionário que recebeu") }}
+            </div>
+            {{ field_error(form.assigned_employee) }}
+          </div>
+          <div class="col-12 col-md-5">
+            {{ form.sector.label(class="form-label fw-semibold") }}
+            {{ form.sector(class="form-control" + (" is-invalid" if form.sector.errors else ""), placeholder="Ex.: Vendas") }}
+            {{ field_error(form.sector) }}
+          </div>
+        </div>
+
+        <div class="row g-3 mt-1">
+          <div class="col-12 col-md-4">
+            {{ form.phone_number.label(class="form-label fw-semibold") }}
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+              {{ form.phone_number(class="form-control number" + (" is-invalid" if form.phone_number.errors else ""), placeholder="(00) 00000-0000") }}
+            </div>
+            {{ field_error(form.phone_number) }}
+          </div>
+          <div class="col-6 col-md-4">
+            {{ form.carrier.label(class="form-label fw-semibold") }}
+            {{ form.carrier(class="form-control" + (" is-invalid" if form.carrier.errors else ""), placeholder="Vivo, Claro, TIM...") }}
+            {{ field_error(form.carrier) }}
+          </div>
+          <div class="col-6 col-md-4">
+            {{ form.plan.label(class="form-label fw-semibold") }}
+            {{ form.plan(class="form-control" + (" is-invalid" if form.plan.errors else ""), placeholder="Ex.: Controle 20GB") }}
+            {{ field_error(form.plan) }}
+          </div>
+        </div>
+
+        <div class="row g-3 mt-1">
+          <div class="col-12 col-md-5">
+            {{ form.imei.label(class="form-label fw-semibold") }}
+            {{ form.imei(class="form-control number" + (" is-invalid" if form.imei.errors else ""), placeholder="IMEI do aparelho") }}
+            {{ field_error(form.imei) }}
+          </div>
+          <div class="col-12 col-md-4">
+            {{ form.serial_number.label(class="form-label fw-semibold") }}
+            {{ form.serial_number(class="form-control" + (" is-invalid" if form.serial_number.errors else "")) }}
+            {{ field_error(form.serial_number) }}
+          </div>
+          <div class="col-12 col-md-3">
+            {{ form.patrimony.label(class="form-label fw-semibold") }}
+            {{ form.patrimony(class="form-control" + (" is-invalid" if form.patrimony.errors else "")) }}
+            {{ field_error(form.patrimony) }}
+          </div>
+        </div>
+
+        <div class="row g-3 mt-1">
+          <div class="col-6 col-md-4">
+            {{ form.status.label(class="form-label fw-semibold") }}
+            {{ form.status(class="form-select") }}
+          </div>
+          <div class="col-6 col-md-4">
+            {{ form.handed_at.label(class="form-label fw-semibold") }}
+            {{ form.handed_at(class="form-control", type="date") }}
+          </div>
+        </div>
+
+        <div class="mt-3">
+          {{ form.notes.label(class="form-label fw-semibold") }}
+          {{ form.notes(class="form-control", rows=2, placeholder="Observações (acessórios, termo de responsabilidade, etc.)") }}
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-4">
+          <a href="{{ url_for('mobile.list_view') }}" class="btn btn-outline-light">Cancelar</a>
+          {{ form.submit(class="btn btn-primary") }}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

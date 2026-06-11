@@ -93,12 +93,15 @@
           </a>
         </li>
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle {% if request.endpoint and (request.endpoint.startswith('products.') or request.endpoint.startswith('movements.') or request.endpoint.startswith('kanban.') or request.endpoint.startswith('reports.')) %}active{% endif %}"
+          <a class="nav-link dropdown-toggle {% if request.endpoint and (request.endpoint.startswith('products.') or request.endpoint.startswith('movements.') or request.endpoint.startswith('kanban.') or request.endpoint.startswith('reports.') or request.endpoint.startswith('mobile.')) %}active{% endif %}"
              href="#" id="ddEstoque" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             <i class="bi bi-box-seam"></i> Estoque
           </a>
           <ul class="dropdown-menu" aria-labelledby="ddEstoque">
-            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('products.') %}active{% endif %}" href="{{ url_for('products.list_view') }}"><i class="bi bi-grid me-2"></i> Produtos</a></li>
+            <li><a class="dropdown-item {% if request.endpoint == 'products.list_view' %}active{% endif %}" href="{{ url_for('products.list_view') }}"><i class="bi bi-grid me-2"></i> Produtos</a></li>
+            <li><a class="dropdown-item {% if request.endpoint == 'products.supplies' %}active{% endif %}" href="{{ url_for('products.supplies') }}"><i class="bi bi-printer me-2"></i> Toner &amp; Cilindros</a></li>
+            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('mobile.') %}active{% endif %}" href="{{ url_for('mobile.list_view') }}"><i class="bi bi-phone me-2"></i> Celulares</a></li>
+            <li><hr class="dropdown-divider"></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('movements.') %}active{% endif %}" href="{{ url_for('movements.list_and_new') }}"><i class="bi bi-arrow-left-right me-2"></i> Movimentações</a></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('kanban.') %}active{% endif %}" href="{{ url_for('kanban.board') }}"><i class="bi bi-kanban me-2"></i> Kanban</a></li>
             <li><hr class="dropdown-divider"></li>

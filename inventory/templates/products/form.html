@@ -15,7 +15,7 @@
   <div class="card shadow-sm w-100 form-card">
     <div class="card-header d-flex align-items-center justify-content-between">
       <span class="fw-semibold">{{ title }}</span>
-      <a href="{{ url_for('products.list_view') }}" class="btn btn-sm btn-outline-light">
+      <a href="{{ back_url or url_for('products.list_view') }}" class="btn btn-sm btn-outline-light">
         <i class="bi bi-arrow-left"></i> Voltar
       </a>
     </div>
@@ -168,7 +168,7 @@
 
         <!-- Ações -->
         <div class="d-flex justify-content-end gap-2 mt-4">
-          <a href="{{ url_for('products.list_view') }}" class="btn btn-outline-light">Cancelar</a>
+          <a href="{{ back_url or url_for('products.list_view') }}" class="btn btn-outline-light">Cancelar</a>
           {{ form.submit(class="btn btn-primary") }}
         </div>
       </form>
