@@ -43,6 +43,7 @@ def create_app():
     from .models.credential import Credential
     from .models.license import License
     from .models.kb import KbArticle
+    from .models.domain import Domain
 
     # Cria tabelas e semente inicial
     with app.app_context():
@@ -89,6 +90,7 @@ def create_app():
     from .routes.credentials import bp as credentials_bp  # ⬅️ NOVO: cofre de senhas
     from .routes.licenses import bp as licenses_bp  # ⬅️ NOVO: licenças e garantias
     from .routes.kb import bp as kb_bp  # ⬅️ NOVO: base de conhecimento
+    from .routes.domains import bp as domains_bp  # ⬅️ NOVO: domínios por empresa
     from .routes.profile import bp as profile_bp  # ⬅️ NOVO: meu perfil
     from .routes.wpp import bp as wpp_bp  # ⬅️ NOVO: conexão WhatsApp (admin)
 
@@ -114,6 +116,7 @@ def create_app():
     app.register_blueprint(credentials_bp, url_prefix="/credentials")  # ⬅️ NOVO: cofre de senhas
     app.register_blueprint(licenses_bp, url_prefix="/licenses")  # ⬅️ NOVO: licenças e garantias
     app.register_blueprint(kb_bp, url_prefix="/kb")  # ⬅️ NOVO: base de conhecimento
+    app.register_blueprint(domains_bp, url_prefix="/domains")  # ⬅️ NOVO: domínios
     app.register_blueprint(profile_bp, url_prefix="/profile")  # ⬅️ NOVO: meu perfil
     app.register_blueprint(wpp_bp, url_prefix="/wpp")  # ⬅️ NOVO: conexão WhatsApp
 

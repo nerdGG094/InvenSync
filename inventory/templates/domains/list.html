@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Domínios{% endblock %}
+{% block content %}
+{% set st_meta = {
+  'vencido': ('Vencido','danger'), 'vencendo': ('Vence em breve','warning'),
+  'vigente': ('Vigente','success'), 'sem_data': ('Sem data','secondary') } %}
+{% set reg_lbl = {'registro_br':'Registro.br','godaddy':'GoDaddy','outro':'Outro'} %}
+
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-globe2"></i></span>
+    Domínios
+    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ items|length }}</span>
+  </h1>
+  <div class="d-flex gap-2">
+    <form action="{{ url_for('domains.alert') }}" method="post" onsubmit="return confirm('Enviar alerta dos domínios vencendo (60 dias) à TI por WhatsApp?');">
+      <input type="hidden" name="days" value="60">
+      <button class="btn btn-outline-warning"><i class="bi bi-whatsapp"></i> Alertar TI</button>
+    </form>
+    <a href="{{ url_for('domains.export', q=q, company=company, registrar=registrar) }}" class="btn btn-outline-light"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+    <a href="{{ url_for('domains.new') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Novo Domínio</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-4">
+    <div class="card stat-card h-100" style="border-left-color:#dc3545"><div class="card-body d-flex align-items-center justify-content-between">
+      <div><div class="text-muted small">Vencidos</div><div class="h3 mb-0 number text-danger">{{ counts.vencido }}</div></div>
+      <i class="bi bi-x-octagon fs-2 text-danger"></i>
+    </div></div>
+  </div>
+  <div class="col-4">
+    <div class="card stat-card h-100" style="border-left-color:#ffc107"><div class="card-body d-flex align-items-center justify-content-between">
+      <div><div class="text-muted small">Vencendo (60d)</div><div class="h3 mb-0 number text-warning">{{ counts.vencendo }}</div></div>
+      <i class="bi bi-alarm fs-2 text-warning"></i>
+    </div></div>
+  </div>
+  <div class="col-4">
+    <div class="card stat-card h-100" style="border-left-color:#198754"><div class="card-body d-flex align-items-center justify-content-between">
+      <div><div class="text-muted small">Vigentes</div><div class="h3 mb-0 number text-success">{{ counts.vigente }}</div></div>
+      <i class="bi bi-patch-check fs-2 text-success"></i>
+    </div></div>
+  </div>
+</div>
+
+<div class="table-card">
+  <div class="table-card-tools d-flex flex-wrap align-items-center gap-2">
+    <form class="d-flex flex-wrap gap-2" method="get" role="search">
+      <div class="input-group search-box">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input class="form-control" type="search" placeholder="Domínio ou empresa..." name="q" value="{{ q }}">
+      </div>
+      <select class="form-select" name="company" style="max-width:170px" onchange="this.form.submit()">
+        <option value="">Empresa: todas</option>
+        {% for c in companies %}<option value="{{ c }}" {{ 'selected' if company==c }}>{{ c }}</option>{% endfor %}
+      </select>
+      <select class="form-select" name="registrar" style="max-width:160px" onchange="this.form.submit()">
+        <option value="">Registrador: todos</option>
+        {% for k, lbl in registrars %}<option value="{{ k }}" {{ 'selected' if registrar==k }}>{{ lbl }}</option>{% endfor %}
+      </select>
+      <button class="btn btn-primary btn-icon" type="submit"><i class="bi bi-search"></i></button>
+      {% if q or company or registrar %}<a href="{{ url_for('domains.list_view') }}" class="btn btn-outline-light btn-icon"><i class="bi bi-x-lg"></i></a>{% endif %}
+    </form>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead><tr><th>Domínio</th><th>Empresa</th><th>Registrador</th><th class="text-center">Vencimento</th><th class="text-center">Status</th><th class="text-end" style="width:110px">Ações</th></tr></thead>
+      <tbody>
+        {% for d in items %}
+        <tr class="{{ 'opacity-75' if d.status=='vencido' }}">
+          <td class="fw-semibold"><i class="bi bi-globe text-muted me-1"></i>{{ d.name }}
+            {% if d.auto_renew %}<span class="badge bg-info-subtle text-info-emphasis ms-1" title="Renovação automática">auto</span>{% endif %}
+          </td>
+          <td>{% if d.company %}<span class="badge bg-secondary-subtle text-secondary-emphasis">{{ d.company }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+          <td class="small">{{ reg_lbl.get(d.registrar, d.registrar) }}</td>
+          <td class="text-center number">{{ d.expiry_date.strftime('%d/%m/%Y') if d.expiry_date else '—' }}</td>
+          <td class="text-center">
+            {% set sm = st_meta.get(d.status, ('—','secondary')) %}
+            <span class="badge bg-{{ sm[1] }}-subtle text-{{ sm[1] }}-emphasis">{{ sm[0] }}</span>
+            {% if d.days_left is not none and d.status in ('vencendo','vencido') %}<small class="d-block text-muted">{{ d.days_left }}d</small>{% endif %}
+          </td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('domains.edit', did=d.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
+            <form action="{{ url_for('domains.delete', did=d.id) }}" method="post" class="d-inline" onsubmit="return confirm('Excluir este domínio?');">
+              <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6"><div class="empty-state"><i class="bi bi-globe2"></i>
+          {% if q or company or registrar %}Nenhum domínio para o filtro.{% else %}Nenhum domínio cadastrado ainda.{% endif %}
+        </div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

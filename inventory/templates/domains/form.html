@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+{% macro field_error(field) -%}
+  {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors[0] }}</div>{% endif %}
+{%- endmacro %}
+
+<div class="container d-flex justify-content-center py-2">
+  <div class="card shadow-sm w-100" style="max-width:720px">
+    <div class="card-header d-flex align-items-center justify-content-between">
+      <span class="fw-semibold d-flex align-items-center gap-2"><i class="bi bi-globe2 text-success"></i> {{ title }}</span>
+      <a href="{{ url_for('domains.list_view') }}" class="btn btn-sm btn-outline-light"><i class="bi bi-arrow-left"></i> Voltar</a>
+    </div>
+    <div class="card-body">
+      <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+        <div class="row g-3">
+          <div class="col-12 col-md-7">
+            {{ form.name.label(class="form-label fw-semibold") }}
+            {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""), placeholder="exemplo.com.br", autofocus=True) }}
+            {{ field_error(form.name) }}
+          </div>
+          <div class="col-12 col-md-5">
+            {{ form.company.label(class="form-label fw-semibold") }}
+            {{ form.company(class="form-control", list="company-list", placeholder="Cervejaria, Jaboti, Distribuidora...") }}
+            <datalist id="company-list">
+              <option value="Cervejaria"><option value="Jaboti"><option value="Distribuidora">
+            </datalist>
+          </div>
+        </div>
+
+        <div class="row g-3 mt-1">
+          <div class="col-12 col-md-5">
+            {{ form.registrar.label(class="form-label fw-semibold") }}
+            {{ form.registrar(class="form-select") }}
+          </div>
+          <div class="col-6 col-md-4">
+            {{ form.expiry_date.label(class="form-label fw-semibold") }}
+            {{ form.expiry_date(class="form-control", type="date") }}
+          </div>
+          <div class="col-6 col-md-3 d-flex align-items-end">
+            <div class="form-check form-switch mb-2">
+              {{ form.auto_renew(class="form-check-input", role="switch", id="auto_renew") }}
+              {{ form.auto_renew.label(class="form-check-label", for="auto_renew") }}
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-3">
+          {{ form.notes.label(class="form-label fw-semibold") }}
+          {{ form.notes(class="form-control", rows=2, placeholder="Observações (titular, contato, DNS, etc.)") }}
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-4">
+          <a href="{{ url_for('domains.list_view') }}" class="btn btn-outline-light">Cancelar</a>
+          {{ form.submit(class="btn btn-primary") }}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
