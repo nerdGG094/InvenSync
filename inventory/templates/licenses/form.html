@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+{% macro field_error(field) -%}
+  {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors[0] }}</div>{% endif %}
+{%- endmacro %}
+
+<div class="container d-flex justify-content-center py-2">
+  <div class="card shadow-sm w-100" style="max-width:780px">
+    <div class="card-header d-flex align-items-center justify-content-between">
+      <span class="fw-semibold d-flex align-items-center gap-2"><i class="bi bi-patch-check text-success"></i> {{ title }}</span>
+      <a href="{{ url_for('licenses.list_view') }}" class="btn btn-sm btn-outline-light"><i class="bi bi-arrow-left"></i> Voltar</a>
+    </div>
+    <div class="card-body">
+      <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+        <div class="row g-3">
+          <div class="col-12 col-md-8">
+            {{ form.name.label(class="form-label fw-semibold") }}
+            {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""), placeholder="Ex.: Windows 11 Pro / Antivírus / Garantia Dell", autofocus=True) }}
+            {{ field_error(form.name) }}
+          </div>
+          <div class="col-12 col-md-4">
+            {{ form.kind.label(class="form-label fw-semibold") }}
+            {{ form.kind(class="form-select") }}
+          </div>
+        </div>
+
+        <div class="row g-3 mt-1">
+          <div class="col-12 col-md-6">
+            {{ form.vendor.label(class="form-label fw-semibold") }}
+            {{ form.vendor(class="form-control", placeholder="Microsoft, Dell, Kaspersky...") }}
+          </div>
+          <div class="col-12 col-md-6">
+            {{ form.assigned_to.label(class="form-label fw-semibold") }}
+            {{ form.assigned_to(class="form-control", placeholder="Máquina, setor ou responsável") }}
+          </div>
+        </div>
+
+        <div class="row g-3 mt-1">
+          <div class="col-12 col-md-8">
+            {{ form.license_key.label(class="form-label fw-semibold") }}
+            {{ form.license_key(class="form-control number", placeholder="Chave / serial (se houver)") }}
+          </div>
+          <div class="col-6 col-md-4">
+            {{ form.seats.label(class="form-label fw-semibold") }}
+            {{ form.seats(class="form-control number", placeholder="Ex.: 10") }}
+          </div>
+        </div>
+
+        <div class="row g-3 mt-1">
+          <div class="col-6 col-md-4">
+            {{ form.start_date.label(class="form-label fw-semibold") }}
+            {{ form.start_date(class="form-control", type="date") }}
+          </div>
+          <div class="col-6 col-md-4">
+            {{ form.expiry_date.label(class="form-label fw-semibold") }}
+            {{ form.expiry_date(class="form-control" + (" is-invalid" if form.expiry_date.errors else ""), type="date") }}
+            {{ field_error(form.expiry_date) }}
+          </div>
+          <div class="col-12 col-md-4">
+            {{ form.cost.label(class="form-label fw-semibold") }}
+            <div class="input-group">
+              <span class="input-group-text">R$</span>
+              {{ form.cost(class="form-control number", placeholder="0,00") }}
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-3">
+          {{ form.notes.label(class="form-label fw-semibold") }}
+          {{ form.notes(class="form-control", rows=2, placeholder="Observações (renovação automática, contato do fornecedor, etc.)") }}
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-4">
+          <a href="{{ url_for('licenses.list_view') }}" class="btn btn-outline-light">Cancelar</a>
+          {{ form.submit(class="btn btn-primary") }}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

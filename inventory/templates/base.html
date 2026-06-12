@@ -118,6 +118,8 @@
           <ul class="dropdown-menu" aria-labelledby="ddCadastros">
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('categories.') %}active{% endif %}" href="{{ url_for('categories.list_view') }}"><i class="bi bi-tags me-2"></i> Categorias</a></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('suppliers.') %}active{% endif %}" href="{{ url_for('suppliers.list_view') }}"><i class="bi bi-truck me-2"></i> Fornecedores</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('licenses.') %}active{% endif %}" href="{{ url_for('licenses.list_view') }}"><i class="bi bi-patch-check me-2"></i> Licenças &amp; Garantias</a></li>
           </ul>
         </li>
         <li class="nav-item dropdown">
