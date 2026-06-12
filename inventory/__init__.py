@@ -79,6 +79,7 @@ def create_app():
     from .routes.mobile import bp as mobile_bp  # ⬅️ NOVO: cadastro de celulares
     from .routes.routers import bp as routers_bp  # ⬅️ NOVO: cadastro de roteadores
     from .routes.audit import bp as audit_bp  # ⬅️ NOVO: trilha de auditoria
+    from .routes.assets import bp as assets_bp  # ⬅️ NOVO: ativos por colaborador
     from .routes.profile import bp as profile_bp  # ⬅️ NOVO: meu perfil
     from .routes.wpp import bp as wpp_bp  # ⬅️ NOVO: conexão WhatsApp (admin)
 
@@ -98,6 +99,7 @@ def create_app():
     app.register_blueprint(mobile_bp, url_prefix="/mobile")  # ⬅️ NOVO: celulares
     app.register_blueprint(routers_bp, url_prefix="/routers")  # ⬅️ NOVO: roteadores
     app.register_blueprint(audit_bp, url_prefix="/audit")  # ⬅️ NOVO: auditoria
+    app.register_blueprint(assets_bp, url_prefix="/assets")  # ⬅️ NOVO: ativos por colaborador
     app.register_blueprint(profile_bp, url_prefix="/profile")  # ⬅️ NOVO: meu perfil
     app.register_blueprint(wpp_bp, url_prefix="/wpp")  # ⬅️ NOVO: conexão WhatsApp
 

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Ativos por Colaborador{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-person-badge"></i></span>
+    Ativos por Colaborador
+    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ totals.pessoas }}</span>
+  </h1>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-4">
+    <div class="card stat-card h-100"><div class="card-body d-flex align-items-center justify-content-between">
+      <div><div class="text-muted small">Colaboradores</div><div class="h3 mb-0 number">{{ totals.pessoas }}</div></div>
+      <i class="bi bi-people fs-2 text-success"></i>
+    </div></div>
+  </div>
+  <div class="col-4">
+    <div class="card stat-card h-100" style="border-left-color:#0dcaf0"><div class="card-body d-flex align-items-center justify-content-between">
+      <div><div class="text-muted small">Máquinas</div><div class="h3 mb-0 number text-info">{{ totals.maquinas }}</div></div>
+      <i class="bi bi-pc-display fs-2 text-info"></i>
+    </div></div>
+  </div>
+  <div class="col-4">
+    <div class="card stat-card h-100" style="border-left-color:#ffc107"><div class="card-body d-flex align-items-center justify-content-between">
+      <div><div class="text-muted small">Celulares</div><div class="h3 mb-0 number text-warning">{{ totals.celulares }}</div></div>
+      <i class="bi bi-phone fs-2 text-warning"></i>
+    </div></div>
+  </div>
+</div>
+
+<div class="table-card">
+  <div class="table-card-tools">
+    <form class="d-flex gap-2" method="get" role="search">
+      <div class="input-group search-box">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input class="form-control" type="search" placeholder="Buscar colaborador..." name="q" value="{{ q }}">
+      </div>
+      <button class="btn btn-primary btn-icon" type="submit"><i class="bi bi-search"></i></button>
+      {% if q %}<a href="{{ url_for('assets.list_view') }}" class="btn btn-outline-light btn-icon"><i class="bi bi-x-lg"></i></a>{% endif %}
+    </form>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead><tr><th>Colaborador</th><th class="text-center">Máquinas</th><th class="text-center">Celulares</th><th class="text-end">Ações</th></tr></thead>
+      <tbody>
+        {% for p in people %}
+        <tr>
+          <td class="fw-semibold"><i class="bi bi-person-circle me-1 text-muted"></i>{{ p.name }}</td>
+          <td class="text-center">{% if p.machines %}<span class="badge bg-info-subtle text-info-emphasis">{{ p.machines|length }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+          <td class="text-center">{% if p.mobiles %}<span class="badge bg-warning-subtle text-warning-emphasis">{{ p.mobiles|length }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-light" href="{{ url_for('assets.detail', name=p.name) }}"><i class="bi bi-eye"></i> Ver</a>
+            <a class="btn btn-sm btn-outline-light" href="{{ url_for('assets.termo', name=p.name) }}" target="_blank"><i class="bi bi-file-earmark-text"></i> Termo</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4"><div class="empty-state"><i class="bi bi-person-badge"></i>
+          {% if q %}Nenhum colaborador para o filtro.{% else %}Nenhum ativo vinculado a colaboradores ainda.{% endif %}
+        </div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

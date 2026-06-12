@@ -143,6 +143,11 @@
             <i class="bi bi-router"></i> Roteadores
           </a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.endpoint and request.endpoint.startswith('assets.') %}active{% endif %}" href="{{ url_for('assets.list_view') }}">
+            <i class="bi bi-person-badge"></i> Ativos
+          </a>
+        </li>
         {% endif %}
         <li class="nav-item">
           <a class="nav-link {% if request.endpoint and request.endpoint.startswith('tickets.') %}active{% endif %}" href="{{ url_for('tickets.list_view') }}">

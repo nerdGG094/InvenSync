@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<title>Termo de Responsabilidade — {{ a.name }}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; color:#111; background:#f3f3f3; margin:0; padding:24px; }
+  .sheet { background:#fff; max-width:820px; margin:0 auto; padding:48px 56px; box-shadow:0 2px 12px rgba(0,0,0,.15); }
+  .toolbar { max-width:820px; margin:0 auto 14px; display:flex; gap:8px; justify-content:flex-end; }
+  .btn { border:1px solid #ccc; background:#fff; border-radius:6px; padding:8px 14px; cursor:pointer; font-size:14px; text-decoration:none; color:#222; }
+  .btn.primary { background:#2e8b57; color:#fff; border-color:#2e8b57; }
+  h1 { font-size:20px; text-align:center; margin:0 0 4px; text-transform:uppercase; letter-spacing:.5px; }
+  .head { text-align:center; border-bottom:2px solid #2e8b57; padding-bottom:14px; margin-bottom:22px; }
+  .company { font-size:18px; font-weight:700; color:#2e8b57; }
+  .sub { font-size:12px; color:#555; }
+  .who { margin:18px 0; font-size:14px; line-height:1.7; }
+  .who b { display:inline-block; min-width:130px; color:#333; }
+  p.intro { font-size:13.5px; line-height:1.6; text-align:justify; }
+  table { width:100%; border-collapse:collapse; margin:16px 0; font-size:12.5px; }
+  th, td { border:1px solid #999; padding:6px 8px; text-align:left; }
+  th { background:#e8f3ec; }
+  .terms { font-size:12px; line-height:1.6; text-align:justify; margin-top:14px; }
+  .sign { margin-top:60px; display:flex; gap:50px; }
+  .sign div { flex:1; text-align:center; border-top:1px solid #333; padding-top:6px; font-size:12.5px; }
+  .city { margin-top:36px; font-size:13px; text-align:right; }
+  @media print {
+    body { background:#fff; padding:0; }
+    .sheet { box-shadow:none; max-width:none; padding:24px 28px; }
+    .toolbar { display:none; }
+  }
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <a href="javascript:history.back()" class="btn">← Voltar</a>
+    <button class="btn primary" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+  </div>
+
+  <div class="sheet">
+    <div class="head">
+      <div class="company">Refrigerantes Jaboti</div>
+      <div class="sub">Departamento de Tecnologia da Informação</div>
+    </div>
+
+    <h1>Termo de Responsabilidade de Equipamentos</h1>
+
+    <div class="who">
+      <div><b>Colaborador(a):</b> {{ a.name }}</div>
+      <div><b>Setor:</b> {{ a.sector or '___________________________' }}</div>
+    </div>
+
+    <p class="intro">
+      Declaro ter recebido da empresa <b>Refrigerantes Jaboti</b>, em perfeito estado de
+      conservação e funcionamento, os equipamentos relacionados abaixo, para uso exclusivo
+      no desempenho das minhas atividades profissionais, comprometendo-me a zelar pela sua
+      guarda e conservação.
+    </p>
+
+    {% if a.machines %}
+    <table>
+      <thead><tr><th style="width:80px">Tipo</th><th>Equipamento</th><th style="width:120px">Patrimônio</th><th style="width:150px">Nº de Série</th></tr></thead>
+      <tbody>
+        {% set kind_lbl = {'computador':'Computador','notebook':'Notebook','impressora':'Impressora'} %}
+        {% for m in a.machines %}
+        <tr>
+          <td>{{ kind_lbl.get(m.kind, m.kind) }}</td>
+          <td>{{ m.brand or '' }} {{ m.model or '—' }}{% if m.ip_address %} — IP {{ m.ip_address }}{% endif %}</td>
+          <td>{{ m.patrimony or '—' }}</td>
+          <td>{{ m.serial_number or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    {% if a.mobiles %}
+    <table>
+      <thead><tr><th>Celular</th><th style="width:150px">Número / Linha</th><th style="width:150px">IMEI</th><th style="width:120px">Patrimônio</th></tr></thead>
+      <tbody>
+        {% for d in a.mobiles %}
+        <tr>
+          <td>{{ d.brand or '' }} {{ d.model }}</td>
+          <td>{{ d.phone_number or '—' }}</td>
+          <td>{{ d.imei or '—' }}</td>
+          <td>{{ d.patrimony or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    <div class="terms">
+      <p><b>Estou ciente de que:</b></p>
+      1. Os equipamentos são de propriedade da empresa e destinam-se exclusivamente ao uso profissional;<br>
+      2. Comprometo-me a comunicar imediatamente ao setor de TI qualquer defeito, dano, perda ou furto;<br>
+      3. Responsabilizo-me por danos decorrentes de mau uso, negligência ou imprudência;<br>
+      4. Devolverei os equipamentos nas mesmas condições em que os recebi quando solicitado ou no desligamento;<br>
+      5. Não instalarei softwares não autorizados nem utilizarei os equipamentos para fins ilícitos.
+    </div>
+
+    <div class="city">{{ a.sector and '' }}Jaboticabal, {{ data_extenso }}.</div>
+
+    <div class="sign">
+      <div>{{ a.name }}<br><span class="sub">Colaborador(a)</span></div>
+      <div>_______________________<br><span class="sub">Responsável de TI</span></div>
+    </div>
+  </div>
+
+  <script>
+    // Abre o diálogo de impressão automaticamente (cancele para apenas visualizar).
+    window.addEventListener('load', function(){ setTimeout(function(){ window.print(); }, 400); });
+  </script>
+</body>
+</html>

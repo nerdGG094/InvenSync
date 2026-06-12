@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Ativos — {{ a.name }}{% endblock %}
+{% block content %}
+{% set kind_lbl = {'computador':'Computador','notebook':'Notebook','impressora':'Impressora'} %}
+
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-person-badge"></i></span>
+    {{ a.name }}
+    {% if a.sector %}<span class="badge bg-secondary-subtle text-secondary-emphasis ph-count">{{ a.sector }}</span>{% endif %}
+  </h1>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('assets.list_view') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Voltar</a>
+    <a href="{{ url_for('assets.termo', name=a.name) }}" target="_blank" class="btn btn-primary btn-sm"><i class="bi bi-file-earmark-text"></i> Gerar Termo</a>
+  </div>
+</div>
+
+<div class="table-card p-3 mb-3">
+  <h3 class="h6 mb-3"><i class="bi bi-pc-display text-info me-1"></i> Máquinas <span class="badge bg-info-subtle text-info-emphasis">{{ a.machines|length }}</span></h3>
+  {% if a.machines %}
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0">
+      <thead><tr><th>Tipo</th><th>Equipamento</th><th>IP</th><th>Patrimônio</th><th>Nº Série</th></tr></thead>
+      <tbody>
+        {% for m in a.machines %}
+        <tr>
+          <td><span class="badge bg-secondary-subtle text-secondary-emphasis">{{ kind_lbl.get(m.kind, m.kind) }}</span></td>
+          <td>{{ m.brand or '' }} {{ m.model or '—' }}{% if m.name %} <small class="text-muted">({{ m.name }})</small>{% endif %}</td>
+          <td class="font-monospace small">{{ m.ip_address or '—' }}</td>
+          <td class="small">{{ m.patrimony or '—' }}</td>
+          <td class="font-monospace small">{{ m.serial_number or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}<p class="contact-muted mb-0">Nenhuma máquina.</p>{% endif %}
+</div>
+
+<div class="table-card p-3">
+  <h3 class="h6 mb-3"><i class="bi bi-phone text-warning me-1"></i> Celulares <span class="badge bg-warning-subtle text-warning-emphasis">{{ a.mobiles|length }}</span></h3>
+  {% if a.mobiles %}
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0">
+      <thead><tr><th>Aparelho</th><th>Número</th><th>IMEI</th><th>Patrimônio</th></tr></thead>
+      <tbody>
+        {% for d in a.mobiles %}
+        <tr>
+          <td>{{ d.brand or '' }} {{ d.model }}</td>
+          <td class="number">{{ d.phone_number or '—' }}{% if d.carrier %} <small class="text-muted">{{ d.carrier }}</small>{% endif %}</td>
+          <td class="font-monospace small">{{ d.imei or '—' }}</td>
+          <td class="small">{{ d.patrimony or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}<p class="contact-muted mb-0">Nenhum celular.</p>{% endif %}
+</div>
+{% endblock %}
