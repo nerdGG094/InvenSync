@@ -98,9 +98,8 @@
       }
       .navbar-collapse > .navbar-nav {
         flex-direction: column; width: 100%; gap: 4px !important; margin: 0 !important;
-        flex: 1 1 auto; overflow-y: auto; overflow-x: visible;
+        flex: 1 1 auto; overflow: visible;   /* visível p/ o submenu não ser recortado */
       }
-      .navbar-collapse > .navbar-nav::-webkit-scrollbar { width: 0; }
 
       /* Itens: ícone centralizado, rótulo oculto (vira tooltip via title) */
       .navbar.navbar-expand-lg .nav-link {
@@ -118,7 +117,7 @@
       .navbar.navbar-expand-lg .nav-item.dropdown > .dropdown-menu.show {
         position: absolute !important;
         left: 100% !important; top: 0 !important; right: auto !important;
-        transform: none !important; margin: 0; min-width: 224px;
+        transform: none !important; margin: 0; min-width: 224px; z-index: 1040;
       }
       .navbar.navbar-expand-lg .dropdown-menu .dropdown-item { font-size: .9rem; }
 
