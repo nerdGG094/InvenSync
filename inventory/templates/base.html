@@ -68,6 +68,75 @@
     .alert-info { background:#0f1f2a; border-color:#1f3e51; color:#cfe9ff; }
     footer { border-top: 1px solid #183224; color:#9ed9b2; }
     .brand-logo{ height: 28px; width: auto; display: inline-block; object-fit: contain; }
+
+    /* ===================================================================
+       DESKTOP (>=992px): menu vira barra lateral esquerda só com ícones
+       (estilo Senior). No mobile mantém o menu superior normal.
+       =================================================================== */
+    @media (min-width: 992px) {
+      :root { --rail-w: 70px; }
+      body { padding-left: var(--rail-w); }
+
+      .navbar.navbar-expand-lg {
+        position: fixed; top: 0; left: 0; bottom: 0; width: var(--rail-w);
+        flex-direction: column; align-items: stretch;
+        border-bottom: none; border-right: 1px solid #183224;
+        padding: 10px 0; z-index: 1031; overflow: visible;
+      }
+      .navbar.navbar-expand-lg > .container-fluid {
+        flex-direction: column; flex-wrap: nowrap; height: 100%;
+        align-items: stretch; padding: 0 9px; gap: 6px; overflow: visible;
+      }
+      /* Marca: mantém só o logo centralizado */
+      .navbar-brand { justify-content: center; margin: 0 0 8px !important; padding: 4px 0; }
+      .navbar-brand .d-flex.flex-column { display: none !important; }
+      .navbar-toggler { display: none !important; }
+
+      .navbar-collapse {
+        display: flex !important; flex-direction: column; flex: 1 1 auto;
+        align-items: stretch; height: 100%; overflow: visible;
+      }
+      .navbar-collapse > .navbar-nav {
+        flex-direction: column; width: 100%; gap: 4px !important; margin: 0 !important;
+        flex: 1 1 auto; overflow-y: auto; overflow-x: visible;
+      }
+      .navbar-collapse > .navbar-nav::-webkit-scrollbar { width: 0; }
+
+      /* Itens: ícone centralizado, rótulo oculto (vira tooltip via title) */
+      .navbar.navbar-expand-lg .nav-link {
+        justify-content: center; padding: .6rem 0 !important; position: relative;
+        font-size: 0 !important; border-radius: 10px;
+      }
+      .navbar.navbar-expand-lg .nav-link i { font-size: 1.3rem; }
+      .navbar.navbar-expand-lg .nav-link.active { box-shadow: inset 3px 0 0 var(--brand); }
+      .navbar.navbar-expand-lg .dropdown-toggle::after { display: none !important; }
+      .navbar.navbar-expand-lg .nav-link .badge {
+        position: absolute; top: 4px; right: 12px; font-size: .58rem !important;
+      }
+
+      /* Submenus (dropdowns) abrem para a DIREITA, no hover */
+      .navbar.navbar-expand-lg .nav-item.dropdown:hover > .dropdown-menu,
+      .navbar.navbar-expand-lg .nav-item.dropdown > .dropdown-menu.show {
+        display: block; position: absolute !important;
+        left: 100% !important; top: 0 !important; right: auto !important;
+        transform: none !important; margin: 0; min-width: 224px;
+      }
+      .navbar.navbar-expand-lg .dropdown-menu .dropdown-item { font-size: .9rem; }
+
+      /* Bloco do perfil ancorado no rodapé da barra */
+      .navbar-collapse > .d-flex.align-items-center { margin-top: auto; justify-content: center; }
+      .navbar-collapse > .d-flex.align-items-center #ddPerfil .small { display: none !important; }
+      .navbar.navbar-expand-lg #ddPerfil { justify-content: center; padding: .5rem 0; }
+      .navbar.navbar-expand-lg #ddPerfil .avatar-circle { font-size: .8rem !important; }
+      .navbar.navbar-expand-lg #ddPerfil.dropdown-toggle::after { display: none !important; }
+      .navbar.navbar-expand-lg .dropdown-menu-end {
+        left: 100% !important; right: auto !important;
+        bottom: 0; top: auto !important; transform: none !important; margin-left: 0;
+      }
+
+      /* área de conteúdo ocupa o restante */
+      main.container, footer .container { margin-left: auto; margin-right: auto; }
+    }
   </style>
 </head>
 <body>
@@ -337,6 +406,19 @@
   })();
 </script>
 {% endif %}
+
+<script>
+  // Barra lateral (desktop): usa o texto de cada item como tooltip, já que
+  // o rótulo fica oculto e só o ícone aparece.
+  (function(){
+    if (!window.matchMedia('(min-width: 992px)').matches) return;
+    document.querySelectorAll('.navbar .nav-link').forEach(function(a){
+      if (a.getAttribute('title')) return;
+      var t = (a.textContent || '').replace(/\s+/g, ' ').trim();
+      if (t) a.setAttribute('title', t);
+    });
+  })();
+</script>
 
 {% block extra_js %}{% endblock %}
 </body>
