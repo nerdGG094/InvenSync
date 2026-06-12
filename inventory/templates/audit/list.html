@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Auditoria{% endblock %}
+{% block content %}
+
+{% set act_meta = {
+  'create': ('Criou','success'), 'update': ('Alterou','info'),
+  'delete': ('Excluiu','danger'), 'reveal': ('Revelou senha','warning'),
+  'export': ('Exportou','secondary'), 'login': ('Login','secondary') } %}
+
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-shield-lock"></i></span>
+    Auditoria
+    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ logs|length }}</span>
+  </h1>
+</div>
+
+<div class="table-card">
+  <div class="table-card-tools d-flex flex-wrap align-items-center gap-2">
+    <form class="d-flex gap-2" method="get">
+      <select class="form-select" name="action" style="max-width:180px" onchange="this.form.submit()">
+        <option value="">Ação: todas</option>
+        {% for k, m in act_meta.items() %}<option value="{{ k }}" {{ 'selected' if action==k }}>{{ m[0] }}</option>{% endfor %}
+      </select>
+      <input class="form-control" name="entity" value="{{ entity }}" placeholder="Entidade (ticket, router...)" style="max-width:220px">
+      <button class="btn btn-primary btn-icon" type="submit"><i class="bi bi-search"></i></button>
+      {% if action or entity %}<a href="{{ url_for('audit.list_view') }}" class="btn btn-outline-light btn-icon"><i class="bi bi-x-lg"></i></a>{% endif %}
+    </form>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead>
+        <tr><th>Quando</th><th>Usuário</th><th>Ação</th><th>Entidade</th><th>Descrição</th><th>IP</th></tr>
+      </thead>
+      <tbody>
+        {% for l in logs %}
+        <tr>
+          <td class="small text-muted">{{ l.created_at.strftime('%d/%m/%Y %H:%M') if l.created_at else '—' }}</td>
+          <td class="fw-semibold">{{ l.user_name or '—' }}</td>
+          <td>{% set am = act_meta.get(l.action, (l.action,'secondary')) %}<span class="badge bg-{{ am[1] }}-subtle text-{{ am[1] }}-emphasis">{{ am[0] }}</span></td>
+          <td class="small">{{ l.entity or '—' }}{% if l.entity_id %} <span class="text-muted">#{{ l.entity_id }}</span>{% endif %}</td>
+          <td class="small">{{ l.summary or '' }}</td>
+          <td class="font-monospace small text-muted">{{ l.ip or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6"><div class="empty-state"><i class="bi bi-shield-lock"></i> Nenhum registro de auditoria.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -37,6 +37,7 @@ def create_app():
     from .models.ticket import Ticket, TicketComment
     from .models.mobile import MobileDevice
     from .models.router import Router
+    from .models.audit import AuditLog
 
     # Cria tabelas e semente inicial
     with app.app_context():
@@ -76,6 +77,7 @@ def create_app():
     from .routes.tickets import bp as tickets_bp  # ⬅️ NOVO: controlador de chamados
     from .routes.mobile import bp as mobile_bp  # ⬅️ NOVO: cadastro de celulares
     from .routes.routers import bp as routers_bp  # ⬅️ NOVO: cadastro de roteadores
+    from .routes.audit import bp as audit_bp  # ⬅️ NOVO: trilha de auditoria
     from .routes.profile import bp as profile_bp  # ⬅️ NOVO: meu perfil
     from .routes.wpp import bp as wpp_bp  # ⬅️ NOVO: conexão WhatsApp (admin)
 
@@ -94,6 +96,7 @@ def create_app():
     app.register_blueprint(tickets_bp, url_prefix="/tickets")  # ⬅️ NOVO: chamados
     app.register_blueprint(mobile_bp, url_prefix="/mobile")  # ⬅️ NOVO: celulares
     app.register_blueprint(routers_bp, url_prefix="/routers")  # ⬅️ NOVO: roteadores
+    app.register_blueprint(audit_bp, url_prefix="/audit")  # ⬅️ NOVO: auditoria
     app.register_blueprint(profile_bp, url_prefix="/profile")  # ⬅️ NOVO: meu perfil
     app.register_blueprint(wpp_bp, url_prefix="/wpp")  # ⬅️ NOVO: conexão WhatsApp
 

@@ -18,7 +18,10 @@
     Chamados
     <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ totals.total }}</span>
   </h1>
-  <a href="{{ url_for('tickets.new') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Novo Chamado</a>
+  <div class="d-flex gap-2">
+    {% if is_admin %}<a href="{{ url_for('tickets.dashboard') }}" class="btn btn-outline-light"><i class="bi bi-speedometer2"></i> Painel</a>{% endif %}
+    <a href="{{ url_for('tickets.new') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Novo Chamado</a>
+  </div>
 </div>
 
 <div class="row g-3 mb-3">

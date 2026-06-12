@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Painel de Chamados{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-speedometer2"></i></span>
+    Painel de Chamados
+  </h1>
+  <a href="{{ url_for('tickets.list_view') }}" class="btn btn-outline-light"><i class="bi bi-headset"></i> Ver chamados</a>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <a href="{{ url_for('tickets.list_view', status='aberto') }}" class="text-decoration-none">
+      <div class="card stat-card h-100"><div class="card-body d-flex align-items-center justify-content-between">
+        <div><div class="text-muted small">Abertos</div><div class="h3 mb-0 number text-primary">{{ counts.aberto }}</div></div>
+        <i class="bi bi-folder2-open fs-2 text-primary"></i>
+      </div></div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{{ url_for('tickets.list_view', status='em_andamento') }}" class="text-decoration-none">
+      <div class="card stat-card h-100" style="border-left-color:#0dcaf0"><div class="card-body d-flex align-items-center justify-content-between">
+        <div><div class="text-muted small">Em andamento</div><div class="h3 mb-0 number text-info">{{ counts.em_andamento }}</div></div>
+        <i class="bi bi-hourglass-split fs-2 text-info"></i>
+      </div></div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card h-100" style="border-left-color:#dc3545"><div class="card-body d-flex align-items-center justify-content-between">
+      <div><div class="text-muted small">Atrasados (SLA)</div><div class="h3 mb-0 number text-danger">{{ overdue_count }}</div></div>
+      <i class="bi bi-alarm fs-2 text-danger"></i>
+    </div></div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card h-100" style="border-left-color:#198754"><div class="card-body d-flex align-items-center justify-content-between">
+      <div><div class="text-muted small">Tempo médio resolução</div>
+        <div class="h3 mb-0 number text-success">{% if avg_resolution_h is not none %}{{ avg_resolution_h }}h{% else %}—{% endif %}</div></div>
+      <i class="bi bi-clock-history fs-2 text-success"></i>
+    </div></div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-lg-8">
+    <div class="card h-100"><div class="card-body">
+      <h6 class="text-muted mb-3"><i class="bi bi-graph-up"></i> Chamados abertos por dia (14 dias)</h6>
+      <canvas id="chartTrend" height="110"></canvas>
+    </div></div>
+  </div>
+  <div class="col-12 col-lg-4">
+    <div class="card h-100"><div class="card-body">
+      <h6 class="text-muted mb-3"><i class="bi bi-pie-chart"></i> Abertos por categoria</h6>
+      <canvas id="chartCat" height="200"></canvas>
+    </div></div>
+  </div>
+</div>
+
+<div class="row g-3 mt-1">
+  <div class="col-12 col-lg-6">
+    <div class="card h-100"><div class="card-body">
+      <h6 class="text-muted mb-3"><i class="bi bi-flag"></i> Abertos por prioridade</h6>
+      <canvas id="chartPrio" height="150"></canvas>
+    </div></div>
+  </div>
+  <div class="col-12 col-lg-6">
+    <div class="card h-100"><div class="card-body">
+      <h6 class="text-muted mb-3"><i class="bi bi-person-badge"></i> Carga por atendente (abertos)</h6>
+      <canvas id="chartAssignee" height="150"></canvas>
+    </div></div>
+  </div>
+</div>
+
+<div class="table-card mt-3">
+  <div class="table-card-tools">
+    <span class="fw-semibold"><i class="bi bi-alarm text-danger"></i> Chamados atrasados (estouraram o SLA)</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead><tr><th>Código</th><th>Título</th><th>Solicitante</th><th class="text-center">Prioridade</th><th class="text-end">Atraso</th></tr></thead>
+      <tbody>
+        {% for t, idade, limite in overdue %}
+        <tr>
+          <td><a href="{{ url_for('tickets.detail', tid=t.id) }}" class="fw-semibold text-decoration-none">{{ t.code }}</a></td>
+          <td>{{ t.title }}</td>
+          <td class="small">{{ t.requester or '—' }}{% if t.sector %} <span class="text-muted">· {{ t.sector }}</span>{% endif %}</td>
+          <td class="text-center"><span class="badge bg-warning-subtle text-warning-emphasis">{{ prio_labels.get(t.priority, t.priority) }}</span></td>
+          <td class="text-end text-danger fw-semibold">+{{ ((idade - limite)|round(0))|int }}h</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5"><div class="empty-state"><i class="bi bi-check2-circle"></i> Nenhum chamado fora do prazo. 🎉</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+(function(){
+  const trend = {{ trend|tojson }};
+  const cat = {{ cat_data|tojson }};
+  const prio = {{ prio_data|tojson }};
+  const assignee = {{ assignee_data|tojson }};
+  const PALETTE = ['#2e8b57','#0dcaf0','#ffc107','#dc3545','#6f42c1','#fd7e14','#20c997','#6c757d'];
+
+  const t = document.getElementById('chartTrend');
+  if (t) new Chart(t, { type:'line', data:{ labels: trend.labels,
+    datasets:[{ label:'Abertos', data: trend.values, borderColor:'#2e8b57',
+      backgroundColor:'rgba(46,139,87,.15)', fill:true, tension:.3 }] },
+    options:{ plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{precision:0}}} } });
+
+  const c = document.getElementById('chartCat');
+  if (c) new Chart(c, { type:'doughnut', data:{ labels: cat.map(x=>x[0]),
+    datasets:[{ data: cat.map(x=>x[1]), backgroundColor: PALETTE }] },
+    options:{ plugins:{legend:{position:'bottom'}} } });
+
+  const p = document.getElementById('chartPrio');
+  if (p) new Chart(p, { type:'bar', data:{ labels: prio.map(x=>x[0]),
+    datasets:[{ data: prio.map(x=>x[1]), backgroundColor: PALETTE }] },
+    options:{ plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{precision:0}}} } });
+
+  const a = document.getElementById('chartAssignee');
+  if (a) new Chart(a, { type:'bar', data:{ labels: assignee.map(x=>x[0]),
+    datasets:[{ data: assignee.map(x=>x[1]), backgroundColor:'#0dcaf0' }] },
+    options:{ indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true, ticks:{precision:0}}} } });
+})();
+</script>
+{% endblock %}
