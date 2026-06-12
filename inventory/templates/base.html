@@ -168,6 +168,11 @@
             <span id="ticketBadge" class="badge rounded-pill bg-danger ms-1" style="display:none">0</span>
           </a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.endpoint and request.endpoint.startswith('kb.') %}active{% endif %}" href="{{ url_for('kb.list_view') }}">
+            <i class="bi bi-journal-bookmark"></i> Base
+          </a>
+        </li>
 
         {# ====== Usuários (somente Admin) ====== #}
         {% if current_user.is_authenticated and current_user.is_admin %}

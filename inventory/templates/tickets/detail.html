@@ -169,6 +169,11 @@
         {% if t.resolved_at %}<dt>Resolvido em</dt><dd class="number text-success">{{ t.resolved_at.strftime('%d/%m/%Y %H:%M') }}</dd>{% endif %}
       </dl>
     </div>
+    <div class="mt-3">
+      <a href="{{ url_for('kb.list_view', category=t.category) }}" class="btn btn-outline-light w-100 btn-sm">
+        <i class="bi bi-journal-bookmark"></i> Buscar soluções na Base ({{ cat_lbl.get(t.category, t.category) }})
+      </a>
+    </div>
   </div>
 </div>
 {% endblock %}

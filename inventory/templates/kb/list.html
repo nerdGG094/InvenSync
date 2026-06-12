@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Base de Conhecimento{% endblock %}
+{% block content %}
+{% set cat_lbl = {'hardware':'Hardware','software':'Software','rede':'Rede','impressora':'Impressora','acesso':'Acesso/Senha','outro':'Outro'} %}
+{% set cat_color = {'hardware':'primary','software':'success','rede':'info','impressora':'warning','acesso':'danger','outro':'secondary'} %}
+
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-journal-bookmark"></i></span>
+    Base de Conhecimento
+    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ items|length }}</span>
+  </h1>
+  {% if is_admin %}<a href="{{ url_for('kb.new') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Novo Artigo</a>{% endif %}
+</div>
+
+<div class="table-card p-3 mb-3">
+  <form class="d-flex flex-wrap gap-2" method="get" role="search">
+    <div class="input-group search-box" style="max-width:380px">
+      <span class="input-group-text"><i class="bi bi-search"></i></span>
+      <input class="form-control" type="search" placeholder="Buscar problema, solução, palavra-chave..." name="q" value="{{ q }}">
+    </div>
+    <select class="form-select" name="category" style="max-width:180px" onchange="this.form.submit()">
+      <option value="">Categoria: todas</option>
+      {% for k, lbl in categories %}<option value="{{ k }}" {{ 'selected' if category==k }}>{{ lbl }}</option>{% endfor %}
+    </select>
+    <button class="btn btn-primary btn-icon" type="submit"><i class="bi bi-search"></i></button>
+    {% if q or category %}<a href="{{ url_for('kb.list_view') }}" class="btn btn-outline-light btn-icon"><i class="bi bi-x-lg"></i></a>{% endif %}
+  </form>
+</div>
+
+{% if items %}
+<div class="row g-3">
+  {% for a in items %}
+  <div class="col-12 col-md-6 col-lg-4">
+    <a href="{{ url_for('kb.detail', aid=a.id) }}" class="text-decoration-none">
+      <div class="card h-100 kb-card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            {% set cc = cat_color.get(a.category,'secondary') %}
+            <span class="badge bg-{{ cc }}-subtle text-{{ cc }}-emphasis">{{ cat_lbl.get(a.category, a.category) }}</span>
+            <span class="text-muted small"><i class="bi bi-eye"></i> {{ a.views }}</span>
+          </div>
+          <h3 class="h6 mb-2">{{ a.title }}</h3>
+          {% if a.problem %}<p class="small text-muted mb-0" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ a.problem }}</p>{% endif %}
+        </div>
+        {% if a.tags %}<div class="card-footer bg-transparent border-0 pt-0"><small class="text-muted"><i class="bi bi-tags"></i> {{ a.tags }}</small></div>{% endif %}
+      </div>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state"><i class="bi bi-journal-bookmark"></i>
+  {% if q or category %}Nenhum artigo para a busca.{% else %}Nenhum artigo publicado ainda.{% endif %}
+</div>
+{% endif %}
+{% endblock %}

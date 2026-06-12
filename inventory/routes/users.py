@@ -108,6 +108,9 @@ def delete(uid):
     if u.id == current_user.id:
         flash("Você não pode excluir a si mesmo.", "warning")
         return redirect(url_for("users.list_view"))
+    # Preserva a trilha de auditoria (mantém o nome registrado, solta a FK)
+    from ..models.audit import AuditLog
+    AuditLog.query.filter_by(user_id=u.id).update({"user_id": None})
     db.session.delete(u)
     db.session.commit()
     flash("Usuário excluído.", "success")

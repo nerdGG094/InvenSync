@@ -7,7 +7,7 @@ class AuditLog(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
     user_name = db.Column(db.String(150), nullable=True)   # snapshot (caso o usuário seja removido)
 
     action = db.Column(db.String(30), nullable=False, index=True)   # create|update|delete|reveal|export|login
