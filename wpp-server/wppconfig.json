@@ -6,6 +6,7 @@
   "tokenStoreType": "file",
   "createOptions": {
     "autoClose": 0,
-    "waitForLogin": true
+    "waitForLogin": true,
+    "headless": false
   }
 }
