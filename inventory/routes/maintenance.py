@@ -10,6 +10,7 @@ from ..models.machine import Machine
 from ..models.machine_maintenance import MachineMaintenance
 from ..extensions import db
 from ..services import audit
+from ..services.exports import xlsx_response
 
 bp = Blueprint("maintenance", __name__)
 
@@ -52,6 +53,28 @@ def list_view():
     return render_template("maintenance/list.html", items=items, q=q,
                            machine_id=machine_id, kind=kind, total_cost=total_cost,
                            kind_choices=KIND_CHOICES)
+
+
+@bp.route("/export")
+@login_required
+def export():
+    q = (request.args.get("q") or "").strip()
+    machine_id = request.args.get("machine_id", type=int)
+    kind = (request.args.get("kind") or "").strip()
+    items = maintenance_repo.list_maintenances(q or None, machine_id, kind or None)
+    kind_lbl = dict(KIND_CHOICES)
+    headers = ["Data", "Máquina", "Usuário", "Tipo", "Descrição", "Peças", "Executado por", "Custo (R$)"]
+    rows = []
+    for m in items:
+        rows.append([
+            m.date.strftime("%d/%m/%Y") if m.date else "",
+            m.machine.model if m.machine else "",
+            m.machine.assigned_user if m.machine else "",
+            kind_lbl.get(m.kind, m.kind), m.description or "", m.parts or "",
+            m.performed_by or "", float(m.cost) if m.cost is not None else "",
+        ])
+    audit.record("export", "maintenance", None, f"Exportou {len(rows)} manutenção(ões)")
+    return xlsx_response("Manutencoes", headers, rows, filename="manutencoes")
 
 
 @bp.route("/new", methods=["GET", "POST"])

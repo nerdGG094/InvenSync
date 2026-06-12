@@ -12,7 +12,10 @@
     Manutenções
     <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ items|length }}</span>
   </h1>
-  <a href="{{ url_for('maintenance.new') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Nova Manutenção</a>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('maintenance.export', q=q, kind=kind, machine_id=machine_id) }}" class="btn btn-outline-light"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+    <a href="{{ url_for('maintenance.new') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Nova Manutenção</a>
+  </div>
 </div>
 
 <div class="row g-3 mb-3">

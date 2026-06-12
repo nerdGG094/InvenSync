@@ -5,6 +5,7 @@ from flask_login import login_required, current_user
 from ..repositories import license_repo
 from ..forms.license import LicenseForm, KIND_CHOICES
 from ..services import audit, whatsapp
+from ..services.exports import xlsx_response
 
 bp = Blueprint("licenses", __name__)
 
@@ -75,6 +76,29 @@ def delete(lid):
     license_repo.delete_license(o)
     flash("Registro excluído.", "success")
     return redirect(url_for("licenses.list_view"))
+
+
+@bp.route("/export")
+def export():
+    q = (request.args.get("q") or "").strip()
+    kind = (request.args.get("kind") or "").strip()
+    items = license_repo.list_licenses(q or None, kind or None)
+    kind_lbl = {"licenca": "Licença", "garantia": "Garantia", "contrato": "Contrato",
+                "certificado": "Certificado", "outro": "Outro"}
+    st_lbl = {"vencido": "Vencido", "vencendo": "Vence em breve", "vigente": "Vigente", "sem_data": "Sem data"}
+    headers = ["Nome", "Tipo", "Fornecedor", "Vínculo", "Qtd", "Início", "Vencimento",
+               "Dias restantes", "Status", "Custo (R$)"]
+    rows = []
+    for o in items:
+        rows.append([
+            o.name, kind_lbl.get(o.kind, o.kind), o.vendor or "", o.assigned_to or "",
+            o.seats or "", o.start_date.strftime("%d/%m/%Y") if o.start_date else "",
+            o.expiry_date.strftime("%d/%m/%Y") if o.expiry_date else "",
+            o.days_left if o.days_left is not None else "",
+            st_lbl.get(o.status, o.status), float(o.cost) if o.cost is not None else "",
+        ])
+    audit.record("export", "license", None, f"Exportou {len(rows)} licença(s)/garantia(s)")
+    return xlsx_response("Licencas", headers, rows, filename="licencas_garantias")
 
 
 @bp.route("/alert", methods=["POST"])

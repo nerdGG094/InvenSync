@@ -18,6 +18,7 @@ from ..models.ticket import Ticket
 from ..models.user import User
 from ..models.machine import Machine
 from ..services import people, whatsapp, audit
+from ..services.exports import xlsx_response
 
 STATUS_LABELS = dict(STATUS_CHOICES)
 
@@ -102,6 +103,34 @@ def list_view():
     }
     return render_template("tickets/list.html", items=items, q=q, status=status,
                            priority=priority, totals=totals, is_admin=current_user.is_admin)
+
+
+@bp.route("/export")
+@login_required
+def export():
+    if not current_user.is_admin:
+        abort(403)
+    q = (request.args.get("q") or "").strip()
+    status = (request.args.get("status") or "").strip()
+    priority = (request.args.get("priority") or "").strip()
+    items = ticket_repo.list_tickets(q or None, status or None, priority or None)
+    cat_lbl = dict(CATEGORY_CHOICES)
+    prio_lbl = dict(PRIORITY_CHOICES)
+    status_lbl = dict(STATUS_CHOICES)
+    headers = ["Código", "Título", "Solicitante", "Setor", "Categoria", "Prioridade",
+               "Status", "Responsável", "Criado em", "Resolvido em"]
+    rows = []
+    for t in items:
+        rows.append([
+            t.code, t.title, t.requester or "", t.sector or "",
+            cat_lbl.get(t.category, t.category), prio_lbl.get(t.priority, t.priority),
+            status_lbl.get(t.status, t.status),
+            t.assigned_to.name if t.assigned_to else "",
+            t.created_at.strftime("%d/%m/%Y %H:%M") if t.created_at else "",
+            t.resolved_at.strftime("%d/%m/%Y %H:%M") if t.resolved_at else "",
+        ])
+    audit.record("export", "ticket", None, f"Exportou {len(rows)} chamado(s) para Excel")
+    return xlsx_response("Chamados", headers, rows, filename="chamados")
 
 
 @bp.route("/painel")

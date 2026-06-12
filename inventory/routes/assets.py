@@ -4,10 +4,13 @@ from datetime import datetime
 from flask import Blueprint, render_template, request, abort
 from flask_login import login_required, current_user
 
-from ..services import assets
+from ..services import assets, audit
+from ..services.exports import xlsx_response
 
 _MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho",
           "agosto", "setembro", "outubro", "novembro", "dezembro"]
+
+KIND_LBL = {"computador": "Computador", "notebook": "Notebook", "impressora": "Impressora"}
 
 bp = Blueprint("assets", __name__)
 
@@ -31,6 +34,29 @@ def list_view():
         "celulares": sum(len(p["mobiles"]) for p in people),
     }
     return render_template("assets/list.html", people=people, totals=totals, q=request.args.get("q") or "")
+
+
+@bp.route("/export")
+def export():
+    people = assets.people_with_assets()
+    headers = ["Colaborador", "Setor", "Tipo de ativo", "Equipamento", "Identificador", "Patrimônio"]
+    rows = []
+    for p in people:
+        sector = ""
+        for m in p["machines"]:
+            if m.sector:
+                sector = m.sector
+                break
+        for m in p["machines"]:
+            rows.append([p["name"], m.sector or sector, KIND_LBL.get(m.kind, m.kind),
+                         f"{m.brand or ''} {m.model or ''}".strip(),
+                         m.ip_address or m.serial_number or "", m.patrimony or ""])
+        for d in p["mobiles"]:
+            rows.append([p["name"], d.sector or sector, "Celular",
+                         f"{d.brand or ''} {d.model or ''}".strip(),
+                         d.phone_number or d.imei or "", d.patrimony or ""])
+    audit.record("export", "assets", None, f"Exportou ativos de {len(people)} colaborador(es)")
+    return xlsx_response("Ativos", headers, rows, filename="ativos_por_colaborador")
 
 
 @bp.route("/<path:name>")
