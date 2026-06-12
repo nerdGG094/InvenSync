@@ -40,6 +40,7 @@ def create_app():
     from .models.mobile import MobileDevice
     from .models.router import Router
     from .models.audit import AuditLog
+    from .models.credential import Credential
 
     # Cria tabelas e semente inicial
     with app.app_context():
@@ -83,6 +84,7 @@ def create_app():
     from .routes.assets import bp as assets_bp  # ⬅️ NOVO: ativos por colaborador
     from .routes.labels import bp as labels_bp  # ⬅️ NOVO: etiquetas QR
     from .routes.maintenance import bp as maintenance_bp  # ⬅️ NOVO: manutenção de máquinas
+    from .routes.credentials import bp as credentials_bp  # ⬅️ NOVO: cofre de senhas
     from .routes.profile import bp as profile_bp  # ⬅️ NOVO: meu perfil
     from .routes.wpp import bp as wpp_bp  # ⬅️ NOVO: conexão WhatsApp (admin)
 
@@ -105,6 +107,7 @@ def create_app():
     app.register_blueprint(assets_bp, url_prefix="/assets")  # ⬅️ NOVO: ativos por colaborador
     app.register_blueprint(labels_bp, url_prefix="/labels")  # ⬅️ NOVO: etiquetas QR
     app.register_blueprint(maintenance_bp, url_prefix="/machines/maintenance")  # ⬅️ NOVO: manutenção
+    app.register_blueprint(credentials_bp, url_prefix="/credentials")  # ⬅️ NOVO: cofre de senhas
     app.register_blueprint(profile_bp, url_prefix="/profile")  # ⬅️ NOVO: meu perfil
     app.register_blueprint(wpp_bp, url_prefix="/wpp")  # ⬅️ NOVO: conexão WhatsApp
 
