@@ -300,7 +300,11 @@ class LauncherWindow(QMainWindow):
         node = shutil.which("node") or "node"
         port = os.environ.get("WPP_SERVER_PORT", "21465")
         secret = os.environ.get("WPP_SERVER_SECRET", "")
-        cmd = [node, str(WPP_BIN), "--port", str(port), "--startAllSession"]
+        # NÃO usar --startAllSession: a sessão é iniciada sob demanda pela página
+        # "Conectar WhatsApp" do app. Auto-iniciar aqui criava uma 2ª instância da
+        # mesma sessão concorrendo com o start-session do app → travava em
+        # INITIALIZING e o QR nunca era gerado.
+        cmd = [node, str(WPP_BIN), "--port", str(port)]
         if WPP_CONFIG.exists():
             cmd += ["-c", str(WPP_CONFIG)]
         if secret:

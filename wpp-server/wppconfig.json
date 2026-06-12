@@ -2,7 +2,7 @@
   "host": "http://localhost",
   "deviceName": "InvenSync",
   "poweredBy": "InvenSync",
-  "startAllSession": true,
+  "startAllSession": false,
   "tokenStoreType": "file",
   "createOptions": {
     "autoClose": 0,
