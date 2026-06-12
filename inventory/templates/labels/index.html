@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Etiquetas QR{% endblock %}
+
+{% block extra_head %}
+<style>
+  .label-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
+  .qr-label {
+    border:1px dashed #888; border-radius:8px; padding:10px; display:flex; gap:10px;
+    align-items:center; background:#fff; color:#111; break-inside:avoid;
+  }
+  .qr-label img { width:96px; height:96px; flex:0 0 96px; }
+  .qr-label .info { font-size:12px; line-height:1.35; overflow:hidden; }
+  .qr-label .info .t { font-weight:700; font-size:13px; }
+  .qr-label .info .pat { font-family:monospace; }
+  .lbl-pick { position:absolute; top:6px; right:6px; }
+  .qr-wrap { position:relative; }
+  @media print {
+    @page { margin:8mm; }
+    body { background:#fff !important; }
+    .app-navbar, .page-header, .labels-tools, footer, .lbl-pick { display:none !important; }
+    .container, main, .content { max-width:none !important; padding:0 !important; margin:0 !important; }
+    .qr-label { border:1px solid #bbb; }
+    .label-grid { gap:6px; }
+    .qr-hide-print { display:none !important; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-qr-code"></i></span>
+    Etiquetas QR
+    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ items|length }}</span>
+  </h1>
+  <button class="btn btn-primary" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button>
+</div>
+
+<div class="labels-tools table-card p-3 mb-3">
+  <div class="d-flex flex-wrap gap-2 align-items-center">
+    <span class="text-muted small me-2">Tipo de ativo:</span>
+    <a href="{{ url_for('labels.index', kind='machine') }}" class="btn btn-sm {{ 'btn-primary' if kind=='machine' else 'btn-outline-light' }}"><i class="bi bi-pc-display"></i> Máquinas</a>
+    <a href="{{ url_for('labels.index', kind='router') }}" class="btn btn-sm {{ 'btn-primary' if kind=='router' else 'btn-outline-light' }}"><i class="bi bi-router"></i> Roteadores</a>
+    <a href="{{ url_for('labels.index', kind='mobile') }}" class="btn btn-sm {{ 'btn-primary' if kind=='mobile' else 'btn-outline-light' }}"><i class="bi bi-phone"></i> Celulares</a>
+    <div class="ms-auto small text-muted">Marque as etiquetas e use “Ocultar não marcadas” para imprimir só as selecionadas.</div>
+    <button class="btn btn-sm btn-outline-light" id="btnHide" type="button"><i class="bi bi-funnel"></i> Ocultar não marcadas</button>
+    <button class="btn btn-sm btn-outline-light" id="btnAll" type="button"><i class="bi bi-eye"></i> Mostrar todas</button>
+  </div>
+</div>
+
+{% if items %}
+<div class="label-grid">
+  {% for it in items %}
+  <div class="qr-label qr-wrap" data-label>
+    <input type="checkbox" class="form-check-input lbl-pick" checked title="Incluir na impressão">
+    <img src="{{ url_for('labels.qr_png', kind=it.kind, oid=it.id) }}" alt="QR">
+    <div class="info">
+      <div class="t">{{ it.title }}</div>
+      <div class="text-muted">{{ it.subtitle }}{% if it.extra %} · {{ it.extra }}{% endif %}</div>
+      {% if it.patrimony %}<div class="pat">Pat.: {{ it.patrimony }}</div>{% endif %}
+      {% if it.sector %}<div>{{ it.sector }}</div>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state"><i class="bi bi-qr-code"></i> Nenhum ativo deste tipo cadastrado.</div>
+{% endif %}
+
+<script>
+(function(){
+  const labels = () => Array.from(document.querySelectorAll('[data-label]'));
+  document.getElementById('btnHide').addEventListener('click', function(){
+    labels().forEach(l => { const c = l.querySelector('.lbl-pick'); l.classList.toggle('qr-hide-print', !c.checked); });
+  });
+  document.getElementById('btnAll').addEventListener('click', function(){
+    labels().forEach(l => { l.classList.remove('qr-hide-print'); l.querySelector('.lbl-pick').checked = true; });
+  });
+})();
+</script>
+{% endblock %}
