@@ -35,6 +35,7 @@ def create_app():
     from .models.machine import Machine
     from .models.machine_cleaning import MachineCleaning
     from .models.ticket import Ticket, TicketComment
+    from .models.ticket_attachment import TicketAttachment
     from .models.mobile import MobileDevice
     from .models.router import Router
     from .models.audit import AuditLog

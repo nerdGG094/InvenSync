@@ -103,6 +103,49 @@
         </div>
       </form>
     </div>
+
+    <!-- Anexos -->
+    <div class="table-card p-3 mt-3">
+      <h3 class="h6 mb-3 d-flex align-items-center gap-2"><i class="bi bi-paperclip text-success"></i> Anexos
+        <span class="badge bg-success-subtle text-success-emphasis">{{ t.attachments|length }}</span>
+      </h3>
+
+      {% if t.attachments %}
+      <div class="row g-2 mb-3">
+        {% for a in t.attachments %}
+        <div class="col-6 col-md-4">
+          <div class="border rounded p-2 h-100 d-flex flex-column" style="background:#15211a;border-color:#243024!important">
+            <a href="{{ url_for('static', filename='uploads/tickets/' ~ a.filename) }}" target="_blank" class="text-decoration-none text-center flex-grow-1 d-flex align-items-center justify-content-center">
+              {% if a.is_image %}
+                <img src="{{ url_for('static', filename='uploads/tickets/' ~ a.filename) }}" alt="{{ a.original_name }}" style="max-width:100%;max-height:120px;border-radius:6px">
+              {% else %}
+                <span class="text-muted"><i class="bi bi-file-earmark-text fs-1"></i></span>
+              {% endif %}
+            </a>
+            <div class="small text-truncate mt-2" title="{{ a.original_name }}">{{ a.original_name }}</div>
+            <div class="d-flex align-items-center justify-content-between">
+              <span class="text-muted" style="font-size:.7rem">{{ (a.size / 1024)|round(0)|int }} KB</span>
+              {% if is_admin or (a.uploaded_by_id and current_user.id == a.uploaded_by_id) %}
+              <form action="{{ url_for('tickets.attach_delete', tid=t.id, aid=a.id) }}" method="post" onsubmit="return confirm('Remover este anexo?');">
+                <button class="btn btn-sm btn-outline-danger btn-icon" title="Remover"><i class="bi bi-trash"></i></button>
+              </form>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="contact-muted mb-3">Nenhum anexo.</p>
+      {% endif %}
+
+      <form method="post" action="{{ url_for('tickets.attach', tid=t.id) }}" enctype="multipart/form-data" class="d-flex flex-wrap gap-2 align-items-center">
+        <input type="file" name="files" class="form-control form-control-sm" multiple style="max-width:340px"
+               accept=".png,.jpg,.jpeg,.gif,.webp,.bmp,.pdf,.txt,.log,.doc,.docx,.xls,.xlsx,.csv,.zip,.rar">
+        <button class="btn btn-outline-light btn-sm"><i class="bi bi-upload"></i> Anexar</button>
+        <span class="text-muted small">Imagens, PDF, Office… até 16 MB.</span>
+      </form>
+    </div>
   </div>
 
   <!-- Coluna lateral: metadados -->

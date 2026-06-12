@@ -1,12 +1,17 @@
 # inventory/routes/tickets.py
+import os
+import time
 from datetime import datetime, timedelta
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, jsonify
+from flask import (Blueprint, render_template, request, redirect, url_for, flash,
+                   abort, jsonify, current_app)
 from flask_login import login_required, current_user
 from sqlalchemy import func
+from werkzeug.utils import secure_filename
 
 from ..extensions import db
 from ..repositories import ticket_repo
+from ..models.ticket_attachment import TicketAttachment
 from ..forms.tickets import (TicketForm, CommentForm, STATUS_CHOICES,
                              CATEGORY_CHOICES, PRIORITY_CHOICES)
 from ..models.ticket import Ticket
@@ -284,6 +289,78 @@ def comment(tid):
         flash("Andamento adicionado.", "success")
     else:
         flash("Escreva o andamento antes de enviar.", "warning")
+    return redirect(url_for("tickets.detail", tid=t.id))
+
+
+ALLOWED_ATTACH_EXT = {
+    "png", "jpg", "jpeg", "gif", "webp", "bmp", "pdf", "txt", "log",
+    "doc", "docx", "xls", "xlsx", "csv", "zip", "rar",
+}
+
+
+def _save_attachment(file_storage, ticket: Ticket) -> TicketAttachment:
+    folder = current_app.config["ATTACH_FOLDER"]
+    os.makedirs(folder, exist_ok=True)
+    safe = secure_filename(file_storage.filename or "arquivo")
+    ext = (safe.rsplit(".", 1)[-1] if "." in safe else "").lower()
+    if ext not in ALLOWED_ATTACH_EXT:
+        return None
+    fname = f"t{ticket.id}_{int(time.time()*1000)}_{safe}"
+    path = os.path.join(folder, fname)
+    file_storage.save(path)
+    size = os.path.getsize(path) if os.path.exists(path) else None
+    att = TicketAttachment(
+        ticket_id=ticket.id, uploaded_by_id=current_user.id,
+        filename=fname, original_name=safe,
+        content_type=file_storage.mimetype, size=size,
+    )
+    db.session.add(att)
+    return att
+
+
+@bp.route("/<int:tid>/attach", methods=["POST"])
+@login_required
+def attach(tid):
+    t = ticket_repo.get_ticket(tid)
+    if not current_user.is_admin and t.opened_by_id != current_user.id:
+        abort(403)
+    files = request.files.getlist("files")
+    saved, rejected = 0, 0
+    for f in files:
+        if not f or not f.filename:
+            continue
+        if _save_attachment(f, t):
+            saved += 1
+        else:
+            rejected += 1
+    if saved:
+        db.session.commit()
+        audit.record("create", "ticket_attachment", t.id, f"Anexou {saved} arquivo(s) ao chamado {t.code}")
+        flash(f"{saved} anexo(s) enviado(s).", "success")
+    if rejected:
+        flash(f"{rejected} arquivo(s) ignorado(s) (tipo não permitido).", "warning")
+    if not saved and not rejected:
+        flash("Selecione um arquivo para anexar.", "warning")
+    return redirect(url_for("tickets.detail", tid=t.id))
+
+
+@bp.route("/<int:tid>/attach/<int:aid>/delete", methods=["POST"])
+@login_required
+def attach_delete(tid, aid):
+    t = ticket_repo.get_ticket(tid)
+    att = TicketAttachment.query.filter_by(id=aid, ticket_id=t.id).first_or_404()
+    # Quem pode remover: admin ou quem enviou
+    if not current_user.is_admin and att.uploaded_by_id != current_user.id:
+        abort(403)
+    try:
+        path = os.path.join(current_app.config["ATTACH_FOLDER"], att.filename)
+        if os.path.exists(path):
+            os.remove(path)
+    except OSError:
+        pass
+    db.session.delete(att)
+    db.session.commit()
+    flash("Anexo removido.", "success")
     return redirect(url_for("tickets.detail", tid=t.id))
 
 

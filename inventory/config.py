@@ -38,9 +38,10 @@ class Config:
     # (conveniente mesmo rodando em produção via waitress).
     TEMPLATES_AUTO_RELOAD = True
 
-    # Upload de fotos de perfil (avatares)
-    MAX_CONTENT_LENGTH = 4 * 1024 * 1024  # 4 MB
+    # Upload de fotos de perfil (avatares) e anexos de chamados
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB
     AVATAR_FOLDER = os.path.join(BASE_DIR, "static", "uploads", "avatars")
+    ATTACH_FOLDER = os.path.join(BASE_DIR, "static", "uploads", "tickets")
 
     # Notificações por WhatsApp (wppconnect-server) — desligado até configurar no .env
     WHATSAPP_ENABLED = os.environ.get("WHATSAPP_ENABLED", "0") in ("1", "true", "True")
