@@ -47,6 +47,13 @@ DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = "5090"
 APP_NAME = "InvenSync"
 
+# Nome amigável anunciado na rede via mDNS (Bonjour/.local). Permite acessar
+# o sistema por http://invensync.local:<porta> sem decorar o IP. Configurável
+# pelo .env (MDNS_HOSTNAME); o sufixo .local é acrescentado se faltar.
+MDNS_HOSTNAME = os.environ.get("MDNS_HOSTNAME", "invensync.local").strip().lower()
+if not MDNS_HOSTNAME.endswith(".local"):
+    MDNS_HOSTNAME += ".local"
+
 # ---------- Paleta (dark, acento verde InvenSync) ----------
 C_BG          = "#0f1115"
 C_SURFACE     = "#171a21"
@@ -263,6 +270,8 @@ class LauncherWindow(QMainWindow):
         self._url = ""
         self._started_at: float | None = None
         self._status_kind = "parado"
+        self._zeroconf = None
+        self._mdns_info = None
 
         self._build_ui()
         self._build_tray()
@@ -279,6 +288,49 @@ class LauncherWindow(QMainWindow):
         # variável de ambiente INVENSYNC_NO_AUTOSTART=1.
         if os.environ.get("INVENSYNC_NO_AUTOSTART", "0") not in ("1", "true", "True"):
             QTimer.singleShot(600, self.start_server)
+
+        # Anuncia o nome amigável na rede (mDNS) logo após subir.
+        QTimer.singleShot(1200, self._start_mdns)
+
+    # ---------- mDNS (nome amigável .local na rede) ----------
+    def _start_mdns(self):
+        if self._zeroconf is not None:
+            return  # já anunciando
+        try:
+            import socket
+            from zeroconf import Zeroconf, ServiceInfo
+        except Exception as e:  # noqa: BLE001
+            self._log(f">>> mDNS: zeroconf indisponível ({e}). Pulando.")
+            return
+        ip = _local_ip()
+        port = int(self.port_input.text().strip() or DEFAULT_PORT)
+        try:
+            info = ServiceInfo(
+                "_http._tcp.local.",
+                f"{APP_NAME}._http._tcp.local.",
+                addresses=[socket.inet_aton(ip)],
+                port=port,
+                properties={"path": "/"},
+                server=f"{MDNS_HOSTNAME}.",   # ex.: "invensync.local."
+            )
+            zc = Zeroconf()
+            zc.register_service(info)
+            self._zeroconf = zc
+            self._mdns_info = info
+            self._log(f">>> mDNS: anunciando http://{MDNS_HOSTNAME}:{port} (→ {ip}).")
+        except Exception as e:  # noqa: BLE001
+            self._log(f"[ERRO] mDNS: falha ao anunciar {MDNS_HOSTNAME}: {e}")
+
+    def _stop_mdns(self):
+        if self._zeroconf is not None:
+            try:
+                if self._mdns_info is not None:
+                    self._zeroconf.unregister_service(self._mdns_info)
+                self._zeroconf.close()
+            except Exception:  # noqa: BLE001
+                pass
+            self._zeroconf = None
+            self._mdns_info = None
 
     # ---------- UI ----------
     def _build_ui(self):
@@ -504,7 +556,10 @@ class LauncherWindow(QMainWindow):
         port = self.port_input.text().strip() or DEFAULT_PORT
         display_host = _local_ip() if host in ("0.0.0.0", "") else host
         self._url = f"http://{display_host}:{port}"
-        self.url_label.setText(f'<a href="{self._url}">{self._url}</a>')
+        self.url_label.setText(
+            f'<a href="{self._url}">{self._url}</a>'
+            f'<span style="color:#6b7388">  ·  rede: http://{MDNS_HOSTNAME}:{port}</span>'
+        )
 
     # ---------- Log ----------
     def _log(self, line: str):
@@ -743,6 +798,7 @@ class LauncherWindow(QMainWindow):
                     self.proc.kill()
                 except Exception:
                     pass
+        self._stop_mdns()
         self.tray.hide()
         QApplication.quit()
 
