@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Verificação em duas etapas{% endblock %}
+
+{% block extra_head %}
+<style>
+  .auth-wrap{ min-height: calc(100vh - 120px); }
+  .auth-bg{
+    position: fixed; inset: 0; z-index: -1;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(0,200,83,.10), transparent 60%),
+      radial-gradient(900px 500px at 110% 120%, rgba(0,230,118,.08), transparent 55%),
+      #0d120f;
+  }
+  .auth-card{
+    background: linear-gradient(180deg, #15211a 0%, #131913 100%);
+    border: 1px solid #24382b; border-radius: 18px;
+    box-shadow: 0 20px 50px rgba(0,0,0,.45); overflow: hidden;
+  }
+  .auth-head{ padding: 1.6rem 1.6rem 0; text-align: center; }
+  .auth-logo{
+    width: 84px; height: 84px; margin: 0 auto .8rem; padding: 12px;
+    border-radius: 18px; display: flex; align-items: center; justify-content: center;
+    background: #0e1a13; border: 1px solid #2e4b3b; overflow: hidden;
+    box-shadow: 0 6px 18px rgba(0,200,83,.22);
+  }
+  .auth-logo img{ max-width: 100%; max-height: 100%; object-fit: contain; }
+  .auth-title{ font-size: 1.4rem; font-weight: 700; margin: 0; }
+  .auth-sub{ color: #7fa890; font-size: .86rem; margin-top: .15rem; }
+  .auth-body{ padding: 1.4rem 1.6rem 1.7rem; }
+  .auth-card .input-group-text{ background:#0e1a13; border-color:#2f3f34; color:#7ee0a4; }
+  .auth-card .form-control{ background:#0e1a13; border-color:#2f3f34; }
+  .code-input{ letter-spacing: .5em; text-align: center; font-size: 1.4rem; font-weight: 700; }
+  .auth-foot{
+    text-align:center; padding:.9rem 1rem; border-top:1px solid #20322799;
+    color:#5f8f72; font-size:.76rem; background:#0e1611;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+{% macro field_error(field) -%}
+  {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors[0] }}</div>{% endif %}
+{%- endmacro %}
+
+<div class="auth-bg"></div>
+
+<div class="container auth-wrap d-flex align-items-center justify-content-center">
+  <div class="col-12 col-sm-10 col-md-7 col-lg-5 col-xl-4">
+    <div class="auth-card">
+      <div class="auth-head">
+        <div class="auth-logo">
+          <i class="bi bi-shield-lock" style="font-size:2.2rem;color:#7ee0a4"></i>
+        </div>
+        <h1 class="auth-title">Verificação em duas etapas</h1>
+        <div class="auth-sub">Digite o código do seu app autenticador</div>
+      </div>
+
+      <div class="auth-body">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for cat, msg in messages %}
+              <div class="alert alert-{{ 'warning' if cat=='message' else cat }} py-2 d-flex align-items-center gap-2">
+                <i class="bi bi-info-circle"></i><span>{{ msg }}</span>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <form method="post" novalidate class="d-grid gap-3">
+          {{ form.hidden_tag() }}
+          <div>
+            {{ form.code.label(class="form-label fw-semibold small") }}
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-123"></i></span>
+              {{ form.code(
+                  class="form-control code-input" + (" is-invalid" if form.code.errors else ""),
+                  placeholder="000000", inputmode="numeric", autocomplete="one-time-code",
+                  maxlength="6", autofocus=True
+              ) }}
+            </div>
+            {{ field_error(form.code) }}
+          </div>
+
+          <button class="btn btn-primary w-100 d-inline-flex align-items-center justify-content-center gap-2 py-2" type="submit">
+            <i class="bi bi-check2-circle"></i><span>Verificar e entrar</span>
+          </button>
+          <a href="{{ url_for('auth.login_cancel') }}" class="text-center small" style="color:#7fa890">Cancelar e voltar</a>
+        </form>
+      </div>
+
+      <div class="auth-foot">
+        <i class="bi bi-shield-lock me-1"></i>Acesso restrito · Refrigerantes Jaboti
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

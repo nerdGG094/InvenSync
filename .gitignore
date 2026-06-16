@@ -32,6 +32,9 @@ inventory/static/uploads/avatars/*
 inventory/static/uploads/tickets/*
 !inventory/static/uploads/tickets/.keep
 
+# === Backups do banco (pg_dump) ===
+backups/
+
 # === Logs ===
 *.log
 flask_output.log

@@ -100,6 +100,22 @@ def toggle_active(uid):
     flash(f"Usuário “{u.name}” {estado}.", "success")
     return redirect(url_for("users.list_view"))
 
+@bp.route("/<int:uid>/reset-2fa", methods=["POST"])
+@login_required
+@admin_required
+def reset_2fa(uid):
+    """Desativa o 2FA de um usuário (resgate quando ele perde o autenticador)."""
+    u = User.query.get_or_404(uid)
+    if not u.is_2fa_enabled and not u.totp_secret:
+        flash(f"“{u.name}” não tem 2FA ativo.", "info")
+        return redirect(url_for("users.list_view"))
+    u.is_2fa_enabled = False
+    u.totp_secret = None
+    db.session.commit()
+    flash(f"2FA de “{u.name}” resetado. Ele poderá entrar só com a senha e reativar depois.", "success")
+    return redirect(url_for("users.list_view"))
+
+
 @bp.route("/<int:uid>/delete", methods=["POST"])
 @login_required
 @admin_required

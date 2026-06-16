@@ -84,6 +84,30 @@
           {{ form.submit(class="btn btn-primary") }}
         </div>
       </form>
+
+      <hr class="my-4" style="border-color:#243024">
+      <h2 class="h6 mb-3"><i class="bi bi-shield-lock text-success me-1"></i> Verificação em duas etapas (2FA)</h2>
+      {% if current_user.is_2fa_enabled %}
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+          <span class="badge bg-success-subtle text-success-emphasis"><i class="bi bi-check-circle me-1"></i> Ativada</span>
+          <span class="text-muted small">Seu login pede um código do app autenticador.</span>
+        </div>
+        <form method="post" action="{{ url_for('profile.twofa_disable') }}" class="row g-2" style="max-width:480px"
+              onsubmit="return confirm('Desativar a verificação em duas etapas?');">
+          <div class="col-12 col-sm-7">
+            <input type="password" name="password" class="form-control" placeholder="Confirme sua senha" autocomplete="current-password" required>
+          </div>
+          <div class="col-12 col-sm-5">
+            <button class="btn btn-outline-danger w-100"><i class="bi bi-shield-slash me-1"></i> Desativar 2FA</button>
+          </div>
+        </form>
+      {% else %}
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+          <span class="badge bg-warning-subtle text-warning-emphasis"><i class="bi bi-exclamation-triangle me-1"></i> Desativada</span>
+          <span class="text-muted small">Adicione uma camada extra de segurança ao seu acesso.</span>
+        </div>
+        <a href="{{ url_for('profile.twofa_setup') }}" class="btn btn-success"><i class="bi bi-shield-plus me-1"></i> Ativar 2FA</a>
+      {% endif %}
     </div>
   </div>
 </div>

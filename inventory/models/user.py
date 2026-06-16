@@ -18,6 +18,12 @@ class User(db.Model, UserMixin):
     photo = db.Column(db.String(255), nullable=True)    # caminho da foto (avatar)
     whatsapp = db.Column(db.String(30), nullable=True)  # número p/ notificações
 
+    # Autenticação em dois fatores (TOTP / Google Authenticator)
+    totp_secret = db.Column(db.String(64), nullable=True)
+    is_2fa_enabled = db.Column(
+        db.Boolean, nullable=False, default=False, server_default=db.text("false")
+    )
+
     @property
     def initials(self) -> str:
         return (self.name or "?")[:2].upper()

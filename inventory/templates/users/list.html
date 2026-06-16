@@ -104,10 +104,20 @@
         {% endif %}
       </form>
 
+      {% if u.is_2fa_enabled %}
+      <div class="small text-success"><i class="bi bi-shield-lock me-1"></i> 2FA ativo</div>
+      {% endif %}
+
       <div class="d-flex gap-2 mt-auto">
         <a class="btn btn-sm btn-outline-light flex-grow-1" href="{{ url_for('users.edit', uid=u.id) }}">
           <i class="bi bi-pencil"></i> Editar
         </a>
+        {% if u.is_2fa_enabled %}
+        <form method="post" action="{{ url_for('users.reset_2fa', uid=u.id) }}"
+              onsubmit="return confirm('Resetar o 2FA de “{{ u.name }}”? Ele entrará só com a senha até reativar.');">
+          <button class="btn btn-sm btn-outline-warning" title="Resetar 2FA (resgate)"><i class="bi bi-shield-slash"></i></button>
+        </form>
+        {% endif %}
         {% if not is_self %}
         <form method="post" action="{{ url_for('users.delete', uid=u.id) }}"
               onsubmit="return confirm('Excluir o usuário “{{ u.name }}”?');">

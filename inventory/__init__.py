@@ -1,8 +1,27 @@
 import os
 from flask import Flask, render_template, request, redirect, url_for
 from flask_login import current_user
+from sqlalchemy import text
 from .extensions import db, login_manager
 from .config import Config
+
+
+def _run_light_migrations():
+    """Ajustes de schema que o db.create_all() não faz em tabelas já existentes.
+
+    Idempotente: usa ADD COLUMN IF NOT EXISTS. "user" é palavra reservada no
+    PostgreSQL, por isso vem entre aspas.
+    """
+    stmts = [
+        'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS totp_secret VARCHAR(64)',
+        'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS is_2fa_enabled BOOLEAN NOT NULL DEFAULT false',
+    ]
+    for sql in stmts:
+        try:
+            db.session.execute(text(sql))
+            db.session.commit()
+        except Exception:  # noqa: BLE001
+            db.session.rollback()
 
 # Endpoints liberados para usuários NÃO administradores (perfil "comum").
 # Eles só acessam Chamados, o próprio Perfil, autenticação e estáticos.
@@ -48,6 +67,7 @@ def create_app():
     # Cria tabelas e semente inicial
     with app.app_context():
         db.create_all()
+        _run_light_migrations()
         # Semente de categoria/fornecedor padrão desativada — a base é mantida
         # limpa intencionalmente; cadastre categorias/fornecedores pela interface.
         #
@@ -93,6 +113,7 @@ def create_app():
     from .routes.domains import bp as domains_bp  # ⬅️ NOVO: domínios por empresa
     from .routes.profile import bp as profile_bp  # ⬅️ NOVO: meu perfil
     from .routes.wpp import bp as wpp_bp  # ⬅️ NOVO: teste de notificações WhatsApp (CallMeBot)
+    from .routes.backups import bp as backups_bp  # ⬅️ NOVO: backups do banco (admin)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -119,6 +140,7 @@ def create_app():
     app.register_blueprint(domains_bp, url_prefix="/domains")  # ⬅️ NOVO: domínios
     app.register_blueprint(profile_bp, url_prefix="/profile")  # ⬅️ NOVO: meu perfil
     app.register_blueprint(wpp_bp, url_prefix="/wpp")  # ⬅️ NOVO: teste de notificações WhatsApp
+    app.register_blueprint(backups_bp, url_prefix="/backups")  # ⬅️ NOVO: backups do banco
 
     # ===== Controle de acesso por módulo =====
     # Usuários comuns (não-admin) só acessam Chamados e o próprio Perfil.

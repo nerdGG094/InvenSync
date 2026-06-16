@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Ativar verificação em duas etapas{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="ph-title"><span class="ph-icon"><i class="bi bi-shield-lock"></i></span> Verificação em duas etapas</h1>
+</div>
+
+<div class="container px-0" style="max-width:720px">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <p class="text-muted">
+        Use um app autenticador (Google Authenticator, Microsoft Authenticator, Authy…)
+        para gerar códigos de 6 dígitos que mudam a cada 30 segundos.
+      </p>
+
+      <ol class="mb-4">
+        <li class="mb-3">
+          <strong>Escaneie o QR Code</strong> com o app autenticador:
+          <div class="mt-2 p-3 d-inline-block" style="background:#fff;border-radius:10px">
+            <img src="{{ url_for('profile.twofa_qr') }}" alt="QR Code 2FA" style="width:200px;height:200px;display:block">
+          </div>
+          <div class="mt-2 small text-muted">
+            Não consegue escanear? Digite esta chave manualmente:
+            <code class="user-select-all">{{ secret }}</code>
+          </div>
+        </li>
+        <li>
+          <strong>Digite o código</strong> que aparecer no app para confirmar:
+          <form method="post" action="{{ url_for('profile.twofa_enable') }}" class="row g-2 mt-1" style="max-width:360px">
+            <div class="col-7">
+              <input type="text" name="code" class="form-control text-center fw-bold"
+                     style="letter-spacing:.4em" placeholder="000000" inputmode="numeric"
+                     maxlength="6" autocomplete="one-time-code" autofocus required>
+            </div>
+            <div class="col-5">
+              <button class="btn btn-success w-100"><i class="bi bi-check2-circle me-1"></i> Ativar</button>
+            </div>
+          </form>
+        </li>
+      </ol>
+
+      <a href="{{ url_for('profile.edit') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left me-1"></i> Voltar ao perfil</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
