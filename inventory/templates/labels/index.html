@@ -7,11 +7,16 @@
   .qr-label {
     border:1px dashed #888; border-radius:8px; padding:10px; display:flex; gap:10px;
     align-items:center; background:#fff; color:#111; break-inside:avoid;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
   }
-  .qr-label img { width:96px; height:96px; flex:0 0 96px; }
-  .qr-label .info { font-size:12px; line-height:1.35; overflow:hidden; }
+  .qr-label img.qr { width:96px; height:96px; flex:0 0 96px; }
+  .qr-label .info { font-size:12px; line-height:1.35; overflow:hidden; color:#111; }
+  .qr-label .info .lbl-logo { height:15px; width:auto; display:block; margin-bottom:4px;
+    filter:brightness(0); /* logo branco -> preto p/ fundo da etiqueta */ }
   .qr-label .info .t { font-weight:700; font-size:13px; }
-  .qr-label .info .pat { font-family:monospace; }
+  .qr-label .info .sub { color:#333; font-weight:600; }
+  .qr-label .info .sub .ip { font-family:monospace; color:#0a4b8c; }
+  .qr-label .info .pat { font-family:monospace; color:#111; }
   .lbl-pick { position:absolute; top:6px; right:6px; }
   .qr-wrap { position:relative; }
   @media print {
@@ -53,10 +58,11 @@
   {% for it in items %}
   <div class="qr-label qr-wrap" data-label>
     <input type="checkbox" class="form-check-input lbl-pick" checked title="Incluir na impressão">
-    <img src="{{ url_for('labels.qr_png', kind=it.kind, oid=it.id) }}" alt="QR">
+    <img class="qr" src="{{ url_for('labels.qr_png', kind=it.kind, oid=it.id) }}" alt="QR">
     <div class="info">
+      <img class="lbl-logo" src="{{ url_for('static', filename='logo.png') }}" alt="Refrigerantes Jaboti">
       <div class="t">{{ it.title }}</div>
-      <div class="text-muted">{{ it.subtitle }}{% if it.extra %} · {{ it.extra }}{% endif %}</div>
+      <div class="sub">{{ it.subtitle }}{% if it.extra %} · <span class="ip">{{ it.extra }}</span>{% endif %}</div>
       {% if it.patrimony %}<div class="pat">Pat.: {{ it.patrimony }}</div>{% endif %}
       {% if it.sector %}<div>{{ it.sector }}</div>{% endif %}
     </div>

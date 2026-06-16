@@ -276,7 +276,7 @@
           <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="ddPerfil">
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('profile.') %}active{% endif %}" href="{{ url_for('profile.edit') }}"><i class="bi bi-person-gear me-2"></i> Meu Perfil</a></li>
             {% if current_user.is_admin %}
-            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('wpp.') %}active{% endif %}" href="{{ url_for('wpp.page') }}"><i class="bi bi-whatsapp me-2 text-success"></i> Conectar WhatsApp</a></li>
+            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('wpp.') %}active{% endif %}" href="{{ url_for('wpp.page') }}"><i class="bi bi-whatsapp me-2 text-success"></i> Notificações WhatsApp</a></li>
             {% endif %}
             <li><hr class="dropdown-divider"></li>
             <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right me-2"></i> Sair</a></li>

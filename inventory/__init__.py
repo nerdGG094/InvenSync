@@ -92,7 +92,7 @@ def create_app():
     from .routes.kb import bp as kb_bp  # ⬅️ NOVO: base de conhecimento
     from .routes.domains import bp as domains_bp  # ⬅️ NOVO: domínios por empresa
     from .routes.profile import bp as profile_bp  # ⬅️ NOVO: meu perfil
-    from .routes.wpp import bp as wpp_bp  # ⬅️ NOVO: conexão WhatsApp (admin)
+    from .routes.wpp import bp as wpp_bp  # ⬅️ NOVO: teste de notificações WhatsApp (CallMeBot)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -118,7 +118,7 @@ def create_app():
     app.register_blueprint(kb_bp, url_prefix="/kb")  # ⬅️ NOVO: base de conhecimento
     app.register_blueprint(domains_bp, url_prefix="/domains")  # ⬅️ NOVO: domínios
     app.register_blueprint(profile_bp, url_prefix="/profile")  # ⬅️ NOVO: meu perfil
-    app.register_blueprint(wpp_bp, url_prefix="/wpp")  # ⬅️ NOVO: conexão WhatsApp
+    app.register_blueprint(wpp_bp, url_prefix="/wpp")  # ⬅️ NOVO: teste de notificações WhatsApp
 
     # ===== Controle de acesso por módulo =====
     # Usuários comuns (não-admin) só acessam Chamados e o próprio Perfil.

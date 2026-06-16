@@ -32,16 +32,6 @@ inventory/static/uploads/avatars/*
 inventory/static/uploads/tickets/*
 !inventory/static/uploads/tickets/.keep
 
-# === wppconnect-server (Node) ===
-wpp-server/node_modules/
-wpp-server/tokens/
-wpp-server/userDataDir/
-wpp-server/WhatsAppImages/
-wpp-server/log/
-wpp-server/*.log
-wpp-server/*.logg
-wpp-server/qr.png
-
 # === Logs ===
 *.log
 flask_output.log

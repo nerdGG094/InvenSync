@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}WhatsApp (CallMeBot){% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-whatsapp text-success"></i></span>
+    Notificações WhatsApp
+  </h1>
+</div>
+
+<div class="table-card p-4">
+  <p class="text-muted">
+    As notificações (chamados, licenças e domínios a vencer) são enviadas via
+    <strong>CallMeBot</strong> — uma chamada HTTP simples, sem QR Code e sem servidor local.
+  </p>
+
+  <ul class="list-unstyled mb-4">
+    <li class="mb-2">
+      Status:
+      {% if enabled %}
+        <span class="badge bg-success-subtle text-success-emphasis"><i class="bi bi-check-circle me-1"></i>Ativo (WHATSAPP_ENABLED=1)</span>
+      {% else %}
+        <span class="badge bg-warning-subtle text-warning-emphasis"><i class="bi bi-exclamation-triangle me-1"></i>Desativado — defina WHATSAPP_ENABLED=1 no .env</span>
+      {% endif %}
+    </li>
+    <li>
+      Destinos da TI:
+      {% if configured %}
+        <span class="badge bg-success-subtle text-success-emphasis">{{ recipients|length }} número(s)</span>
+        <div class="mt-2">
+          {% for phone in recipients.keys() %}
+            <code class="me-2">+{{ phone }}</code>
+          {% endfor %}
+        </div>
+      {% else %}
+        <span class="badge bg-warning-subtle text-warning-emphasis">nenhum — preencha CALLMEBOT_RECIPIENTS no .env</span>
+      {% endif %}
+    </li>
+  </ul>
+
+  <form action="{{ url_for('wpp.test') }}" method="post">
+    <button class="btn btn-success" {% if not (enabled and configured) %}disabled{% endif %}>
+      <i class="bi bi-send me-1"></i> Enviar mensagem de teste à TI
+    </button>
+  </form>
+
+  <hr class="my-4">
+
+  <details>
+    <summary class="fw-semibold" style="cursor:pointer">Como adicionar um número</summary>
+    <ol class="mt-3 text-muted">
+      <li>No WhatsApp do destino, envie <code>I allow callmebot to send me messages</code> para <strong>+34 644 51 95 23</strong>.</li>
+      <li>O CallMeBot responde com a <strong>apikey</strong> daquele número.</li>
+      <li>No <code>.env</code>, adicione o par <code>numero:apikey</code> em <code>CALLMEBOT_RECIPIENTS</code> (separe vários por vírgula) e reinicie o servidor.</li>
+    </ol>
+  </details>
+</div>
+{% endblock %}
