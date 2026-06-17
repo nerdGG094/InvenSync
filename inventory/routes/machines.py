@@ -56,6 +56,7 @@ def list_view():
 @login_required
 def new():
     form = MachineForm()
+    form.assigned_user.choices = people.user_choices("— Selecione —")
     if request.method == "GET" and not form.kind.data:
         form.kind.data = request.args.get("kind") or "computador"
     if form.validate_on_submit():
@@ -63,7 +64,7 @@ def new():
         flash("Máquina cadastrada!", "success")
         return redirect(url_for("machines.list_view"))
     return render_template("machines/form.html", form=form, title="Nova Máquina",
-                           user_names=people.user_names(), users_info=people.users_sector_map())
+                           users_info=people.users_sector_map())
 
 
 @bp.route("/<int:mid>/edit", methods=["GET", "POST"])
@@ -71,12 +72,16 @@ def new():
 def edit(mid):
     m = machine_repo.get_machine(mid)
     form = MachineForm(obj=m)
+    form.assigned_user.choices = people.user_choices("— Selecione —")
+    # Garante que o responsável atual apareça mesmo se o colaborador foi removido/inativado.
+    if m.assigned_user and m.assigned_user not in [c[0] for c in form.assigned_user.choices]:
+        form.assigned_user.choices.append((m.assigned_user, m.assigned_user))
     if form.validate_on_submit():
         machine_repo.update_machine(m, **_form_to_kwargs(form))
         flash("Máquina atualizada!", "success")
         return redirect(url_for("machines.list_view"))
     return render_template("machines/form.html", form=form, title="Editar Máquina",
-                           user_names=people.user_names(), users_info=people.users_sector_map())
+                           users_info=people.users_sector_map())
 
 
 @bp.route("/<int:mid>/delete", methods=["POST"])

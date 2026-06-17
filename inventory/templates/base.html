@@ -225,6 +225,11 @@
           </a>
         </li>
         <li class="nav-item">
+          <a class="nav-link {% if request.endpoint and request.endpoint.startswith('colaboradores.') %}active{% endif %}" href="{{ url_for('colaboradores.list_view') }}">
+            <i class="bi bi-person-vcard"></i> Colaboradores
+          </a>
+        </li>
+        <li class="nav-item">
           <a class="nav-link {% if request.endpoint and request.endpoint.startswith('assets.') %}active{% endif %}" href="{{ url_for('assets.list_view') }}">
             <i class="bi bi-person-badge"></i> Ativos
           </a>

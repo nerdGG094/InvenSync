@@ -52,12 +52,9 @@
             {{ form.assigned_user.label(class="form-label fw-semibold") }}
             <div class="input-group">
               <span class="input-group-text"><i class="bi bi-person"></i></span>
-              {{ form.assigned_user(class="form-control" + (" is-invalid" if form.assigned_user.errors else ""), placeholder="Nome do usuário", id="assigned_user", list="userList", autocomplete="off") }}
+              {{ form.assigned_user(class="form-select" + (" is-invalid" if form.assigned_user.errors else ""), id="assigned_user") }}
             </div>
-            <datalist id="userList">
-              {% for u in (user_names or []) %}<option value="{{ u }}">{% endfor %}
-            </datalist>
-            <div class="form-text">Escolha um existente ou digite um novo.</div>
+            <div class="form-text">Colaborador responsável. Não está na lista? <a href="{{ url_for('colaboradores.new') }}">Cadastre</a>.</div>
             {{ field_error(form.assigned_user) }}
           </div>
           <div class="col-12 col-md-5">

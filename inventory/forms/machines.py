@@ -20,7 +20,8 @@ class MachineForm(FlaskForm):
     name = StringField("Identificação / Hostname", validators=[Optional(), Length(max=120)])
     brand = StringField("Marca", validators=[Optional(), Length(max=120)])
     model = StringField("Modelo", validators=[DataRequired(), Length(min=1, max=150)])
-    assigned_user = StringField("Usuário / Responsável", validators=[Optional(), Length(max=150)])
+    # choices preenchidas na rota com os Colaboradores cadastrados
+    assigned_user = SelectField("Usuário / Responsável", validators=[Optional()], choices=[])
     ip_address = StringField("IP da máquina", validators=[Optional(), Length(max=45),
                                                           Regexp(IP_REGEX, message="IP inválido.")])
     sector = StringField("Setor / Localização", validators=[Optional(), Length(max=120)])

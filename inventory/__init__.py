@@ -23,6 +23,33 @@ def _run_light_migrations():
         except Exception:  # noqa: BLE001
             db.session.rollback()
 
+
+def _seed_colaboradores_from_assets():
+    """Importa para a tabela Colaboradores os nomes de responsáveis que já
+    existem em Máquinas/Celulares. Idempotente: só insere o que ainda falta."""
+    from .models.colaborador import Colaborador
+    from .models.machine import Machine
+    from .models.mobile import MobileDevice
+    try:
+        existentes = {(c.name or "").strip().lower() for c in Colaborador.query.all()}
+        novos = {}
+        for m in Machine.query.all():
+            nome = (m.assigned_user or "").strip()
+            chave = nome.lower()
+            if nome and chave not in existentes and chave not in novos:
+                novos[chave] = (nome, (m.sector or "").strip() or None)
+        for d in MobileDevice.query.all():
+            nome = (d.assigned_employee or "").strip()
+            chave = nome.lower()
+            if nome and chave not in existentes and chave not in novos:
+                novos[chave] = (nome, (d.sector or "").strip() or None)
+        for nome, dept in novos.values():
+            db.session.add(Colaborador(name=nome, department=dept, is_active=True))
+        if novos:
+            db.session.commit()
+    except Exception:  # noqa: BLE001
+        db.session.rollback()
+
 # Endpoints liberados para usuários NÃO administradores (perfil "comum").
 # Eles só acessam Chamados, o próprio Perfil, autenticação e estáticos.
 NON_ADMIN_PREFIXES = ("tickets.", "profile.", "auth.", "kb.")
@@ -63,11 +90,13 @@ def create_app():
     from .models.license import License
     from .models.kb import KbArticle
     from .models.domain import Domain
+    from .models.colaborador import Colaborador
 
     # Cria tabelas e semente inicial
     with app.app_context():
         db.create_all()
         _run_light_migrations()
+        _seed_colaboradores_from_assets()
         # Semente de categoria/fornecedor padrão desativada — a base é mantida
         # limpa intencionalmente; cadastre categorias/fornecedores pela interface.
         #
@@ -114,6 +143,7 @@ def create_app():
     from .routes.profile import bp as profile_bp  # ⬅️ NOVO: meu perfil
     from .routes.wpp import bp as wpp_bp  # ⬅️ NOVO: teste de notificações WhatsApp (CallMeBot)
     from .routes.backups import bp as backups_bp  # ⬅️ NOVO: backups do banco (admin)
+    from .routes.colaboradores import bp as colaboradores_bp  # ⬅️ NOVO: cadastro central de colaboradores
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -141,6 +171,7 @@ def create_app():
     app.register_blueprint(profile_bp, url_prefix="/profile")  # ⬅️ NOVO: meu perfil
     app.register_blueprint(wpp_bp, url_prefix="/wpp")  # ⬅️ NOVO: teste de notificações WhatsApp
     app.register_blueprint(backups_bp, url_prefix="/backups")  # ⬅️ NOVO: backups do banco
+    app.register_blueprint(colaboradores_bp, url_prefix="/colaboradores")  # ⬅️ NOVO: colaboradores
 
     # ===== Controle de acesso por módulo =====
     # Usuários comuns (não-admin) só acessam Chamados e o próprio Perfil.

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Colaboradores{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-person-vcard"></i></span>
+    Colaboradores
+    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ items|length }}</span>
+  </h1>
+  <a href="{{ url_for('colaboradores.new') }}" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> Novo Colaborador
+  </a>
+</div>
+
+<div class="table-card">
+  <div class="table-card-tools">
+    <form class="d-flex search-box" method="get" role="search">
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input class="form-control" type="search" placeholder="Buscar por nome ou departamento..." name="q" value="{{ q }}">
+      </div>
+      {% if q %}
+      <a href="{{ url_for('colaboradores.list_view') }}" class="btn btn-outline-light ms-2" title="Limpar"><i class="bi bi-x-lg"></i></a>
+      {% endif %}
+    </form>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead>
+        <tr>
+          <th style="min-width:200px">Nome</th>
+          <th>Departamento / Setor</th>
+          <th>E-mail</th>
+          <th style="width:110px">Status</th>
+          <th class="text-end" style="width:160px">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in items %}
+        <tr class="{{ '' if c.is_active else 'opacity-50' }}">
+          <td class="fw-semibold"><i class="bi bi-person-fill text-success me-1 small"></i> {{ c.name }}</td>
+          <td>{% if c.department %}{{ c.department }}{% else %}<span class="contact-muted">—</span>{% endif %}</td>
+          <td>{% if c.email %}<a href="mailto:{{ c.email }}" class="text-decoration-none">{{ c.email }}</a>{% else %}<span class="contact-muted">—</span>{% endif %}</td>
+          <td>
+            {% if c.is_active %}
+              <span class="badge bg-success-subtle text-success">Ativo</span>
+            {% else %}
+              <span class="badge bg-secondary-subtle text-secondary">Inativo</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('colaboradores.edit', cid=c.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
+            <form action="{{ url_for('colaboradores.toggle_active', cid=c.id) }}" method="post" class="d-inline">
+              <button class="btn btn-sm btn-outline-light btn-icon" title="{{ 'Inativar' if c.is_active else 'Ativar' }}">
+                <i class="bi bi-toggle2-{{ 'on text-success' if c.is_active else 'off text-secondary' }}"></i>
+              </button>
+            </form>
+            <form action="{{ url_for('colaboradores.delete', cid=c.id) }}" method="post" class="d-inline" onsubmit="return confirm('Excluir o colaborador “{{ c.name }}”?');">
+              <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5">
+            <div class="empty-state">
+              <i class="bi bi-person-vcard"></i>
+              {% if q %}Nenhum colaborador encontrado para “{{ q }}”.{% else %}Nenhum colaborador cadastrado ainda.{% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
