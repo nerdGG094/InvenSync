@@ -48,6 +48,10 @@ class Config:
     #   ex.: 5544999999999:123456,5544988888888:654321
     WHATSAPP_ENABLED = os.environ.get("WHATSAPP_ENABLED", "0") in ("1", "true", "True")
     CALLMEBOT_RECIPIENTS = os.environ.get("CALLMEBOT_RECIPIENTS", "")
+
+    # Monitoramento de uptime (ping/HTTP em segundo plano).
+    MONITORING_ENABLED = os.environ.get("MONITORING_ENABLED", "1") in ("1", "true", "True")
+    MONITORING_INTERVAL = int(os.environ.get("MONITORING_INTERVAL", "120"))  # segundos
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_pre_ping": True,   # evita conexões mortas após ociosidade
         "pool_recycle": 1800,    # recicla conexões a cada 30 min

@@ -162,14 +162,13 @@
         </li>{% endif %}
         {% if current_user.is_admin %}
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle {% if request.endpoint and (request.endpoint.startswith('products.') or request.endpoint.startswith('movements.') or request.endpoint.startswith('kanban.') or request.endpoint.startswith('reports.') or request.endpoint.startswith('mobile.')) %}active{% endif %}"
+          <a class="nav-link dropdown-toggle {% if request.endpoint and (request.endpoint.startswith('products.') or request.endpoint.startswith('movements.') or request.endpoint.startswith('kanban.') or request.endpoint.startswith('reports.')) %}active{% endif %}"
              href="#" id="ddEstoque" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             <i class="bi bi-box-seam"></i> Estoque
           </a>
           <ul class="dropdown-menu" aria-labelledby="ddEstoque">
             <li><a class="dropdown-item {% if request.endpoint == 'products.list_view' %}active{% endif %}" href="{{ url_for('products.list_view') }}"><i class="bi bi-grid me-2"></i> Produtos</a></li>
             <li><a class="dropdown-item {% if request.endpoint == 'products.supplies' %}active{% endif %}" href="{{ url_for('products.supplies') }}"><i class="bi bi-printer me-2"></i> Toner &amp; Cilindros</a></li>
-            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('mobile.') %}active{% endif %}" href="{{ url_for('mobile.list_view') }}"><i class="bi bi-phone me-2"></i> Celulares</a></li>
             <li><hr class="dropdown-divider"></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('movements.') %}active{% endif %}" href="{{ url_for('movements.list_and_new') }}"><i class="bi bi-arrow-left-right me-2"></i> Movimentações</a></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('kanban.') %}active{% endif %}" href="{{ url_for('kanban.board') }}"><i class="bi bi-kanban me-2"></i> Kanban</a></li>
@@ -191,7 +190,7 @@
           </ul>
         </li>
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle {% if request.endpoint and (request.endpoint.startswith('machines.') or request.endpoint.startswith('cleanings.')) %}active{% endif %}"
+          <a class="nav-link dropdown-toggle {% if request.endpoint and (request.endpoint.startswith('machines.') or request.endpoint.startswith('cleanings.') or request.endpoint.startswith('maintenance.') or request.endpoint.startswith('mobile.') or request.endpoint.startswith('monitoring.') or request.endpoint.startswith('labels.')) %}active{% endif %}"
              href="#" id="ddMaquinas" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             <i class="bi bi-pc-display"></i> Máquinas
           </a>
@@ -202,6 +201,11 @@
               </a>
             </li>
             <li>
+              <a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('mobile.') %}active{% endif %}" href="{{ url_for('mobile.list_view') }}">
+                <i class="bi bi-phone me-2"></i> Celulares
+              </a>
+            </li>
+            <li>
               <a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('cleanings.') %}active{% endif %}" href="{{ url_for('cleanings.list_view') }}">
                 <i class="bi bi-droplet-half me-2"></i> Limpeza de Máquinas
               </a>
@@ -209,6 +213,11 @@
             <li>
               <a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('maintenance.') %}active{% endif %}" href="{{ url_for('maintenance.list_view') }}">
                 <i class="bi bi-tools me-2"></i> Manutenções
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('monitoring.') %}active{% endif %}" href="{{ url_for('monitoring.list_view') }}">
+                <i class="bi bi-activity me-2"></i> Monitoramento
               </a>
             </li>
             <li><hr class="dropdown-divider"></li>

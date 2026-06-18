@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-activity"></i></span>{{ title }}
+  </h1>
+  <a href="{{ url_for('monitoring.list_view') }}" class="btn btn-outline-light"><i class="bi bi-arrow-left"></i> Voltar</a>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <form method="post" class="row g-3">
+      <div class="col-12 col-md-6">
+        <label class="form-label">Nome / identificação</label>
+        <input type="text" name="label" class="form-control" required
+               value="{{ h.label if h is mapping else h.label or '' }}" placeholder="Ex.: Servidor PG17, Impressora Fiscal...">
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label">Host / IP / URL</label>
+        <input type="text" name="host" class="form-control" required
+               value="{{ h.host if h is mapping else h.host or '' }}" placeholder="192.168.0.10 ou https://site.com.br">
+      </div>
+
+      <div class="col-12 col-md-4">
+        <label class="form-label">Tipo</label>
+        <select name="kind" class="form-select">
+          {% set cur_kind = h.kind if h is mapping else h.kind %}
+          {% for val, lbl in kinds %}
+            <option value="{{ val }}" {{ 'selected' if cur_kind == val }}>{{ lbl }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label">Forma de checagem</label>
+        <select name="check_type" class="form-select">
+          {% set cur_chk = h.check_type if h is mapping else h.check_type %}
+          {% for val, lbl in checks %}
+            <option value="{{ val }}" {{ 'selected' if cur_chk == val }}>{{ lbl }}</option>
+          {% endfor %}
+        </select>
+        <small class="text-muted">Ping para equipamentos de rede; HTTP para sites/serviços web.</small>
+      </div>
+      <div class="col-12 col-md-4 d-flex align-items-center">
+        <div class="form-check mt-4">
+          {% set cur_en = h.enabled if h is mapping else h.enabled %}
+          <input class="form-check-input" type="checkbox" name="enabled" id="enabled" {{ 'checked' if cur_en }}>
+          <label class="form-check-label" for="enabled">Monitorar este host</label>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <label class="form-label">Observações</label>
+        <textarea name="notes" class="form-control" rows="2">{{ h.notes if h is mapping else (h.notes or '') }}</textarea>
+      </div>
+
+      <div class="col-12 d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Salvar</button>
+        <a href="{{ url_for('monitoring.list_view') }}" class="btn btn-outline-light">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

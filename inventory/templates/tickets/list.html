@@ -27,6 +27,24 @@
   </div>
 </div>
 
+{% if not is_admin %}
+<div class="card mb-3" style="border-left:4px solid var(--brand);">
+  <div class="card-body d-flex flex-wrap align-items-center gap-3">
+    <div class="flex-grow-1">
+      <h2 class="h5 mb-1"><i class="bi bi-hand-thumbs-up text-success"></i> Olá, {{ current_user.name.split(' ')[0] }}!</h2>
+      <p class="text-muted mb-0">
+        Precisa de ajuda da TI? Abra um chamado e acompanhe o andamento aqui mesmo.
+        Antes, veja se a <a href="{{ url_for('kb.list_view') }}">Base de Conhecimento</a> já resolve.
+      </p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('tickets.new') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Abrir chamado</a>
+      <a href="{{ url_for('kb.list_view') }}" class="btn btn-outline-light"><i class="bi bi-journal-bookmark"></i> Base de Conhecimento</a>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <div class="row g-3 mb-3">
   <div class="col-6 col-lg-3">
     <a href="{{ url_for('tickets.list_view', status='aberto') }}" class="text-decoration-none">

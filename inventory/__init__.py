@@ -91,6 +91,7 @@ def create_app():
     from .models.kb import KbArticle
     from .models.domain import Domain
     from .models.colaborador import Colaborador
+    from .models.monitor import MonitoredHost
 
     # Cria tabelas e semente inicial
     with app.app_context():
@@ -144,6 +145,7 @@ def create_app():
     from .routes.wpp import bp as wpp_bp  # ⬅️ NOVO: teste de notificações WhatsApp (CallMeBot)
     from .routes.backups import bp as backups_bp  # ⬅️ NOVO: backups do banco (admin)
     from .routes.colaboradores import bp as colaboradores_bp  # ⬅️ NOVO: cadastro central de colaboradores
+    from .routes.monitoring import bp as monitoring_bp  # ⬅️ NOVO: monitoramento de uptime
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -158,7 +160,7 @@ def create_app():
     app.register_blueprint(machines_bp, url_prefix="/machines")  # ⬅️ NOVO: rota /machines
     app.register_blueprint(cleanings_bp, url_prefix="/machines/cleanings")  # ⬅️ NOVO: limpezas
     app.register_blueprint(tickets_bp, url_prefix="/tickets")  # ⬅️ NOVO: chamados
-    app.register_blueprint(mobile_bp, url_prefix="/mobile")  # ⬅️ NOVO: celulares
+    app.register_blueprint(mobile_bp, url_prefix="/machines/mobile")  # ⬅️ celulares (submódulo de Máquinas)
     app.register_blueprint(routers_bp, url_prefix="/routers")  # ⬅️ NOVO: roteadores
     app.register_blueprint(audit_bp, url_prefix="/audit")  # ⬅️ NOVO: auditoria
     app.register_blueprint(assets_bp, url_prefix="/assets")  # ⬅️ NOVO: ativos por colaborador
@@ -172,6 +174,7 @@ def create_app():
     app.register_blueprint(wpp_bp, url_prefix="/wpp")  # ⬅️ NOVO: teste de notificações WhatsApp
     app.register_blueprint(backups_bp, url_prefix="/backups")  # ⬅️ NOVO: backups do banco
     app.register_blueprint(colaboradores_bp, url_prefix="/colaboradores")  # ⬅️ NOVO: colaboradores
+    app.register_blueprint(monitoring_bp, url_prefix="/machines/monitoring")  # ⬅️ monitoramento (submódulo de Máquinas)
 
     # ===== Controle de acesso por módulo =====
     # Usuários comuns (não-admin) só acessam Chamados e o próprio Perfil.
@@ -207,5 +210,13 @@ def create_app():
     @app.errorhandler(500)
     def server_error(e):
         return render_template("error.html", title="Erro", message="Erro interno no servidor"), 500
+
+    # Monitoramento de uptime em segundo plano (ping/HTTP + alerta WhatsApp)
+    if app.config.get("MONITORING_ENABLED", True):
+        try:
+            from .services import monitoring
+            monitoring.start_scheduler(app)
+        except Exception:  # noqa: BLE001
+            app.logger.exception("Falha ao iniciar o monitoramento de uptime")
 
     return app

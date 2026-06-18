@@ -6,6 +6,11 @@
   .stat-card .display-6 { line-height: 1.1; }
   .chart-card { min-height: 360px; }
   .chart-wrap { position: relative; height: 260px; }
+  .mini-card .mini-num { font-size: 1.6rem; line-height: 1; font-weight: 600; }
+  .mini-card { transition: transform .12s ease, border-color .12s ease; }
+  .mini-card:hover { transform: translateY(-2px); border-color: var(--brand, #00c853); }
+  .mini-card a.stretched-link { color: inherit; }
+  .section-title { letter-spacing:.02em; }
 </style>
 
 <div class="row g-3">
@@ -54,6 +59,105 @@
     </div>
   </div>
 </div>
+
+{% if it %}
+{# ===================== SEÇÃO: VISÃO GERAL DE TI ===================== #}
+<h2 class="h6 text-uppercase text-muted section-title mt-4 mb-2 d-flex align-items-center gap-2">
+  <i class="bi bi-hdd-network"></i> Ativos &amp; serviços de TI
+</h2>
+<div class="row g-3">
+  <div class="col-6 col-md-4 col-lg-2">
+    <div class="card mini-card h-100">
+      <div class="card-body position-relative">
+        <a href="{{ url_for('machines.list_view') }}" class="stretched-link text-decoration-none"></a>
+        <div class="d-flex align-items-center justify-content-between">
+          <span class="text-muted small">Máquinas</span>
+          <i class="bi bi-pc-display text-success"></i>
+        </div>
+        <div class="mini-num mt-2">{{ it.counts.machines }}</div>
+        <small class="text-muted">{{ it.counts.machines_active }} ativas</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-4 col-lg-2">
+    <div class="card mini-card h-100">
+      <div class="card-body position-relative">
+        <a href="{{ url_for('tickets.list_view') }}" class="stretched-link text-decoration-none"></a>
+        <div class="d-flex align-items-center justify-content-between">
+          <span class="text-muted small">Chamados abertos</span>
+          <i class="bi bi-life-preserver {% if it.counts.tickets_open > 0 %}text-warning{% else %}text-success{% endif %}"></i>
+        </div>
+        <div class="mini-num mt-2">{{ it.counts.tickets_open }}</div>
+        <small class="text-muted">em atendimento</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-4 col-lg-2">
+    <div class="card mini-card h-100">
+      <div class="card-body position-relative">
+        <a href="{{ url_for('mobile.list_view') }}" class="stretched-link text-decoration-none"></a>
+        <div class="d-flex align-items-center justify-content-between">
+          <span class="text-muted small">Celulares</span>
+          <i class="bi bi-phone text-success"></i>
+        </div>
+        <div class="mini-num mt-2">{{ it.counts.mobiles }}</div>
+        <small class="text-muted">corporativos</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-4 col-lg-2">
+    <div class="card mini-card h-100">
+      <div class="card-body position-relative">
+        <a href="{{ url_for('routers.list_view') }}" class="stretched-link text-decoration-none"></a>
+        <div class="d-flex align-items-center justify-content-between">
+          <span class="text-muted small">Roteadores</span>
+          <i class="bi bi-router text-success"></i>
+        </div>
+        <div class="mini-num mt-2">{{ it.counts.routers }}</div>
+        <small class="text-muted">rede / APs</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-4 col-lg-2">
+    <div class="card mini-card h-100">
+      <div class="card-body position-relative">
+        <a href="{{ url_for('colaboradores.list_view') }}" class="stretched-link text-decoration-none"></a>
+        <div class="d-flex align-items-center justify-content-between">
+          <span class="text-muted small">Colaboradores</span>
+          <i class="bi bi-people text-success"></i>
+        </div>
+        <div class="mini-num mt-2">{{ it.counts.colaboradores }}</div>
+        <small class="text-muted">cadastrados</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-md-4 col-lg-2">
+    <div class="card mini-card h-100">
+      <div class="card-body position-relative">
+        <a href="{{ url_for('licenses.list_view') }}" class="stretched-link text-decoration-none"></a>
+        <div class="d-flex align-items-center justify-content-between">
+          <span class="text-muted small">A vencer (60d)</span>
+          <i class="bi bi-calendar-event {% if it.expiring_count > 0 %}text-warning{% else %}text-success{% endif %}"></i>
+        </div>
+        <div class="mini-num mt-2">{{ it.expiring_count }}</div>
+        <small class="text-muted">licenças + domínios</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if it.cleanings_due and it.cleanings_due > 0 %}
+<div class="alert alert-warning d-flex align-items-center mt-3 mb-0 py-2" role="alert">
+  <i class="bi bi-droplet-half me-2"></i>
+  <span>{{ it.cleanings_due }} limpeza(s) de máquina em atraso (próxima data já passou).</span>
+</div>
+{% endif %}
+{% endif %}
 
 <!-- Atalhos rápidos -->
 <div class="d-flex flex-wrap gap-2 mt-4">
@@ -152,6 +256,214 @@
   </div>
 </div>
 
+{% if it %}
+{# ===================== SEÇÃO: GRÁFICOS DE TI ===================== #}
+<div class="row g-3 mt-1">
+  <!-- Chamados por status (rosca) -->
+  <div class="col-12 col-md-6 col-lg-3">
+    <div class="card chart-card h-100">
+      <div class="card-header fw-semibold d-flex align-items-center gap-2">
+        <i class="bi bi-life-preserver"></i> Chamados por status
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap"><canvas id="chartTicketsStatus" role="img" aria-label="Chamados por status"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chamados abertos por prioridade (barras) -->
+  <div class="col-12 col-md-6 col-lg-3">
+    <div class="card chart-card h-100">
+      <div class="card-header fw-semibold d-flex align-items-center gap-2">
+        <i class="bi bi-flag"></i> Chamados abertos por prioridade
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap"><canvas id="chartTicketsPriority" role="img" aria-label="Chamados por prioridade"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Máquinas por tipo (rosca) -->
+  <div class="col-12 col-md-6 col-lg-3">
+    <div class="card chart-card h-100">
+      <div class="card-header fw-semibold d-flex align-items-center gap-2">
+        <i class="bi bi-pc-display"></i> Máquinas por tipo
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap"><canvas id="chartMachinesKind" role="img" aria-label="Máquinas por tipo"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Celulares por status (barras) -->
+  <div class="col-12 col-md-6 col-lg-3">
+    <div class="card chart-card h-100">
+      <div class="card-header fw-semibold d-flex align-items-center gap-2">
+        <i class="bi bi-phone"></i> Celulares por status
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap"><canvas id="chartMobilesStatus" role="img" aria-label="Celulares por status"></canvas></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ===================== SEÇÃO: VENCIMENTOS + ATIVIDADE ===================== #}
+<div class="row g-3 mt-1">
+  <!-- Vencimentos próximos -->
+  <div class="col-12 col-lg-7">
+    <div class="card h-100">
+      <div class="card-header fw-semibold d-flex align-items-center gap-2">
+        <i class="bi bi-calendar-event text-warning"></i> Vencimentos próximos (60 dias)
+        {% if it.expiring_count > 0 %}<span class="badge bg-warning-subtle text-warning-emphasis ms-auto">{{ it.expiring_count }}</span>{% endif %}
+      </div>
+      <div class="card-body">
+        {% if it.expiring and it.expiring|length > 0 %}
+        <div class="table-responsive">
+          <table class="table table-sm table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Tipo</th><th>Item</th><th>Detalhe</th>
+                <th class="text-end">Vencimento</th><th class="text-end">Dias</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for e in it.expiring %}
+              <tr>
+                <td><span class="badge bg-secondary-subtle text-secondary-emphasis">{{ e.tipo }}</span></td>
+                <td class="text-truncate" style="max-width:220px">{{ e.name }}</td>
+                <td class="text-muted small">{{ e.info or '—' }}</td>
+                <td class="text-end text-nowrap">{{ e.expiry.strftime('%d/%m/%Y') if e.expiry else '—' }}</td>
+                <td class="text-end">
+                  {% if e.status == 'vencido' %}
+                    <span class="badge bg-danger-subtle text-danger">vencido</span>
+                  {% elif e.status == 'vencendo' %}
+                    <span class="badge bg-warning-subtle text-warning-emphasis">{{ e.days }}d</span>
+                  {% else %}
+                    <span class="badge bg-success-subtle text-success">{{ e.days }}d</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="alert alert-success d-flex align-items-center mb-0" role="alert">
+          <i class="bi bi-check-circle me-2"></i> Nenhuma licença ou domínio vencendo nos próximos 60 dias.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Atividade recente -->
+  <div class="col-12 col-lg-5">
+    <div class="card h-100">
+      <div class="card-header fw-semibold d-flex align-items-center gap-2">
+        <i class="bi bi-clock-history"></i> Atividade recente
+      </div>
+      <div class="card-body">
+        {% if recent_audit and recent_audit|length > 0 %}
+        <ul class="list-group list-group-flush">
+          {% for a in recent_audit %}
+          <li class="list-group-item bg-transparent px-0 d-flex align-items-start gap-2">
+            <i class="bi
+              {%- if a.action == 'create' %} bi-plus-circle text-success
+              {%- elif a.action == 'delete' %} bi-trash text-danger
+              {%- elif a.action == 'update' %} bi-pencil text-warning
+              {%- elif a.action == 'login' %} bi-box-arrow-in-right text-info
+              {%- else %} bi-dot{% endif %} mt-1"></i>
+            <div class="flex-grow-1">
+              <div class="small">{{ a.summary or (a.action ~ ' ' ~ (a.entity or '')) }}</div>
+              <div class="text-muted" style="font-size:.75rem">
+                {{ a.user_name or '—' }} · {{ a.created_at.strftime('%d/%m %H:%M') if a.created_at else '' }}
+              </div>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted mb-0">Sem registros de auditoria ainda.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ===================== SEÇÃO: PRÓXIMAS LIMPEZAS ===================== #}
+<div class="row g-3 mt-1">
+  <div class="col-12">
+    <div class="card h-100">
+      <div class="card-header fw-semibold d-flex align-items-center gap-2">
+        <i class="bi bi-droplet-half text-info"></i> Máquinas mais próximas da limpeza
+        {% if it.cleanings_due and it.cleanings_due > 0 %}
+          <span class="badge bg-danger-subtle text-danger ms-auto">{{ it.cleanings_due }} em atraso</span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        {% if it.cleanings_next and it.cleanings_next|length > 0 %}
+        {% set kind_icon = {'computador':'bi-pc-display','notebook':'bi-laptop','impressora':'bi-printer'} %}
+        <div class="table-responsive">
+          <table class="table table-sm table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Máquina</th>
+                <th class="text-end">Periodicidade</th>
+                <th class="text-end">Próxima limpeza</th>
+                <th class="text-end">Quando</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for c in it.cleanings_next %}
+              <tr>
+                <td>
+                  <div class="fw-semibold text-truncate" style="max-width:260px">
+                    <i class="bi {{ kind_icon.get(c.kind, 'bi-hdd') }} text-success me-1"></i>{{ c.machine }}
+                  </div>
+                  <small class="text-muted">
+                    {{ c.user or 's/ usuário' }}{% if c.sector %} · {{ c.sector }}{% endif %}
+                  </small>
+                </td>
+                <td class="text-end text-nowrap">
+                  {% if c.period_days %}{{ c.period_days }} dias{% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
+                <td class="text-end text-nowrap">{{ c.next_date.strftime('%d/%m/%Y') if c.next_date else '—' }}</td>
+                <td class="text-end">
+                  {% if c.overdue %}
+                    <span class="badge bg-danger-subtle text-danger"><i class="bi bi-exclamation-triangle me-1"></i>vencida {{ -c.days }}d</span>
+                  {% elif c.days == 0 %}
+                    <span class="badge bg-warning-subtle text-warning-emphasis"><i class="bi bi-clock me-1"></i>hoje</span>
+                  {% elif c.days <= 7 %}
+                    <span class="badge bg-info-subtle text-info-emphasis"><i class="bi bi-clock-history me-1"></i>em {{ c.days }}d</span>
+                  {% else %}
+                    <span class="badge bg-success-subtle text-success">em {{ c.days }}d</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="d-flex align-items-center justify-content-between mt-2">
+          <small class="text-muted">
+            Baseado na próxima data agendada no último registro de limpeza de cada máquina.
+          </small>
+          <a href="{{ url_for('cleanings.list_view') }}" class="btn btn-sm btn-outline-light">
+            <i class="bi bi-droplet-half"></i> Ver limpezas
+          </a>
+        </div>
+        {% else %}
+        <div class="alert alert-secondary d-flex align-items-center mb-0" role="alert">
+          <i class="bi bi-info-circle me-2"></i> Nenhuma limpeza agendada com data definida ainda.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <!-- SCRIPTS dos gráficos -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
@@ -173,6 +485,23 @@
   const CHART_DATA = {{ (chart_data or {})|tojson }};
   const TOP_ITEMS   = {{ (top_items_data or {})|tojson }};
   const TOP_USERS   = {{ (top_users_data or {})|tojson }};
+  const IT = {
+    tickets_status:   {{ (it.tickets_status if it else {})|tojson }},
+    tickets_priority: {{ (it.tickets_priority if it else {})|tojson }},
+    machines_kind:    {{ (it.machines_kind if it else {})|tojson }},
+    mobiles_status:   {{ (it.mobiles_status if it else {})|tojson }}
+  };
+
+  // Paleta categórica para gráficos de TI
+  const CATPAL = [
+    'rgba(0,200,83,.7)', 'rgba(255,193,7,.7)', 'rgba(0,184,148,.7)',
+    'rgba(244,67,54,.7)', 'rgba(33,150,243,.7)', 'rgba(156,39,176,.7)',
+    'rgba(255,112,67,.7)'
+  ];
+  const CATBORDER = [
+    'rgb(0,200,83)', 'rgb(255,193,7)', 'rgb(0,184,148)',
+    'rgb(244,67,54)', 'rgb(33,150,243)', 'rgb(156,39,176)', 'rgb(255,112,67)'
+  ];
 
   // Se não vier chart_data, gerar fallback a partir de low_stock
   {% if not chart_data and low_stock and low_stock|length > 0 %}
@@ -313,6 +642,52 @@
       }
     });
   })();
+
+  // ===================== GRÁFICOS DE TI =====================
+  function hasData(d){ return d && d.labels && d.labels.length > 0 && (d.data||[]).some(v => v > 0); }
+
+  // Helper: rosca categórica
+  function drawDoughnut(id, d){
+    if (!hasData(d)) return;
+    const el = document.getElementById(id); if (!el) return;
+    new Chart(el, {
+      type: 'doughnut',
+      data: { labels: d.labels, datasets: [{
+        data: d.data,
+        backgroundColor: d.labels.map((_,i)=>CATPAL[i % CATPAL.length]),
+        borderColor: d.labels.map((_,i)=>CATBORDER[i % CATBORDER.length]),
+        borderWidth: 2
+      }]},
+      options: { responsive:true, maintainAspectRatio:false, cutout:'58%',
+        plugins:{ legend:{ position:'bottom', labels:{ color:COLORS.tick, boxWidth:12 } } } }
+    });
+  }
+
+  // Helper: barras categóricas
+  function drawBars(id, d){
+    if (!hasData(d)) return;
+    const el = document.getElementById(id); if (!el) return;
+    new Chart(el, {
+      type: 'bar',
+      data: { labels: d.labels, datasets: [{
+        label: 'Quantidade', data: d.data,
+        backgroundColor: d.labels.map((_,i)=>CATPAL[i % CATPAL.length]),
+        borderColor: d.labels.map((_,i)=>CATBORDER[i % CATBORDER.length]),
+        borderWidth: 2
+      }]},
+      options: { responsive:true, maintainAspectRatio:false,
+        scales:{ x:{ticks:{color:COLORS.tick},grid:{color:COLORS.grid}},
+                 y:{beginAtZero:true,ticks:{precision:0,color:COLORS.tick},grid:{color:COLORS.grid}} },
+        plugins:{ legend:{ display:false } } }
+    });
+  }
+
+  if (IT && Object.keys(IT).length) {
+    drawDoughnut('chartTicketsStatus', IT.tickets_status);
+    drawBars('chartTicketsPriority', IT.tickets_priority);
+    drawDoughnut('chartMachinesKind', IT.machines_kind);
+    drawBars('chartMobilesStatus', IT.mobiles_status);
+  }
 </script>
 {# =================== FIM SEÇÃO: GRÁFICOS =================== #}
 
