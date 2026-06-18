@@ -41,8 +41,10 @@
 
 {% set entrada_total = (totals.in_total if totals else 0) or 0 %}
 {% set saida_total   = (totals.out_total if totals else 0) or 0 %}
+{% set saida_valor   = (totals.out_money if totals and totals.out_money is defined else 0) or 0 %}
 {% set saldo_total   = entrada_total - saida_total %}
 {% set total_regs    = (totals.count if totals and totals.count is defined else (pagination.total if pagination else 0)) %}
+{% set has_filter    = request.args.get('q') or request.args.get('type') or request.args.get('start') or request.args.get('end') %}
 
 <div class="page-header">
   <h1 class="ph-title">
@@ -50,30 +52,43 @@
     Movimentações
     <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ total_regs }}</span>
   </h1>
-  <a href="{{ url_for('kanban.board') }}" class="btn btn-outline-light"><i class="bi bi-kanban"></i> Kanban</a>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('reports.saidas', start=request.args.get('start'), end=request.args.get('end'), q=request.args.get('q')) }}" class="btn btn-outline-light"><i class="bi bi-file-earmark-bar-graph"></i> Relatório de saídas</a>
+    <a href="{{ url_for('kanban.board') }}" class="btn btn-outline-light"><i class="bi bi-kanban"></i> Kanban</a>
+  </div>
 </div>
 
 {# ===== Cartões-resumo (refletem o filtro atual) ===== #}
 <div class="row g-3 mb-3">
-  <div class="col-12 col-md-4">
+  <div class="col-12 col-sm-6 col-xl-3">
     <div class="card stat-card h-100"><div class="card-body d-flex align-items-center justify-content-between">
       <div>
-        <div class="text-muted small">Entradas {% if request.args.get('q') or request.args.get('type') or request.args.get('start') or request.args.get('end') %}(no filtro){% endif %}</div>
+        <div class="text-muted small">Entradas {% if has_filter %}(no filtro){% endif %}</div>
         <div class="h3 mb-0 number text-success">{{ entrada_total }}</div>
       </div>
       <i class="bi bi-box-arrow-in-down text-success fs-2"></i>
     </div></div>
   </div>
-  <div class="col-12 col-md-4">
+  <div class="col-12 col-sm-6 col-xl-3">
     <div class="card stat-card h-100" style="border-left-color:#f44336"><div class="card-body d-flex align-items-center justify-content-between">
       <div>
-        <div class="text-muted small">Saídas {% if request.args.get('q') or request.args.get('type') or request.args.get('start') or request.args.get('end') %}(no filtro){% endif %}</div>
+        <div class="text-muted small">Saídas {% if has_filter %}(no filtro){% endif %}</div>
         <div class="h3 mb-0 number text-danger">{{ saida_total }}</div>
       </div>
       <i class="bi bi-box-arrow-up text-danger fs-2"></i>
     </div></div>
   </div>
-  <div class="col-12 col-md-4">
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="card stat-card h-100" style="border-left-color:#ffb020"><div class="card-body d-flex align-items-center justify-content-between">
+      <div>
+        <div class="text-muted small">Valor das saídas {% if has_filter %}(no filtro){% endif %}</div>
+        <div class="h4 mb-0 number text-warning">R$ {{ '%.2f'|format(saida_valor)|replace('.', ',') }}</div>
+        <div class="mov-meta">Custo informado ou preço do produto</div>
+      </div>
+      <i class="bi bi-cash-stack text-warning fs-2"></i>
+    </div></div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
     <div class="card stat-card h-100" style="border-left-color:#0dcaf0"><div class="card-body d-flex align-items-center justify-content-between">
       <div>
         <div class="text-muted small">Saldo (E − S)</div>
@@ -97,7 +112,7 @@
         </a>
       </div>
       <div class="p-3">
-        <form method="post" novalidate class="d-grid gap-3">
+        <form method="post" enctype="multipart/form-data" novalidate class="d-grid gap-3">
           {{ form.hidden_tag() }}
 
           <div>
@@ -133,6 +148,19 @@
             </div>
             <div class="form-text">Informe para entradas (opcional nas saídas).</div>
             {{ field_error(form.unit_cost) }}
+          </div>
+
+          {# ===== Nota fiscal (apenas entradas) ===== #}
+          <div id="nf-wrapper" class="border rounded p-2" style="border-color:#243024 !important">
+            <div class="form-check form-switch">
+              {{ form.has_nf(class="form-check-input", id="has_nf") }}
+              <label class="form-check-label fw-semibold" for="has_nf">Possui NF?</label>
+            </div>
+            <div id="nf-file-box" class="mt-2 d-none">
+              {{ form.nf_file(class="form-control", id="nf_file", accept=".xml,.pdf") }}
+              <div class="form-text">Anexe a nota fiscal em XML ou PDF.</div>
+              {{ field_error(form.nf_file) }}
+            </div>
           </div>
 
           <div class="row g-2">
@@ -212,6 +240,7 @@
                 <div class="fw-semibold">{{ m.product.name }}</div>
                 <span class="mov-meta font-monospace">{{ m.product.sku }}</span>
                 {% if m.note %}<span class="mov-meta d-block text-truncate" style="max-width:280px" title="{{ m.note }}"><i class="bi bi-chat-left-text me-1"></i>{{ m.note }}</span>{% endif %}
+                {% if m.nf_filename %}<a class="mov-meta d-inline-block text-decoration-none" href="{{ url_for('movements.nf', mid=m.id) }}" target="_blank" title="Abrir nota fiscal anexada"><i class="bi bi-paperclip me-1"></i>NF{% if m.nf_original_name %} · {{ m.nf_original_name }}{% endif %}</a>{% endif %}
               </td>
               <td class="text-center">{{ movement_badge(m.movement_type) }}</td>
               <td class="text-end number {{ 'qty-in' if m.movement_type == 'IN' else 'qty-out' }}">
@@ -267,6 +296,31 @@
       const setor = UINFO[this.value];
       if (setor) sec.value = setor;
     });
+  })();
+
+  // ===== Nota fiscal: só aparece em entradas; o switch revela o anexo =====
+  (function(){
+    const type = document.getElementById('movement_type');
+    const wrap = document.getElementById('nf-wrapper');
+    const sw   = document.getElementById('has_nf');
+    const box  = document.getElementById('nf-file-box');
+    const file = document.getElementById('nf_file');
+    if (!type || !wrap || !sw || !box) return;
+
+    function syncType(){
+      const isIn = type.value === 'IN';
+      wrap.classList.toggle('d-none', !isIn);
+      if (!isIn){ sw.checked = false; }   // saída nunca leva NF
+      syncSwitch();
+    }
+    function syncSwitch(){
+      const on = sw.checked && type.value === 'IN';
+      box.classList.toggle('d-none', !on);
+      if (!on && file){ file.value = ''; }   // limpa o anexo se desligar
+    }
+    type.addEventListener('change', syncType);
+    sw.addEventListener('change', syncSwitch);
+    syncType();   // estado inicial
   })();
 </script>
 {% endblock %}

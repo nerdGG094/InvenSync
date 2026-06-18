@@ -1,10 +1,16 @@
 # inventory/routes/movements.py
+import os
+import time
 from datetime import datetime, timedelta
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import (
+    Blueprint, render_template, request, redirect, url_for, flash,
+    current_app, send_from_directory, abort,
+)
 from flask_login import login_required
+from werkzeug.utils import secure_filename
 from sqlalchemy.orm import joinedload
-from sqlalchemy import or_, func, case
+from sqlalchemy import or_, func, case, select
 
 from ..repositories import movement_repo
 from ..forms.catalog import MovementForm
@@ -15,6 +21,8 @@ from ..services import people
 
 bp = Blueprint("movements", __name__)
 
+NF_ALLOWED_EXT = {"xml", "pdf"}
+
 
 def _parse_date(value: str):
     if not value:
@@ -23,6 +31,24 @@ def _parse_date(value: str):
         return datetime.strptime(value, "%Y-%m-%d")
     except Exception:
         return None
+
+
+def _save_nf(file_storage):
+    """Salva a NF (XML/PDF) em disco e retorna (nome_salvo, nome_original).
+
+    Retorna (None, None) quando não há arquivo ou a extensão não é permitida.
+    """
+    if not file_storage or not file_storage.filename:
+        return None, None
+    safe = secure_filename(file_storage.filename)
+    ext = (safe.rsplit(".", 1)[-1] if "." in safe else "").lower()
+    if ext not in NF_ALLOWED_EXT:
+        return None, None
+    folder = current_app.config["NF_FOLDER"]
+    os.makedirs(folder, exist_ok=True)
+    fname = f"nf_{int(time.time() * 1000)}_{safe}"
+    file_storage.save(os.path.join(folder, fname))
+    return fname, safe
 
 
 @bp.route("", methods=["GET", "POST"])
@@ -36,6 +62,11 @@ def list_and_new():
     form.responsible_user.choices = people.user_choices("— Nenhum —")
 
     if form.validate_on_submit():
+        # Nota fiscal: só faz sentido em entradas e quando o switch está ligado
+        nf_filename = nf_original = None
+        if form.movement_type.data == "IN" and form.has_nf.data:
+            nf_filename, nf_original = _save_nf(form.nf_file.data)
+
         movement_repo.create_movement(
             product_id=form.product_id.data,
             movement_type=form.movement_type.data,
@@ -44,8 +75,13 @@ def list_and_new():
             note=form.note.data,
             responsible_user=(form.responsible_user.data or "").strip() or None,
             responsible_sector=(form.responsible_sector.data or "").strip() or None,
+            nf_filename=nf_filename,
+            nf_original_name=nf_original,
         )
-        flash("Movimentação registrada!", "success")
+        if form.movement_type.data == "IN" and form.has_nf.data and not nf_filename:
+            flash("Entrada registrada, mas a NF não foi anexada (envie um XML ou PDF).", "warning")
+        else:
+            flash("Movimentação registrada!", "success")
         return redirect(url_for("movements.list_and_new"))
 
     # ===== Filtros do histórico =====
@@ -108,12 +144,27 @@ def list_and_new():
     out_sum = func.coalesce(
         func.sum(case((StockMovement.movement_type != "IN", StockMovement.quantity), else_=0)), 0
     )
-    in_total, out_total, mov_count = query.with_entities(
-        in_sum, out_sum, func.count(StockMovement.id)
+    # Valor unitário da saída: custo informado na movimentação ou, na falta, o preço do produto
+    price_subq = (
+        select(Product.price).where(Product.id == StockMovement.product_id).scalar_subquery()
+    )
+    unit_value = func.coalesce(StockMovement.unit_cost, price_subq, 0)
+    out_money_sum = func.coalesce(
+        func.sum(
+            case(
+                (StockMovement.movement_type != "IN", StockMovement.quantity * unit_value),
+                else_=0,
+            )
+        ),
+        0,
+    )
+    in_total, out_total, out_money, mov_count = query.with_entities(
+        in_sum, out_sum, out_money_sum, func.count(StockMovement.id)
     ).one()
     totals = {
         "in_total": int(in_total or 0),
         "out_total": int(out_total or 0),
+        "out_money": float(out_money or 0),
         "count": int(mov_count or 0),
     }
 
@@ -124,4 +175,19 @@ def list_and_new():
         pagination=pagination,
         totals=totals,
         users_info=people.users_sector_map(),
+    )
+
+
+@bp.route("/<int:mid>/nf")
+@login_required
+def nf(mid):
+    """Abre/baixa a nota fiscal anexada a uma entrada."""
+    m = StockMovement.query.get_or_404(mid)
+    if not m.nf_filename:
+        abort(404)
+    return send_from_directory(
+        current_app.config["NF_FOLDER"],
+        m.nf_filename,
+        as_attachment=False,
+        download_name=m.nf_original_name or m.nf_filename,
     )

@@ -32,6 +32,10 @@ inventory/static/uploads/avatars/*
 inventory/static/uploads/tickets/*
 !inventory/static/uploads/tickets/.keep
 
+# === Uploads (notas fiscais das entradas) ===
+inventory/static/uploads/nf/*
+!inventory/static/uploads/nf/.keep
+
 # === Backups do banco (pg_dump) ===
 backups/
 

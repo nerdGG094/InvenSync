@@ -15,6 +15,8 @@ def _run_light_migrations():
     stmts = [
         'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS totp_secret VARCHAR(64)',
         'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS is_2fa_enabled BOOLEAN NOT NULL DEFAULT false',
+        'ALTER TABLE stock_movement ADD COLUMN IF NOT EXISTS nf_filename VARCHAR(255)',
+        'ALTER TABLE stock_movement ADD COLUMN IF NOT EXISTS nf_original_name VARCHAR(255)',
     ]
     for sql in stmts:
         try:

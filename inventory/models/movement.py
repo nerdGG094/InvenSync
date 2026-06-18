@@ -11,6 +11,10 @@ class StockMovement(db.Model):
     note = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, server_default=db.func.now(), index=True)
 
+    # Nota fiscal anexada (apenas entradas): nome salvo em disco e nome original
+    nf_filename = db.Column(db.String(255), nullable=True)
+    nf_original_name = db.Column(db.String(255), nullable=True)
+
     # Usuário responsável (de Máquinas) + setor — ex.: para quem foi o item
     responsible_user = db.Column(db.String(150), nullable=True, index=True)
     responsible_sector = db.Column(db.String(120), nullable=True)

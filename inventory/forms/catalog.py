@@ -1,8 +1,9 @@
 
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileAllowed
 from wtforms import (
     StringField, TextAreaField, SubmitField, IntegerField, DecimalField,
-    SelectField, DateField,
+    SelectField, DateField, BooleanField,
 )
 from wtforms.validators import DataRequired, Length, Email, Optional, NumberRange
 
@@ -50,6 +51,12 @@ class MovementForm(FlaskForm):
     movement_type = SelectField("Tipo", choices=[("IN","Entrada"),("OUT","Saída")])
     quantity = IntegerField("Quantidade", validators=[DataRequired(), NumberRange(min=1)])
     unit_cost = DecimalField("Custo unitário (opcional)", places=2, validators=[Optional(), NumberRange(min=0)])
+    # Nota fiscal (apenas entradas): switch + arquivo XML/PDF
+    has_nf = BooleanField("Possui NF?", default=False)
+    nf_file = FileField(
+        "Nota fiscal (XML ou PDF)",
+        validators=[Optional(), FileAllowed(["xml", "pdf"], "Envie apenas arquivos XML ou PDF.")],
+    )
     # Usuário responsável (de Máquinas) + setor automático
     responsible_user = SelectField("Usuário responsável", validators=[Optional()], choices=[])
     responsible_sector = StringField("Setor", validators=[Optional(), Length(max=120)])

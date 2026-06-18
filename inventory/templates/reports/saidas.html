@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Relatório de Saídas{% endblock %}
+{% block content %}
+
+{% set has_filter = request.args.get('q') or request.args.get('start') or request.args.get('end') %}
+
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-box-arrow-up"></i></span>
+    Relatório de Saídas
+    <span class="badge bg-danger-subtle text-danger-emphasis ph-count">{{ count }} saída{{ 's' if count != 1 else '' }}</span>
+  </h1>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('movements.list_and_new') }}" class="btn btn-outline-light"><i class="bi bi-arrow-left-right"></i> Movimentações</a>
+    <a href="{{ url_for('reports.export_saidas', q=request.args.get('q'), start=request.args.get('start'), end=request.args.get('end')) }}" class="btn btn-primary"><i class="bi bi-filetype-csv"></i> Exportar CSV</a>
+  </div>
+</div>
+
+{# ===== Filtros ===== #}
+<form method="get" action="{{ url_for('reports.saidas') }}" class="row g-2 align-items-end mb-3">
+  <div class="col-12 col-md-4">
+    <label class="form-label fw-semibold mb-1 small">Produto / observação</label>
+    <div class="input-group input-group-sm">
+      <span class="input-group-text"><i class="bi bi-search"></i></span>
+      <input type="text" name="q" value="{{ request.args.get('q','') }}" class="form-control" placeholder="Buscar...">
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <label class="form-label fw-semibold mb-1 small">Início</label>
+    <input type="date" class="form-control form-control-sm" name="start" value="{{ request.args.get('start','') }}">
+  </div>
+  <div class="col-6 col-md-3">
+    <label class="form-label fw-semibold mb-1 small">Fim</label>
+    <input type="date" class="form-control form-control-sm" name="end" value="{{ request.args.get('end','') }}">
+  </div>
+  <div class="col-12 col-md-2 d-flex gap-2">
+    <button class="btn btn-sm btn-primary flex-fill" type="submit"><i class="bi bi-funnel"></i> Filtrar</button>
+    <a class="btn btn-sm btn-outline-light" href="{{ url_for('reports.saidas') }}" title="Limpar"><i class="bi bi-x-lg"></i></a>
+  </div>
+</form>
+
+{# ===== Cartões-resumo ===== #}
+<div class="row g-3 mb-3">
+  <div class="col-12 col-md-4">
+    <div class="card stat-card h-100" style="border-left-color:#f44336"><div class="card-body d-flex align-items-center justify-content-between">
+      <div>
+        <h6 class="text-muted mb-1">Saídas {% if has_filter %}(no filtro){% endif %}</h6>
+        <div class="h3 mb-0 number text-danger">{{ count }}</div>
+      </div>
+      <i class="bi bi-box-arrow-up text-danger fs-2"></i>
+    </div></div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="card stat-card h-100"><div class="card-body d-flex align-items-center justify-content-between">
+      <div>
+        <h6 class="text-muted mb-1">Quantidade total</h6>
+        <div class="h3 mb-0 number">{{ total_qty }}</div>
+      </div>
+      <i class="bi bi-box-seam text-secondary fs-2"></i>
+    </div></div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="card stat-card h-100" style="border-left-color:#ffb020"><div class="card-body d-flex align-items-center justify-content-between">
+      <div>
+        <h6 class="text-muted mb-1">Valor total</h6>
+        <div class="h3 mb-0 number text-warning">R$ {{ '%.2f'|format(total_value)|replace('.', ',') }}</div>
+      </div>
+      <i class="bi bi-cash-stack text-warning fs-2"></i>
+    </div></div>
+  </div>
+</div>
+
+<div class="table-card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th style="min-width:130px">Data</th>
+          <th>Produto</th>
+          <th class="text-end" style="width:80px">Qtd</th>
+          <th class="text-end" style="width:120px">Valor unit.</th>
+          <th class="text-end" style="width:130px">Valor total</th>
+          <th class="d-none d-lg-table-cell">Responsável</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        {% set m = r.m %}
+        <tr>
+          <td class="text-nowrap number">
+            {{ m.created_at.strftime('%d/%m/%Y') if m.created_at else '' }}
+            <span class="d-block" style="font-size:.72rem;color:#8fb0a0">{{ m.created_at.strftime('%H:%M') if m.created_at else '' }}</span>
+          </td>
+          <td>
+            <div class="fw-semibold">{{ m.product.name if m.product else '—' }}</div>
+            <span class="font-monospace" style="font-size:.72rem;color:#8fb0a0">{{ m.product.sku if m.product else '' }}</span>
+            {% if m.note %}<span class="d-block text-truncate" style="max-width:280px;font-size:.72rem;color:#8fb0a0" title="{{ m.note }}"><i class="bi bi-chat-left-text me-1"></i>{{ m.note }}</span>{% endif %}
+          </td>
+          <td class="text-end number">{{ m.quantity }}</td>
+          <td class="text-end number">R$ {{ '%.2f'|format(r.unit_value)|replace('.', ',') }}</td>
+          <td class="text-end number fw-semibold">R$ {{ '%.2f'|format(r.line_total)|replace('.', ',') }}</td>
+          <td class="d-none d-lg-table-cell">
+            {% if m.responsible_user %}
+              {{ m.responsible_user }}{% if m.responsible_sector %}<span class="d-block" style="font-size:.72rem;color:#8fb0a0">{{ m.responsible_sector }}</span>{% endif %}
+            {% else %}<span class="contact-muted">—</span>{% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6">
+            <div class="empty-state"><i class="bi bi-inboxes"></i>
+              {% if has_filter %}Nenhuma saída para os filtros aplicados.{% else %}Nenhuma saída registrada ainda.{% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      {% if rows %}
+      <tfoot>
+        <tr class="border-top" style="border-color:#243024 !important">
+          <th colspan="2" class="text-end">Total</th>
+          <th class="text-end number">{{ total_qty }}</th>
+          <th></th>
+          <th class="text-end number text-warning">R$ {{ '%.2f'|format(total_value)|replace('.', ',') }}</th>
+          <th class="d-none d-lg-table-cell"></th>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+{% endblock %}

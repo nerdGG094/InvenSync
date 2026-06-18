@@ -42,6 +42,8 @@ class Config:
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB
     AVATAR_FOLDER = os.path.join(BASE_DIR, "static", "uploads", "avatars")
     ATTACH_FOLDER = os.path.join(BASE_DIR, "static", "uploads", "tickets")
+    # Notas fiscais anexadas às entradas de estoque (XML/PDF)
+    NF_FOLDER = os.path.join(BASE_DIR, "static", "uploads", "nf")
 
     # Notificações por WhatsApp via CallMeBot (gratuito) — desligado até configurar no .env.
     # CALLMEBOT_RECIPIENTS: pares numero:apikey separados por vírgula.
