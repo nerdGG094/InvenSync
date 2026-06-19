@@ -105,14 +105,14 @@
   <div class="group-head {{ 'no-sector' if not g.name }}">
     <i class="bi {{ 'bi-diagram-3' if g.name else 'bi-dash-circle' }}"></i>
     {{ g.name or 'Sem setor' }}
-    <span class="count">{{ g.items|length }}</span>
+    <span class="count">{{ g['items']|length }}</span>
     <span class="gtotals">
       {% if g.maquinas %}<span class="pchip blue"><i class="bi bi-pc-display"></i> {{ g.maquinas }}</span>{% endif %}
       {% if g.celulares %}<span class="pchip amber"><i class="bi bi-phone"></i> {{ g.celulares }}</span>{% endif %}
     </span>
   </div>
   <div class="asset-grid">
-  {% for p in g.items %}
+  {% for p in g['items'] %}
   {% set parts = p.name.split() %}
   {% set initials = (parts[0][0] ~ (parts[-1][0] if parts|length > 1 else ''))|upper %}
   <article class="asset-card">

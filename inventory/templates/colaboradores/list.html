@@ -105,10 +105,10 @@
   <div class="group-head {{ 'no-sector' if not g.name }}">
     <i class="bi {{ 'bi-diagram-3' if g.name else 'bi-dash-circle' }}"></i>
     {{ g.name or 'Sem setor' }}
-    <span class="count">{{ g.items|length }}</span>
+    <span class="count">{{ g['items']|length }}</span>
   </div>
   <div class="people-grid">
-  {% for c in g.items %}
+  {% for c in g['items'] %}
   {% set is_self = (current_user.is_authenticated and c.id == current_user.id) %}
   {% set ac = asset_counts.get((c.name or '')|lower|trim, 0) %}
   <article class="person-card {{ '' if c.is_active else 'is-inactive' }}">
