@@ -45,11 +45,15 @@ def _group_by_sector(people: list) -> list:
     out = []
     for s in ordem:
         itens = grupos[s]
+        # Conta dispositivos ÚNICOS por id: um celular compartilhado por várias
+        # pessoas é 1 aparelho, não vários.
+        maquinas = {m.id for p in itens for m in p["machines"]}
+        celulares = {d.id for p in itens for d in p["mobiles"]}
         out.append({
             "name": s or None,
             "items": itens,
-            "maquinas": sum(len(p["machines"]) for p in itens),
-            "celulares": sum(len(p["mobiles"]) for p in itens),
+            "maquinas": len(maquinas),
+            "celulares": len(celulares),
         })
     return out
 
@@ -62,8 +66,9 @@ def list_view():
         people = [p for p in people if q in p["name"].lower()]
     totals = {
         "pessoas": len(people),
-        "maquinas": sum(len(p["machines"]) for p in people),
-        "celulares": sum(len(p["mobiles"]) for p in people),
+        # Dispositivos únicos por id (aparelho compartilhado conta 1).
+        "maquinas": len({m.id for p in people for m in p["machines"]}),
+        "celulares": len({d.id for p in people for d in p["mobiles"]}),
     }
     grupos = _group_by_sector(people)
     return render_template("assets/list.html", people=people, grupos=grupos,

@@ -31,9 +31,17 @@ class MobileDevice(db.Model):
 
     @property
     def employees(self) -> list:
-        """Lista (sem vazios) dos funcionários vinculados ao aparelho."""
+        """Funcionários vinculados ao aparelho, sem vazios e sem repetir o
+        mesmo nome (a mesma pessoa nunca conta duas vezes)."""
         nomes = (self.assigned_employee, self.assigned_employee_2, self.assigned_employee_3)
-        return [e.strip() for e in nomes if (e or "").strip()]
+        out, seen = [], set()
+        for e in nomes:
+            e = (e or "").strip()
+            chave = e.lower()
+            if e and chave not in seen:
+                seen.add(chave)
+                out.append(e)
+        return out
 
     @property
     def is_shared(self) -> bool:
