@@ -155,8 +155,9 @@
     </div>
 
     <div class="phone-chips">
-      {% if m.assigned_employee %}
-        <span class="pchip green"><i class="bi bi-person-fill"></i> {{ m.assigned_employee }}</span>
+      {% if m.employees %}
+        {% for e in m.employees %}<span class="pchip green"><i class="bi bi-person-fill"></i> {{ e }}</span>{% endfor %}
+        {% if m.is_shared %}<span class="pchip blue" title="Aparelho compartilhado"><i class="bi bi-people"></i> compartilhado</span>{% endif %}
       {% else %}
         <span class="pchip"><i class="bi bi-person-dash"></i> não atribuído</span>
       {% endif %}

@@ -27,11 +27,13 @@ def people_with_assets() -> list:
         people[nome]["machines"].append(m)
 
     for d in MobileDevice.query.all():
-        nome = _norm(d.assigned_employee)
-        if not nome:
-            continue
-        people.setdefault(nome, {"name": nome, "machines": [], "mobiles": []})
-        people[nome]["mobiles"].append(d)
+        # Aparelho pode ser compartilhado: aparece para cada funcionário vinculado.
+        for nome in (d.employees or [_norm(d.assigned_employee)]):
+            nome = _norm(nome)
+            if not nome:
+                continue
+            people.setdefault(nome, {"name": nome, "machines": [], "mobiles": []})
+            people[nome]["mobiles"].append(d)
 
     result = []
     for p in people.values():
@@ -45,7 +47,8 @@ def assets_for(name: str) -> dict:
     """Ativos de uma pessoa específica (ou estrutura vazia)."""
     nome = _norm(name)
     machines = [m for m in Machine.query.all() if _norm(m.assigned_user).lower() == nome.lower()]
-    mobiles = [d for d in MobileDevice.query.all() if _norm(d.assigned_employee).lower() == nome.lower()]
+    mobiles = [d for d in MobileDevice.query.all()
+               if any(_norm(e).lower() == nome.lower() for e in d.employees)]
     sector = ""
     for m in machines:
         if m.sector:

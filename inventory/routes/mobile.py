@@ -13,7 +13,10 @@ bp = Blueprint("mobile", __name__)
 
 
 def _populate(form: MobileForm):
-    form.assigned_employee.choices = people.user_choices()
+    choices = people.user_choices()
+    form.assigned_employee.choices = choices
+    form.assigned_employee_2.choices = choices
+    form.assigned_employee_3.choices = choices
 
 
 def _group_by_sector(items: list) -> list:
@@ -31,6 +34,10 @@ def _to_kwargs(form: MobileForm) -> dict:
     def s(v):
         v = (v or "").strip()
         return v or None
+    # Funcionários adicionais só contam se o aparelho for marcado como compartilhado.
+    shared = bool(form.shared.data)
+    emp2 = s(form.assigned_employee_2.data) if shared else None
+    emp3 = s(form.assigned_employee_3.data) if shared else None
     return dict(
         brand=s(form.brand.data),
         model=(form.model.data or "").strip(),
@@ -40,6 +47,8 @@ def _to_kwargs(form: MobileForm) -> dict:
         imei=s(form.imei.data),
         serial_number=s(form.serial_number.data),
         assigned_employee=s(form.assigned_employee.data),
+        assigned_employee_2=emp2,
+        assigned_employee_3=emp3,
         sector=s(form.sector.data),
         patrimony=s(form.patrimony.data),
         status=form.status.data or "em_uso",
@@ -87,10 +96,18 @@ def edit(mid):
     m = mobile_repo.get_mobile(mid)
     form = MobileForm(obj=m)
     _populate(form)
-    if m.assigned_employee and m.assigned_employee not in [c[0] for c in form.assigned_employee.choices]:
-        form.assigned_employee.choices.append((m.assigned_employee, m.assigned_employee))
+    # Garante que os responsáveis atuais apareçam, mesmo se o colaborador
+    # foi removido/inativado depois.
+    for fld, val in ((form.assigned_employee, m.assigned_employee),
+                     (form.assigned_employee_2, m.assigned_employee_2),
+                     (form.assigned_employee_3, m.assigned_employee_3)):
+        if val and val not in [c[0] for c in fld.choices]:
+            fld.choices.append((val, val))
     if request.method == "GET":
         form.assigned_employee.data = m.assigned_employee or ""
+        form.assigned_employee_2.data = m.assigned_employee_2 or ""
+        form.assigned_employee_3.data = m.assigned_employee_3 or ""
+        form.shared.data = bool(m.assigned_employee_2 or m.assigned_employee_3)
     if form.validate_on_submit():
         mobile_repo.update_mobile(m, **_to_kwargs(form))
         flash("Celular atualizado!", "success")

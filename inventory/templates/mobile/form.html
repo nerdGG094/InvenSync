@@ -48,6 +48,29 @@
           </div>
         </div>
 
+        {# ===== Aparelho compartilhado: até 2 funcionários adicionais ===== #}
+        <div class="form-check form-switch mt-3">
+          {{ form.shared(class="form-check-input", id="sharedChk") }}
+          {{ form.shared.label(class="form-check-label fw-semibold") }}
+          <div class="form-text">Marque quando o mesmo celular é usado por mais de uma pessoa.</div>
+        </div>
+        <div id="sharedFields" class="row g-3 mt-0 ps-1" style="border-left:3px solid #243024">
+          <div class="col-12 col-md-6">
+            {{ form.assigned_employee_2.label(class="form-label fw-semibold") }}
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-person-plus"></i></span>
+              {{ form.assigned_employee_2(class="form-select", id="assigned_employee_2") }}
+            </div>
+          </div>
+          <div class="col-12 col-md-6">
+            {{ form.assigned_employee_3.label(class="form-label fw-semibold") }}
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-person-plus"></i></span>
+              {{ form.assigned_employee_3(class="form-select", id="assigned_employee_3") }}
+            </div>
+          </div>
+        </div>
+
         <div class="row g-3 mt-1">
           <div class="col-12 col-md-4">
             {{ form.phone_number.label(class="form-label fw-semibold") }}
@@ -117,11 +140,21 @@
     const UINFO = {{ (users_info or {})|tojson }};   // usuário -> setor
     const emp = document.getElementById('assigned_employee');
     const sec = document.getElementById('sector');
-    if (!emp || !sec) return;
-    emp.addEventListener('change', function(){
-      const setor = UINFO[this.value];
-      if (setor) sec.value = setor;
-    });
+    if (emp && sec) {
+      emp.addEventListener('change', function(){
+        const setor = UINFO[this.value];
+        if (setor) sec.value = setor;
+      });
+    }
+
+    // Mostra/oculta os funcionários adicionais conforme o switch "Compartilhado".
+    const chk = document.getElementById('sharedChk');
+    const box = document.getElementById('sharedFields');
+    if (chk && box) {
+      const sync = function(){ box.style.display = chk.checked ? '' : 'none'; };
+      sync();
+      chk.addEventListener('change', sync);
+    }
   })();
 </script>
 {% endblock %}

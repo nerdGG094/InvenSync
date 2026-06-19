@@ -16,6 +16,9 @@ class MobileDevice(db.Model):
     plan = db.Column(db.String(80), nullable=True)             # plano/pacote
 
     assigned_employee = db.Column(db.String(150), nullable=True, index=True)  # funcionário
+    # Aparelho compartilhado: até 2 funcionários adicionais usam o mesmo celular.
+    assigned_employee_2 = db.Column(db.String(150), nullable=True, index=True)
+    assigned_employee_3 = db.Column(db.String(150), nullable=True, index=True)
     sector = db.Column(db.String(120), nullable=True)          # setor
     patrimony = db.Column(db.String(60), nullable=True, index=True)
 
@@ -25,6 +28,16 @@ class MobileDevice(db.Model):
     handed_at = db.Column(db.Date, nullable=True)              # data de entrega
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
+
+    @property
+    def employees(self) -> list:
+        """Lista (sem vazios) dos funcionários vinculados ao aparelho."""
+        nomes = (self.assigned_employee, self.assigned_employee_2, self.assigned_employee_3)
+        return [e.strip() for e in nomes if (e or "").strip()]
+
+    @property
+    def is_shared(self) -> bool:
+        return len(self.employees) > 1
 
     def __repr__(self) -> str:
         return f"<MobileDevice id={self.id} model={self.model!r} phone={self.phone_number!r}>"

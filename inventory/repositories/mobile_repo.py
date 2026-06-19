@@ -7,7 +7,8 @@ from ..models.mobile import MobileDevice
 
 _ALLOWED = {
     "brand", "model", "imei", "serial_number", "phone_number", "carrier",
-    "plan", "assigned_employee", "sector", "patrimony", "status", "handed_at", "notes",
+    "plan", "assigned_employee", "assigned_employee_2", "assigned_employee_3",
+    "sector", "patrimony", "status", "handed_at", "notes",
 }
 
 
@@ -23,6 +24,8 @@ def list_mobiles(search: Optional[str] = None, status: Optional[str] = None) -> 
             MobileDevice.phone_number.ilike(s),
             MobileDevice.imei.ilike(s),
             MobileDevice.assigned_employee.ilike(s),
+            MobileDevice.assigned_employee_2.ilike(s),
+            MobileDevice.assigned_employee_3.ilike(s),
             MobileDevice.sector.ilike(s),
             MobileDevice.patrimony.ilike(s),
         ))

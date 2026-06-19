@@ -23,6 +23,9 @@ def _run_light_migrations():
         'ALTER TABLE "user" ALTER COLUMN email DROP NOT NULL',
         # Quem já tinha senha era um usuário de login — preserva o acesso.
         'UPDATE "user" SET can_login = true WHERE password_hash IS NOT NULL AND can_login = false',
+        # Celular compartilhado: até 2 funcionários adicionais no mesmo aparelho.
+        'ALTER TABLE mobile_device ADD COLUMN IF NOT EXISTS assigned_employee_2 VARCHAR(150)',
+        'ALTER TABLE mobile_device ADD COLUMN IF NOT EXISTS assigned_employee_3 VARCHAR(150)',
     ]
     for sql in stmts:
         try:
