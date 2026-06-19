@@ -105,6 +105,10 @@ def _populate_choices(form: ProductForm) -> None:
     form.responsible_user.choices = people.user_choices("— Nenhum —")
 
 def _form_to_kwargs(form: ProductForm) -> dict:
+    # Setor automático: se ficou em branco, busca do cadastro do responsável.
+    resp_sector = (form.responsible_sector.data or "").strip() or None
+    if not resp_sector and form.responsible_user.data:
+        resp_sector = people.sector_for(form.responsible_user.data) or None
     return dict(
         sku=(form.sku.data or "").strip(),
         name=(form.name.data or "").strip(),
@@ -124,7 +128,7 @@ def _form_to_kwargs(form: ProductForm) -> dict:
         compatibility=(form.compatibility.data or "").strip() or None,
         expiry_date=form.expiry_date.data or None,
         responsible_user=(form.responsible_user.data or "").strip() or None,
-        responsible_sector=(form.responsible_sector.data or "").strip() or None,
+        responsible_sector=resp_sector,
     )
 
 @bp.route("")

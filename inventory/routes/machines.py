@@ -27,6 +27,10 @@ def _form_to_kwargs(form: MachineForm) -> dict:
     def s(v):
         v = (v or "").strip()
         return v or None
+    # Setor automático: se ficou em branco, busca do cadastro do colaborador.
+    sector = s(form.sector.data)
+    if not sector and form.assigned_user.data:
+        sector = people.sector_for(form.assigned_user.data) or None
     return dict(
         kind=form.kind.data or "computador",
         name=s(form.name.data),
@@ -34,7 +38,7 @@ def _form_to_kwargs(form: MachineForm) -> dict:
         model=s(form.model.data),
         assigned_user=s(form.assigned_user.data),
         ip_address=s(form.ip_address.data),
-        sector=s(form.sector.data),
+        sector=sector,
         patrimony=s(form.patrimony.data),
         serial_number=s(form.serial_number.data),
         notes=s(form.notes.data),

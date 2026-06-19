@@ -38,6 +38,10 @@ def _to_kwargs(form: MobileForm) -> dict:
     shared = bool(form.shared.data)
     emp2 = s(form.assigned_employee_2.data) if shared else None
     emp3 = s(form.assigned_employee_3.data) if shared else None
+    # Setor automático: se ficou em branco, busca do cadastro do colaborador.
+    sector = s(form.sector.data)
+    if not sector and form.assigned_employee.data:
+        sector = people.sector_for(form.assigned_employee.data) or None
     return dict(
         brand=s(form.brand.data),
         model=(form.model.data or "").strip(),
@@ -49,7 +53,7 @@ def _to_kwargs(form: MobileForm) -> dict:
         assigned_employee=s(form.assigned_employee.data),
         assigned_employee_2=emp2,
         assigned_employee_3=emp3,
-        sector=s(form.sector.data),
+        sector=sector,
         patrimony=s(form.patrimony.data),
         status=form.status.data or "em_uso",
         handed_at=form.handed_at.data,

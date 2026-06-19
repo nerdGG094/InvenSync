@@ -7,6 +7,7 @@ os nomes que aparecem nos ativos (Máquinas / Celulares) ainda não cadastrados.
 Usado para padronizar o combobox de responsável + setor automático em Chamados,
 Celulares, Movimentações, Materiais e Máquinas.
 """
+from ..extensions import db
 from ..models.machine import Machine
 from ..models.mobile import MobileDevice
 from ..models.user import User
@@ -48,3 +49,20 @@ def user_names() -> list:
 def user_choices(blank: str = "— Selecione —") -> list:
     """Choices para SelectField: [('', '— Selecione —'), (nome, nome), ...]."""
     return [("", blank)] + [(u, u) for u in user_names()]
+
+
+def sector_for(name: str) -> str:
+    """Setor/departamento de uma pessoa, a partir do cadastro (User) — fonte da
+    verdade. Usado para preencher o setor automaticamente nos formulários quando
+    o campo é deixado em branco. Retorna '' se não souber."""
+    nome = (name or "").strip()
+    if not nome:
+        return ""
+    # Casa por nome (case-insensitive) no cadastro central de pessoas.
+    p = User.query.filter(
+        db.func.lower(User.name) == nome.lower()
+    ).first()
+    if p and (p.sector or "").strip():
+        return p.sector.strip()
+    # Compatibilidade: nomes que só existem nos ativos.
+    return (users_sector_map().get(nome) or "").strip()
