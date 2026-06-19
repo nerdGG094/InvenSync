@@ -16,6 +16,17 @@ def _populate(form: MobileForm):
     form.assigned_employee.choices = people.user_choices()
 
 
+def _group_by_sector(items: list) -> list:
+    """Agrupa por setor (alfabético; 'Sem setor' por último)."""
+    grupos_map = {}
+    for it in items:
+        setor = (it.sector or "").strip()
+        grupos_map.setdefault(setor, []).append(it)
+    nomeados = sorted((s for s in grupos_map if s), key=lambda s: s.lower())
+    ordem = nomeados + ([""] if "" in grupos_map else [])
+    return [{"name": s or None, "items": grupos_map[s]} for s in ordem]
+
+
 def _to_kwargs(form: MobileForm) -> dict:
     def s(v):
         v = (v or "").strip()
@@ -52,7 +63,9 @@ def list_view():
         "inativo": counts.get("inativo", 0),
         "total": sum(counts.values()),
     }
-    return render_template("mobile/list.html", items=items, q=q, status=status, totals=totals)
+    grupos = _group_by_sector(items)
+    return render_template("mobile/list.html", items=items, q=q, status=status,
+                           totals=totals, grupos=grupos)
 
 
 @bp.route("/new", methods=["GET", "POST"])
