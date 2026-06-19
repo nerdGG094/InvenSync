@@ -39,19 +39,24 @@
 
   .asset-foot{ display:flex; gap:.5rem; margin-top:auto; padding-top:.75rem; border-top:1px solid #243024; }
 
-  .group-section{ margin-bottom:1.6rem; }
+  .group-section{ margin-bottom:1rem; border:1px solid #243024; border-radius:14px; background:#161616; overflow:hidden; }
   .group-head{
-    display:flex; align-items:center; gap:.55rem; margin:.25rem 0 .8rem;
-    font-weight:700; color:#cfe9d8; font-size:1.02rem;
-    padding-bottom:.5rem; border-bottom:1px solid #243024;
+    display:flex; align-items:center; gap:.55rem; cursor:pointer; user-select:none; list-style:none;
+    font-weight:700; color:#cfe9d8; font-size:1.02rem; padding:.85rem 1rem;
   }
-  .group-head i{ color:#46e08a; }
-  .group-head.no-sector, .group-head.no-sector i{ color:#9bb6a6; }
+  .group-head::-webkit-details-marker{ display:none; }
+  .group-head:hover{ background:#1b2a1f; }
+  .group-head > i{ color:#46e08a; }
+  .group-head .chev{ color:#6b7d70; transition:transform .15s ease; }
+  .group-section[open] > .group-head .chev{ transform:rotate(90deg); }
+  .group-section[open] > .group-head{ border-bottom:1px solid #243024; }
+  .group-head.no-sector, .group-head.no-sector > i{ color:#9bb6a6; }
   .group-head .count{
     font-size:.78rem; font-weight:600; color:#9bb6a6;
     background:#15211a; border:1px solid #243024; border-radius:999px; padding:.1rem .55rem;
   }
   .group-head .gtotals{ margin-left:auto; display:flex; gap:.4rem; }
+  .group-section .asset-grid{ padding:1rem; }
 </style>
 {% endblock %}
 
@@ -101,8 +106,9 @@
 
 {% if people %}
 {% for g in grupos %}
-<div class="group-section">
-  <div class="group-head {{ 'no-sector' if not g.name }}">
+<details class="group-section">
+  <summary class="group-head {{ 'no-sector' if not g.name }}">
+    <i class="bi bi-chevron-right chev"></i>
     <i class="bi {{ 'bi-diagram-3' if g.name else 'bi-dash-circle' }}"></i>
     {{ g.name or 'Sem setor' }}
     <span class="count">{{ g['items']|length }}</span>
@@ -110,7 +116,7 @@
       {% if g.maquinas %}<span class="pchip blue"><i class="bi bi-pc-display"></i> {{ g.maquinas }}</span>{% endif %}
       {% if g.celulares %}<span class="pchip amber"><i class="bi bi-phone"></i> {{ g.celulares }}</span>{% endif %}
     </span>
-  </div>
+  </summary>
   <div class="asset-grid">
   {% for p in g['items'] %}
   {% set parts = p.name.split() %}
@@ -147,7 +153,7 @@
   </article>
   {% endfor %}
   </div>
-</div>
+</details>
 {% endfor %}
 {% else %}
 <div class="table-card">
