@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Produtos{% endblock %}
+{% block title %}Materiais{% endblock %}
 {% block content %}
 
 {# Mapa para exibir rótulo amigável da unidade #}
@@ -12,17 +12,57 @@
   'KIT':'Kit/Conjunto','HR':'Hora','MIN':'Minuto'
 } %}
 
-{% set seg = seg or {'title':'Produtos','icon':'bi-grid','new_label':'Novo Produto','new_url':url_for('products.new'),'list_url':url_for('products.list_view')} %}
 <div class="page-header">
   <h1 class="ph-title">
-    <span class="ph-icon"><i class="bi {{ seg.icon }}"></i></span>
-    {{ seg.title }}
+    <span class="ph-icon"><i class="bi bi-box-seam"></i></span>
+    Materiais
     <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ items|length }}</span>
   </h1>
   <div class="d-flex gap-2">
     <a href="{{ url_for('kanban.board') }}" class="btn btn-outline-light"><i class="bi bi-kanban"></i> Kanban</a>
     <a href="{{ url_for('reports.export_products') }}" class="btn btn-outline-light"><i class="bi bi-filetype-csv"></i> Exportar</a>
-    <a href="{{ seg.new_url }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> {{ seg.new_label }}</a>
+    <a href="{{ url_for('products.new') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Novo Material</a>
+  </div>
+</div>
+
+{# ===== Cartões-resumo (refletem o filtro de busca atual) ===== #}
+<div class="row g-3 mb-3">
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="card stat-card h-100"><div class="card-body d-flex align-items-center justify-content-between">
+      <div>
+        <div class="text-muted small">Materiais {% if q %}(no filtro){% endif %}</div>
+        <div class="h3 mb-0 number">{{ items|length }}</div>
+      </div>
+      <i class="bi bi-box-seam text-success fs-2"></i>
+    </div></div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="card stat-card h-100" style="border-left-color:#0dcaf0"><div class="card-body d-flex align-items-center justify-content-between">
+      <div>
+        <div class="text-muted small">Quantidade em estoque</div>
+        <div class="h3 mb-0 number text-info">{{ total_qty }}</div>
+      </div>
+      <i class="bi bi-boxes text-info fs-2"></i>
+    </div></div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="card stat-card h-100" style="border-left-color:#ffb020"><div class="card-body d-flex align-items-center justify-content-between">
+      <div>
+        <div class="text-muted small">Valor em estoque</div>
+        <div class="h4 mb-0 number text-warning">R$ {{ '%.2f'|format(total_value)|replace('.', ',') }}</div>
+        <div class="mov-meta">Preço cadastrado × estoque atual</div>
+      </div>
+      <i class="bi bi-cash-stack text-warning fs-2"></i>
+    </div></div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="card stat-card h-100" style="border-left-color:#f44336"><div class="card-body d-flex align-items-center justify-content-between">
+      <div>
+        <div class="text-muted small">Abaixo do mínimo</div>
+        <div class="h3 mb-0 number {{ 'text-danger' if low_count else 'text-success' }}">{{ low_count }}</div>
+      </div>
+      <i class="bi bi-exclamation-triangle {{ 'text-danger' if low_count else 'text-success' }} fs-2"></i>
+    </div></div>
   </div>
 </div>
 
@@ -34,7 +74,7 @@
         <input class="form-control" type="search" placeholder="Buscar por nome ou SKU..." name="q" value="{{ q }}">
       </div>
       {% if q %}
-      <a href="{{ seg.list_url }}" class="btn btn-outline-light ms-2" title="Limpar"><i class="bi bi-x-lg"></i></a>
+      <a href="{{ url_for('products.list_view') }}" class="btn btn-outline-light ms-2" title="Limpar"><i class="bi bi-x-lg"></i></a>
       {% endif %}
     </form>
   </div>
@@ -44,7 +84,7 @@
       <thead>
         <tr>
           <th>SKU</th>
-          <th>Produto</th>
+          <th>Material</th>
           <th>Unidade</th>
           <th>Categoria</th>
           <th>Fornecedor</th>
@@ -87,7 +127,7 @@
           <td class="text-end number">{{ mn }}</td>
           <td class="text-end">
             <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('products.edit', pid=p.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
-            <form action="{{ url_for('products.delete', pid=p.id) }}" method="post" class="d-inline" onsubmit="return confirm('Excluir o produto “{{ p.name }}”?');">
+            <form action="{{ url_for('products.delete', pid=p.id) }}" method="post" class="d-inline" onsubmit="return confirm('Excluir o material “{{ p.name }}”?');">
               <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
             </form>
           </td>
@@ -97,7 +137,7 @@
           <td colspan="9">
             <div class="empty-state">
               <i class="bi bi-grid"></i>
-              {% if q %}Nenhum produto encontrado para “{{ q }}”.{% else %}Nenhum produto cadastrado ainda.{% endif %}
+              {% if q %}Nenhum material encontrado para “{{ q }}”.{% else %}Nenhum material cadastrado ainda.{% endif %}
             </div>
           </td>
         </tr>

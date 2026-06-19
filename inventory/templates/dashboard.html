@@ -29,12 +29,12 @@
     </div>
   </div>
 
-  <!-- Card: Produtos cadastrados -->
+  <!-- Card: Materiais cadastrados -->
   <div class="col-12 col-md-4">
     <div class="card stat-card h-100">
       <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <h6 class="text-muted mb-1">Produtos cadastrados</h6>
+          <h6 class="text-muted mb-1">Materiais cadastrados</h6>
           <div class="display-6">{{ total_products }}</div>
         </div>
         <div class="ms-3">
@@ -49,7 +49,7 @@
     <div class="card stat-card h-100">
       <div class="card-body d-flex align-items-center justify-content-between">
         <div>
-          <h6 class="text-muted mb-1">Produtos com baixo estoque</h6>
+          <h6 class="text-muted mb-1">Materiais com baixo estoque</h6>
           <div class="display-6">{{ low_stock|length }}</div>
         </div>
         <div class="ms-3">
@@ -162,7 +162,7 @@
 <!-- Atalhos rápidos -->
 <div class="d-flex flex-wrap gap-2 mt-4">
   <a href="{{ url_for('products.new') }}" class="btn btn-primary btn-sm">
-    <i class="bi bi-plus-circle"></i> Novo produto
+    <i class="bi bi-plus-circle"></i> Novo material
   </a>
   <a href="{{ url_for('movements.list_and_new') }}" class="btn btn-outline-light btn-sm">
     <i class="bi bi-arrow-left-right"></i> Registrar movimentação
@@ -191,7 +191,7 @@
           <canvas id="chartLowStockBar" aria-label="Estoque atual versus mínimo" role="img"></canvas>
         </div>
         <small class="text-muted d-block mt-2">
-          Mostrando até 10 produtos com menor cobertura percentual em relação ao mínimo.
+          Mostrando até 10 materiais com menor cobertura percentual em relação ao mínimo.
         </small>
       </div>
     </div>
@@ -705,7 +705,7 @@
       <thead>
         <tr>
           <th style="min-width:100px">SKU</th>
-          <th>Produto</th>
+          <th>Material</th>
           <th style="width:220px">Estoque vs. Mínimo</th>
           <th class="text-end" style="width:120px">Estoque</th>
           <th class="text-end" style="width:120px">Mínimo</th>
@@ -754,7 +754,7 @@
 {% else %}
   <div class="alert alert-success d-flex align-items-center mt-2" role="alert">
     <i class="bi bi-check-circle me-2"></i>
-    Nenhum produto abaixo do mínimo. Excelente!
+    Nenhum material abaixo do mínimo. Excelente!
   </div>
 {% endif %}
 {% endblock %}

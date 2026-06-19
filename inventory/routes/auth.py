@@ -22,7 +22,7 @@ def login():
     if form.validate_on_submit():
         email = form.email.data.strip().lower()
         user = User.query.filter_by(email=email).first()
-        if user and user.check_password(form.password.data):
+        if user and user.can_login and user.check_password(form.password.data):
             if not user.is_active:
                 flash("Usuário desativado. Procure um administrador.", "warning")
                 return render_template("login.html", form=form)

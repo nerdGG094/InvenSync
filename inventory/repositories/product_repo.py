@@ -16,7 +16,6 @@ _ALLOWED_FIELDS = {
     "price",
     "item_type",
     "unit",
-    "segment",
     # Campos específicos de TI
     "brand",
     "model",
@@ -37,19 +36,14 @@ def list_products(
     search: Optional[str] = None,
     item_type: Optional[str] = None,
     unit: Optional[str] = None,
-    segment: Optional[str] = None,
 ) -> List[Product]:
     """
-    Lista produtos com filtros opcionais.
+    Lista materiais com filtros opcionais.
     - search: busca em nome, sku e descrição
     - item_type: ex.: 'product', 'raw_material', 'kit', 'service'
     - unit: ex.: 'UN', 'KG', 'L', 'CX', ...
-    - segment: 'equipamento' ou 'suprimento' (toner/cilindro)
     """
     query = Product.query
-
-    if segment:
-        query = query.filter(Product.segment == segment)
 
     if search:
         s = f"%{search.strip()}%"

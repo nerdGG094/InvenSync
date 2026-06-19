@@ -95,7 +95,7 @@ def export_saidas():
     si = StringIO()
     cw = csv.writer(si, delimiter=";")
     cw.writerow([
-        "Data", "SKU", "Produto", "Quantidade",
+        "Data", "SKU", "Material", "Quantidade",
         "Valor Unitario", "Valor Total", "Responsavel", "Setor", "Observacao",
     ])
     for m in _saidas_query().all():

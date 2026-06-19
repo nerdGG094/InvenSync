@@ -83,7 +83,7 @@
       <div>
         <div class="text-muted small">Valor das saídas {% if has_filter %}(no filtro){% endif %}</div>
         <div class="h4 mb-0 number text-warning">R$ {{ '%.2f'|format(saida_valor)|replace('.', ',') }}</div>
-        <div class="mov-meta">Custo informado ou preço do produto</div>
+        <div class="mov-meta">Custo informado ou preço do material</div>
       </div>
       <i class="bi bi-cash-stack text-warning fs-2"></i>
     </div></div>
@@ -201,7 +201,7 @@
           <form method="get" action="{{ url_for('movements.list_and_new') }}" class="d-flex flex-wrap align-items-center gap-2 mov-filters" role="search">
             <div class="input-group input-group-sm" style="width:200px">
               <span class="input-group-text"><i class="bi bi-search"></i></span>
-              <input type="text" name="q" value="{{ request.args.get('q','') }}" class="form-control" placeholder="Produto/obs">
+              <input type="text" name="q" value="{{ request.args.get('q','') }}" class="form-control" placeholder="Material/obs">
             </div>
             <select class="form-select form-select-sm" name="type" style="max-width:120px">
               <option value="">Todos</option>
@@ -222,7 +222,7 @@
           <thead>
             <tr>
               <th style="min-width:130px">Data</th>
-              <th>Produto</th>
+              <th>Material</th>
               <th class="text-center" style="width:110px">Tipo</th>
               <th class="text-end" style="width:90px">Qtd</th>
               <th class="text-end" style="width:110px">Custo</th>

@@ -94,35 +94,8 @@ UNIT_CHOICES = [
     ("MIN", "Minuto"),
 ]
 
-# Categorias consideradas "suprimentos de impressão" (Toner & Cilindros)
-SUPPLY_CATEGORY_NAMES = ("Toner", "Cilindro/Fotocondutor")
-
-
-def _seg_ctx(segment: str) -> dict:
-    """Contexto de visão (título, ícone, URLs) por segmento."""
-    if segment == "suprimento":
-        return {
-            "segment": "suprimento",
-            "title": "Toner & Cilindros",
-            "icon": "bi-printer",
-            "new_label": "Novo Toner/Cilindro",
-            "list_url": url_for("products.supplies"),
-            "new_url": url_for("products.new", segment="suprimento"),
-        }
-    return {
-        "segment": "equipamento",
-        "title": "Produtos",
-        "icon": "bi-grid",
-        "new_label": "Novo Produto",
-        "list_url": url_for("products.list_view"),
-        "new_url": url_for("products.new"),
-    }
-
-
-def _populate_choices(form: ProductForm, segment: str = "equipamento") -> None:
+def _populate_choices(form: ProductForm) -> None:
     cats = Category.query.order_by(Category.name).all()
-    if segment == "suprimento":
-        cats = [c for c in cats if c.name in SUPPLY_CATEGORY_NAMES]
     form.category_id.choices = [(0, "-- Nenhuma --")] + [(c.id, c.name) for c in cats]
     form.supplier_id.choices = [(0, "-- Nenhum --")] + [
         (s.id, s.name) for s in Supplier.query.order_by(Supplier.name).all()
@@ -158,38 +131,34 @@ def _form_to_kwargs(form: ProductForm) -> dict:
 @login_required
 def list_view():
     q = request.args.get("q", "")
-    items = product_repo.list_products(q, segment="equipamento")
+    items = product_repo.list_products(q)
+
+    # Totais para os cartões-resumo (refletem o filtro de busca atual).
+    total_qty = 0
+    total_value = 0.0
+    low_count = 0
+    for p in items:
+        est = product_repo.current_stock(p)
+        total_qty += est
+        total_value += est * float(p.price or 0)
+        if est <= (p.min_stock or 0):
+            low_count += 1
+
     return render_template(
         "products/list.html",
         items=items, q=q,
         current_stock=product_repo.current_stock,
-        seg=_seg_ctx("equipamento"),
+        total_qty=total_qty,
+        total_value=total_value,
+        low_count=low_count,
     )
 
-
-@bp.route("/supplies")
-@login_required
-def supplies():
-    """Submódulo Toner & Cilindros (segmento 'suprimento')."""
-    q = request.args.get("q", "")
-    items = product_repo.list_products(q, segment="suprimento")
-    return render_template(
-        "products/list.html",
-        items=items, q=q,
-        current_stock=product_repo.current_stock,
-        seg=_seg_ctx("suprimento"),
-    )
 
 @bp.route("/new", methods=["GET", "POST"])
 @login_required
 def new():
-    segment = request.args.get("segment") or "equipamento"
-    if segment not in ("equipamento", "suprimento"):
-        segment = "equipamento"
-    seg = _seg_ctx(segment)
-
     form = ProductForm()
-    _populate_choices(form, segment)
+    _populate_choices(form)
 
     # defaults no GET
     if request.method == "GET":
@@ -208,11 +177,9 @@ def new():
                 )
             try:
                 kwargs = _form_to_kwargs(form)
-                kwargs["segment"] = segment
                 product_repo.create_product(**kwargs)
-                label = "Toner/Cilindro" if segment == "suprimento" else "Produto"
-                flash(f"{label} criado! SKU: {form.sku.data}", "success")
-                return redirect(seg["list_url"])
+                flash(f"Material criado! SKU: {form.sku.data}", "success")
+                return redirect(url_for("products.list_view"))
             except IntegrityError:
                 db.session.rollback()
                 if auto_sku and attempt < 5:
@@ -224,21 +191,18 @@ def new():
                 flash("Erro ao criar item.", "danger")
                 break
 
-    title = "Novo Toner/Cilindro" if segment == "suprimento" else "Novo Produto"
-    return render_template("products/form.html", form=form, title=title,
-                           back_url=seg["list_url"], seg=seg,
+    return render_template("products/form.html", form=form, title="Novo Material",
+                           back_url=url_for("products.list_view"),
                            users_info=people.users_sector_map())
 
 @bp.route("/<int:pid>/edit", methods=["GET", "POST"])
 @login_required
 def edit(pid):
     p = Product.query.get_or_404(pid)
-    segment = p.segment or "equipamento"
-    seg = _seg_ctx(segment)
 
     # Para garantir que as choices existam ANTES de processar os dados do objeto:
     form = ProductForm()
-    _populate_choices(form, segment)
+    _populate_choices(form)
 
     # Garante que o responsável atual apareça no combobox
     if p.responsible_user and p.responsible_user not in [c[0] for c in form.responsible_user.choices]:
@@ -254,30 +218,27 @@ def edit(pid):
     if form.validate_on_submit():
         try:
             kwargs = _form_to_kwargs(form)
-            kwargs["segment"] = segment  # preserva o segmento
             product_repo.update_product(p, **kwargs)
-            flash("Item atualizado!", "success")
-            return redirect(seg["list_url"])
+            flash("Material atualizado!", "success")
+            return redirect(url_for("products.list_view"))
         except IntegrityError:
             flash("Erro: SKU deve ser único.", "danger")
         except Exception:
             flash("Erro ao atualizar item.", "danger")
 
-    title = "Editar Toner/Cilindro" if segment == "suprimento" else "Editar Produto"
-    return render_template("products/form.html", form=form, title=title,
-                           back_url=seg["list_url"], seg=seg,
+    return render_template("products/form.html", form=form, title="Editar Material",
+                           back_url=url_for("products.list_view"),
                            users_info=people.users_sector_map())
 
 @bp.route("/<int:pid>/delete", methods=["POST"])
 @login_required
 def delete(pid):
     p = Product.query.get_or_404(pid)
-    seg = _seg_ctx(p.segment or "equipamento")
     try:
         product_repo.delete_product(p)
-        flash("Item excluído.", "success")
+        flash("Material excluído.", "success")
     except ValueError as e:
         flash(str(e), "warning")
     except Exception:
         flash("Erro ao excluir item.", "danger")
-    return redirect(seg["list_url"])
+    return redirect(url_for("products.list_view"))

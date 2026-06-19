@@ -54,7 +54,10 @@ def _users_info() -> dict:
 
 
 def _populate(form: TicketForm):
-    users = User.query.filter_by(is_active=True).order_by(User.name).all()
+    # Atribuição só para quem opera o sistema (tem login ativo) — normalmente TI.
+    users = (User.query
+             .filter_by(is_active=True, can_login=True)
+             .order_by(User.name).all())
     form.assigned_to_id.choices = [(0, "— Não atribuído —")] + [(u.id, u.name) for u in users]
     machines = Machine.query.order_by(Machine.assigned_user.asc().nullslast(),
                                       Machine.model.asc()).all()

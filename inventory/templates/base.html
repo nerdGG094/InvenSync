@@ -162,13 +162,14 @@
         </li>{% endif %}
         {% if current_user.is_admin %}
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle {% if request.endpoint and (request.endpoint.startswith('products.') or request.endpoint.startswith('movements.') or request.endpoint.startswith('kanban.') or request.endpoint.startswith('reports.')) %}active{% endif %}"
+          <a class="nav-link dropdown-toggle {% if request.endpoint and (request.endpoint.startswith('products.') or request.endpoint.startswith('movements.') or request.endpoint.startswith('kanban.') or request.endpoint.startswith('reports.') or request.endpoint.startswith('categories.') or request.endpoint.startswith('suppliers.')) %}active{% endif %}"
              href="#" id="ddEstoque" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             <i class="bi bi-box-seam"></i> Estoque
           </a>
           <ul class="dropdown-menu" aria-labelledby="ddEstoque">
-            <li><a class="dropdown-item {% if request.endpoint == 'products.list_view' %}active{% endif %}" href="{{ url_for('products.list_view') }}"><i class="bi bi-grid me-2"></i> Produtos</a></li>
-            <li><a class="dropdown-item {% if request.endpoint == 'products.supplies' %}active{% endif %}" href="{{ url_for('products.supplies') }}"><i class="bi bi-printer me-2"></i> Toner &amp; Cilindros</a></li>
+            <li><a class="dropdown-item {% if request.endpoint == 'products.list_view' %}active{% endif %}" href="{{ url_for('products.list_view') }}"><i class="bi bi-box-seam me-2"></i> Materiais</a></li>
+            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('categories.') %}active{% endif %}" href="{{ url_for('categories.list_view') }}"><i class="bi bi-tags me-2"></i> Categorias</a></li>
+            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('suppliers.') %}active{% endif %}" href="{{ url_for('suppliers.list_view') }}"><i class="bi bi-truck me-2"></i> Fornecedores</a></li>
             <li><hr class="dropdown-divider"></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('movements.') %}active{% endif %}" href="{{ url_for('movements.list_and_new') }}"><i class="bi bi-arrow-left-right me-2"></i> Movimentações</a></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('kanban.') %}active{% endif %}" href="{{ url_for('kanban.board') }}"><i class="bi bi-kanban me-2"></i> Kanban</a></li>
@@ -177,20 +178,17 @@
           </ul>
         </li>
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle {% if request.endpoint and (request.endpoint.startswith('categories.') or request.endpoint.startswith('suppliers.')) %}active{% endif %}"
+          <a class="nav-link dropdown-toggle {% if request.endpoint and (request.endpoint.startswith('licenses.') or request.endpoint.startswith('domains.')) %}active{% endif %}"
              href="#" id="ddCadastros" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             <i class="bi bi-journal-text"></i> Cadastros
           </a>
           <ul class="dropdown-menu" aria-labelledby="ddCadastros">
-            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('categories.') %}active{% endif %}" href="{{ url_for('categories.list_view') }}"><i class="bi bi-tags me-2"></i> Categorias</a></li>
-            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('suppliers.') %}active{% endif %}" href="{{ url_for('suppliers.list_view') }}"><i class="bi bi-truck me-2"></i> Fornecedores</a></li>
-            <li><hr class="dropdown-divider"></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('licenses.') %}active{% endif %}" href="{{ url_for('licenses.list_view') }}"><i class="bi bi-patch-check me-2"></i> Licenças &amp; Garantias</a></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('domains.') %}active{% endif %}" href="{{ url_for('domains.list_view') }}"><i class="bi bi-globe2 me-2"></i> Domínios</a></li>
           </ul>
         </li>
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle {% if request.endpoint and (request.endpoint.startswith('machines.') or request.endpoint.startswith('cleanings.') or request.endpoint.startswith('maintenance.') or request.endpoint.startswith('mobile.') or request.endpoint.startswith('monitoring.') or request.endpoint.startswith('labels.')) %}active{% endif %}"
+          <a class="nav-link dropdown-toggle {% if request.endpoint and (request.endpoint.startswith('machines.') or request.endpoint.startswith('cleanings.') or request.endpoint.startswith('maintenance.') or request.endpoint.startswith('mobile.') or request.endpoint.startswith('monitoring.') or request.endpoint.startswith('routers.') or request.endpoint.startswith('labels.')) %}active{% endif %}"
              href="#" id="ddMaquinas" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             <i class="bi bi-pc-display"></i> Máquinas
           </a>
@@ -203,6 +201,11 @@
             <li>
               <a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('mobile.') %}active{% endif %}" href="{{ url_for('mobile.list_view') }}">
                 <i class="bi bi-phone me-2"></i> Celulares
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('routers.') %}active{% endif %}" href="{{ url_for('routers.list_view') }}">
+                <i class="bi bi-router me-2"></i> Roteadores
               </a>
             </li>
             <li>
@@ -228,20 +231,15 @@
             </li>
           </ul>
         </li>
-        <li class="nav-item">
-          <a class="nav-link {% if request.endpoint and request.endpoint.startswith('routers.') %}active{% endif %}" href="{{ url_for('routers.list_view') }}">
-            <i class="bi bi-router"></i> Roteadores
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle {% if request.endpoint and (request.endpoint.startswith('colaboradores.') or request.endpoint.startswith('assets.')) %}active{% endif %}"
+             href="#" id="ddColaboradores" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-people"></i> Colaboradores
           </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {% if request.endpoint and request.endpoint.startswith('colaboradores.') %}active{% endif %}" href="{{ url_for('colaboradores.list_view') }}">
-            <i class="bi bi-person-vcard"></i> Colaboradores
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {% if request.endpoint and request.endpoint.startswith('assets.') %}active{% endif %}" href="{{ url_for('assets.list_view') }}">
-            <i class="bi bi-person-badge"></i> Ativos
-          </a>
+          <ul class="dropdown-menu" aria-labelledby="ddColaboradores">
+            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('colaboradores.') %}active{% endif %}" href="{{ url_for('colaboradores.list_view') }}"><i class="bi bi-person-vcard me-2"></i> Colaboradores</a></li>
+            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('assets.') %}active{% endif %}" href="{{ url_for('assets.list_view') }}"><i class="bi bi-person-badge me-2"></i> Ativos</a></li>
+          </ul>
         </li>
         {% endif %}
         <li class="nav-item">
@@ -256,22 +254,17 @@
           </a>
         </li>
 
-        {# ====== Usuários (somente Admin) ====== #}
+        {# ====== Admin: Cofre & Auditoria (somente Admin) ====== #}
         {% if current_user.is_authenticated and current_user.is_admin %}
-        <li class="nav-item">
-          <a class="nav-link {% if request.endpoint and request.endpoint.startswith('users.') %}active{% endif %}" href="{{ url_for('users.list_view') }}">
-            <i class="bi bi-people"></i> Usuários
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle {% if request.endpoint and (request.endpoint.startswith('credentials.') or request.endpoint.startswith('audit.')) %}active{% endif %}"
+             href="#" id="ddAdmin" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-gear"></i> Admin
           </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {% if request.endpoint and request.endpoint.startswith('credentials.') %}active{% endif %}" href="{{ url_for('credentials.list_view') }}">
-            <i class="bi bi-key"></i> Cofre
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {% if request.endpoint and request.endpoint.startswith('audit.') %}active{% endif %}" href="{{ url_for('audit.list_view') }}">
-            <i class="bi bi-shield-lock"></i> Auditoria
-          </a>
+          <ul class="dropdown-menu" aria-labelledby="ddAdmin">
+            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('credentials.') %}active{% endif %}" href="{{ url_for('credentials.list_view') }}"><i class="bi bi-key me-2"></i> Cofre</a></li>
+            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('audit.') %}active{% endif %}" href="{{ url_for('audit.list_view') }}"><i class="bi bi-shield-lock me-2"></i> Auditoria</a></li>
+          </ul>
         </li>
         {% endif %}
         {# ================================================ #}

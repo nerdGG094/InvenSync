@@ -1,22 +1,23 @@
 """
 Fonte única de "usuários responsáveis" para os formulários do app.
 
-A fonte da verdade agora é o cadastro central de **Colaboradores**. Para não
-perder nada já registrado, também unimos os nomes que já aparecem nos ativos
-(Máquinas / Celulares). Usado para padronizar o combobox de responsável + setor
-automático em Chamados, Celulares, Movimentações, Produtos e Máquinas.
+A fonte da verdade é o cadastro central de pessoas (**Colaboradores**, tabela
+`user` — com login opcional). Para não perder nada já registrado, também unimos
+os nomes que aparecem nos ativos (Máquinas / Celulares) ainda não cadastrados.
+Usado para padronizar o combobox de responsável + setor automático em Chamados,
+Celulares, Movimentações, Materiais e Máquinas.
 """
 from ..models.machine import Machine
 from ..models.mobile import MobileDevice
-from ..models.colaborador import Colaborador
+from ..models.user import User
 
 
 def users_sector_map() -> dict:
-    """{ nome_do_colaborador: setor/departamento }.
+    """{ nome_da_pessoa: setor/departamento }.
 
-    Base: nomes já usados em ativos (compatibilidade). Por cima, o cadastro de
-    Colaboradores ativos — que é a fonte da verdade e inclui quem não tem ativo
-    (ex.: pessoa que só possui celular, ou nenhum equipamento ainda).
+    Base: nomes já usados em ativos (compatibilidade, pega o que foi cadastrado
+    desde o último boot). Por cima, o cadastro central de pessoas ativas — a
+    fonte da verdade, que inclui quem não tem ativo nem login.
     """
     info = {}
 
@@ -30,11 +31,11 @@ def users_sector_map() -> dict:
         if u and (u not in info or (not info[u] and d.sector)):
             info[u] = (d.sector or "").strip()
 
-    # Fonte da verdade: colaboradores ativos (departamento = setor).
-    for c in Colaborador.query.filter_by(is_active=True).all():
-        nome = (c.name or "").strip()
+    # Fonte da verdade: pessoas ativas do cadastro central (setor = sector).
+    for p in User.query.filter_by(is_active=True).all():
+        nome = (p.name or "").strip()
         if nome:
-            info[nome] = (c.department or "").strip() or info.get(nome, "")
+            info[nome] = (p.sector or "").strip() or info.get(nome, "")
 
     return info
 

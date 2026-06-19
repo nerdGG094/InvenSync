@@ -47,7 +47,7 @@ class ProductForm(FlaskForm):
     submit = SubmitField("Salvar")
 
 class MovementForm(FlaskForm):
-    product_id = SelectField("Produto", coerce=int)
+    product_id = SelectField("Material", coerce=int)
     movement_type = SelectField("Tipo", choices=[("IN","Entrada"),("OUT","Saída")])
     quantity = IntegerField("Quantidade", validators=[DataRequired(), NumberRange(min=1)])
     unit_cost = DecimalField("Custo unitário (opcional)", places=2, validators=[Optional(), NumberRange(min=0)])

@@ -17,7 +17,6 @@ from ..models.mobile import MobileDevice
 from ..models.router import Router
 from ..models.license import License
 from ..models.domain import Domain
-from ..models.colaborador import Colaborador
 from ..models.credential import Credential
 from ..models.kb import KbArticle
 from ..models.machine_cleaning import MachineCleaning
@@ -113,7 +112,7 @@ def index():
         "tickets_open": 0,
         "mobiles": _safe_count(MobileDevice),
         "routers": _safe_count(Router),
-        "colaboradores": _safe_count(Colaborador),
+        "colaboradores": _safe_count(User),
         "credentials": _safe_count(Credential),
         "kb": _safe_count(KbArticle),
         "licenses": _safe_count(License),

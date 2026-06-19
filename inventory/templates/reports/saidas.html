@@ -19,7 +19,7 @@
 {# ===== Filtros ===== #}
 <form method="get" action="{{ url_for('reports.saidas') }}" class="row g-2 align-items-end mb-3">
   <div class="col-12 col-md-4">
-    <label class="form-label fw-semibold mb-1 small">Produto / observação</label>
+    <label class="form-label fw-semibold mb-1 small">Material / observação</label>
     <div class="input-group input-group-sm">
       <span class="input-group-text"><i class="bi bi-search"></i></span>
       <input type="text" name="q" value="{{ request.args.get('q','') }}" class="form-control" placeholder="Buscar...">
@@ -76,7 +76,7 @@
       <thead>
         <tr>
           <th style="min-width:130px">Data</th>
-          <th>Produto</th>
+          <th>Material</th>
           <th class="text-end" style="width:80px">Qtd</th>
           <th class="text-end" style="width:120px">Valor unit.</th>
           <th class="text-end" style="width:130px">Valor total</th>

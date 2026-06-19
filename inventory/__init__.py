@@ -17,6 +17,12 @@ def _run_light_migrations():
         'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS is_2fa_enabled BOOLEAN NOT NULL DEFAULT false',
         'ALTER TABLE stock_movement ADD COLUMN IF NOT EXISTS nf_filename VARCHAR(255)',
         'ALTER TABLE stock_movement ADD COLUMN IF NOT EXISTS nf_original_name VARCHAR(255)',
+        # Unificação Colaboradores + Usuários: o login passa a ser opcional.
+        'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS can_login BOOLEAN NOT NULL DEFAULT false',
+        'ALTER TABLE "user" ALTER COLUMN password_hash DROP NOT NULL',
+        'ALTER TABLE "user" ALTER COLUMN email DROP NOT NULL',
+        # Quem já tinha senha era um usuário de login — preserva o acesso.
+        'UPDATE "user" SET can_login = true WHERE password_hash IS NOT NULL AND can_login = false',
     ]
     for sql in stmts:
         try:
@@ -26,28 +32,49 @@ def _run_light_migrations():
             db.session.rollback()
 
 
-def _seed_colaboradores_from_assets():
-    """Importa para a tabela Colaboradores os nomes de responsáveis que já
-    existem em Máquinas/Celulares. Idempotente: só insere o que ainda falta."""
+def _seed_people_into_users():
+    """Migração ÚNICA da antiga tabela `colaborador` para o cadastro central `user`.
+
+    Copia para `user` cada colaborador que ainda não exista lá (casando por nome,
+    case-insensitive) como pessoa SEM login (can_login=False) e, em seguida,
+    ESVAZIA a tabela `colaborador`. Como a tabela é zerada, isto roda de fato uma
+    só vez — em boots seguintes não há nada a importar.
+
+    Importante: NÃO recriamos pessoas a partir de Máquinas/Celulares. Os nomes
+    vinculados a ativos continuam aparecendo no seletor de "responsável" via
+    `services.people` (união em tempo real), mas não são recriados aqui — assim,
+    quem o admin excluir na tela de Colaboradores permanece excluído."""
+    from .models.user import User
     from .models.colaborador import Colaborador
-    from .models.machine import Machine
-    from .models.mobile import MobileDevice
     try:
-        existentes = {(c.name or "").strip().lower() for c in Colaborador.query.all()}
-        novos = {}
-        for m in Machine.query.all():
-            nome = (m.assigned_user or "").strip()
+        existentes = {(u.name or "").strip().lower() for u in User.query.all()}
+        emails = {(u.email or "").strip().lower() for u in User.query.all() if u.email}
+        novos = {}  # chave_nome -> (nome, setor, email)
+
+        for c in Colaborador.query.all():
+            nome = (c.name or "").strip()
             chave = nome.lower()
             if nome and chave not in existentes and chave not in novos:
-                novos[chave] = (nome, (m.sector or "").strip() or None)
-        for d in MobileDevice.query.all():
-            nome = (d.assigned_employee or "").strip()
-            chave = nome.lower()
-            if nome and chave not in existentes and chave not in novos:
-                novos[chave] = (nome, (d.sector or "").strip() or None)
-        for nome, dept in novos.values():
-            db.session.add(Colaborador(name=nome, department=dept, is_active=True))
-        if novos:
+                email = (c.email or "").strip().lower() or None
+                if email and email in emails:
+                    email = None  # evita violar a unicidade de e-mail
+                if email:
+                    emails.add(email)
+                novos[chave] = (nome, (c.department or "").strip() or None, email)
+
+        for nome, setor, email in novos.values():
+            db.session.add(User(
+                name=nome, sector=setor, email=email,
+                is_active=True, is_admin=False, can_login=False,
+            ))
+
+        # Esvazia a tabela antiga: todo colaborador já está representado em `user`
+        # (criado acima ou casado por nome). Evita ressurreição em boots futuros.
+        migrou_colaboradores = Colaborador.query.count() > 0
+        if migrou_colaboradores:
+            Colaborador.query.delete()
+
+        if novos or migrou_colaboradores:
             db.session.commit()
     except Exception:  # noqa: BLE001
         db.session.rollback()
@@ -99,16 +126,21 @@ def create_app():
     with app.app_context():
         db.create_all()
         _run_light_migrations()
-        _seed_colaboradores_from_assets()
         # Semente de categoria/fornecedor padrão desativada — a base é mantida
         # limpa intencionalmente; cadastre categorias/fornecedores pela interface.
         #
         # Cria o admin padrão APENAS quando não existe NENHUM usuário, evitando
         # recriar "admin@local" caso ele seja renomeado/excluído pela interface.
+        # (Roda ANTES de importar colaboradores para garantir que sempre exista
+        # uma conta de login de administrador.)
         if not User.query.first():
-            admin = User(name="Administrador", email="admin@local", is_admin=True)
+            admin = User(name="Administrador", email="admin@local",
+                         is_admin=True, can_login=True)
             admin.set_password("admin")
             db.session.add(admin)
+            db.session.commit()
+        # Unifica colaboradores/ativos no cadastro central de pessoas (user).
+        _seed_people_into_users()
         db.session.commit()
 
     # Loader do usuário
@@ -127,7 +159,6 @@ def create_app():
     from .routes.products import bp as products_bp
     from .routes.movements import bp as movements_bp
     from .routes.reports import bp as reports_bp
-    from .routes.users import bp as users_bp  # ⬅️ NOVO: blueprint de usuários
     from .routes.kanban import bp as kanban_bp  # ⬅️ NOVO: board kanban de estoque
     from .routes.health import bp as health_bp  # ⬅️ NOVO: endpoint /health (launcher)
     from .routes.machines import bp as machines_bp  # ⬅️ NOVO: cadastro de máquinas
@@ -156,7 +187,6 @@ def create_app():
     app.register_blueprint(products_bp, url_prefix="/products")
     app.register_blueprint(movements_bp, url_prefix="/movements")
     app.register_blueprint(reports_bp, url_prefix="/reports")
-    app.register_blueprint(users_bp, url_prefix="/users")  # ⬅️ NOVO: rota /users
     app.register_blueprint(kanban_bp, url_prefix="/kanban")  # ⬅️ NOVO: rota /kanban
     app.register_blueprint(health_bp)  # ⬅️ NOVO: /health (sem login, para o launcher)
     app.register_blueprint(machines_bp, url_prefix="/machines")  # ⬅️ NOVO: rota /machines
