@@ -1,9 +1,42 @@
 {% extends "base.html" %}
 {% block title %}Domínios{% endblock %}
+
+{% block extra_head %}
+<style>
+  .reg-grid{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); }
+  .reg-card{
+    background:#1e1e1e; border:1px solid #243024; border-radius:16px;
+    padding:1.1rem 1.1rem 0.9rem; display:flex; flex-direction:column; gap:.8rem;
+    border-left:4px solid #5c6b5c;
+    transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+  }
+  .reg-card:hover{ transform:translateY(-3px); box-shadow:0 10px 24px rgba(0,0,0,.4); border-color:#2e4b3b; }
+  .reg-card.dim{ opacity:.7; }
+  .reg-top{ display:flex; align-items:flex-start; gap:.8rem; }
+  .reg-avatar{
+    width:48px; height:48px; flex:0 0 48px; border-radius:14px;
+    display:inline-flex; align-items:center; justify-content:center; font-size:1.25rem;
+    background:linear-gradient(135deg,#0f5132,#1e1e1e); color:#46e08a; border:1px solid #2e4b3b;
+  }
+  .reg-name{ font-weight:600; color:#e6ffe9; line-height:1.2; word-break:break-all; }
+  .reg-sub{ font-size:.8rem; color:#9bb6a6; }
+  .pchip{
+    display:inline-flex; align-items:center; gap:.3rem; font-size:.74rem; font-weight:600;
+    padding:.2rem .55rem; border-radius:999px; background:#15211a; border:1px solid #243024; color:#9bb6a6;
+  }
+  .pchip i{ font-size:.85rem; }
+  .pchip.blue{ background:rgba(13,202,240,.12); border-color:rgba(13,202,240,.35); color:#5ad6ee; }
+  .reg-chips{ display:flex; flex-wrap:wrap; gap:.4rem; }
+  .reg-foot{ display:flex; align-items:center; justify-content:space-between; gap:.5rem; margin-top:auto; padding-top:.75rem; border-top:1px solid #243024; }
+  .reg-actions{ display:flex; gap:.35rem; }
+</style>
+{% endblock %}
+
 {% block content %}
 {% set st_meta = {
   'vencido': ('Vencido','danger'), 'vencendo': ('Vence em breve','warning'),
   'vigente': ('Vigente','success'), 'sem_data': ('Sem data','secondary') } %}
+{% set st_color = {'vencido':'#dc3545','vencendo':'#ffc107','vigente':'#198754','sem_data':'#5c6b5c'} %}
 {% set reg_lbl = {'registro_br':'Registro.br','godaddy':'GoDaddy','outro':'Outro'} %}
 
 <div class="page-header">
@@ -43,7 +76,7 @@
   </div>
 </div>
 
-<div class="table-card">
+<div class="table-card mb-3">
   <div class="table-card-tools d-flex flex-wrap align-items-center gap-2">
     <form class="d-flex flex-wrap gap-2" method="get" role="search">
       <div class="input-group search-box">
@@ -62,38 +95,48 @@
       {% if q or company or registrar %}<a href="{{ url_for('domains.list_view') }}" class="btn btn-outline-light btn-icon"><i class="bi bi-x-lg"></i></a>{% endif %}
     </form>
   </div>
+</div>
 
-  <div class="table-responsive">
-    <table class="table table-hover align-middle">
-      <thead><tr><th>Domínio</th><th>Empresa</th><th>Registrador</th><th class="text-center">Vencimento</th><th class="text-center">Status</th><th class="text-end" style="width:110px">Ações</th></tr></thead>
-      <tbody>
-        {% for d in items %}
-        <tr class="{{ 'opacity-75' if d.status=='vencido' }}">
-          <td class="fw-semibold"><i class="bi bi-globe text-muted me-1"></i>{{ d.name }}
-            {% if d.auto_renew %}<span class="badge bg-info-subtle text-info-emphasis ms-1" title="Renovação automática">auto</span>{% endif %}
-          </td>
-          <td>{% if d.company %}<span class="badge bg-secondary-subtle text-secondary-emphasis">{{ d.company }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
-          <td class="small">{{ reg_lbl.get(d.registrar, d.registrar) }}</td>
-          <td class="text-center number">{{ d.expiry_date.strftime('%d/%m/%Y') if d.expiry_date else '—' }}</td>
-          <td class="text-center">
-            {% set sm = st_meta.get(d.status, ('—','secondary')) %}
-            <span class="badge bg-{{ sm[1] }}-subtle text-{{ sm[1] }}-emphasis">{{ sm[0] }}</span>
-            {% if d.days_left is not none and d.status in ('vencendo','vencido') %}<small class="d-block text-muted">{{ d.days_left }}d</small>{% endif %}
-          </td>
-          <td class="text-end">
-            <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('domains.edit', did=d.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
-            <form action="{{ url_for('domains.delete', did=d.id) }}" method="post" class="d-inline" onsubmit="return confirm('Excluir este domínio?');">
-              <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
-            </form>
-          </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="6"><div class="empty-state"><i class="bi bi-globe2"></i>
-          {% if q or company or registrar %}Nenhum domínio para o filtro.{% else %}Nenhum domínio cadastrado ainda.{% endif %}
-        </div></td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+{% if items %}
+<div class="reg-grid">
+  {% for d in items %}
+  {% set sm = st_meta.get(d.status, ('—','secondary')) %}
+  <article class="reg-card {{ 'dim' if d.status == 'vencido' }}" style="border-left-color:{{ st_color.get(d.status,'#5c6b5c') }}">
+    <div class="reg-top">
+      <span class="reg-avatar"><i class="bi bi-globe"></i></span>
+      <div class="flex-grow-1 min-w-0">
+        <div class="reg-name">{{ d.name }}</div>
+        {% if d.company %}<div class="reg-sub"><i class="bi bi-building"></i> {{ d.company }}</div>{% endif %}
+      </div>
+      <div class="text-end">
+        <span class="badge bg-{{ sm[1] }}-subtle text-{{ sm[1] }}-emphasis">{{ sm[0] }}</span>
+        {% if d.days_left is not none and d.status in ('vencendo','vencido') %}<div class="text-muted small mt-1">{{ d.days_left }}d</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="reg-chips">
+      <span class="pchip"><i class="bi bi-building-gear"></i> {{ reg_lbl.get(d.registrar, d.registrar) }}</span>
+      {% if d.expiry_date %}<span class="pchip blue"><i class="bi bi-calendar-event"></i> {{ d.expiry_date.strftime('%d/%m/%Y') }}</span>{% endif %}
+      {% if d.auto_renew %}<span class="pchip blue" title="Renovação automática"><i class="bi bi-arrow-repeat"></i> auto</span>{% endif %}
+    </div>
+
+    <div class="reg-foot">
+      <span></span>
+      <div class="reg-actions">
+        <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('domains.edit', did=d.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
+        <form action="{{ url_for('domains.delete', did=d.id) }}" method="post" class="d-inline" onsubmit="return confirm('Excluir o domínio “{{ d.name }}”?');">
+          <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
+        </form>
+      </div>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<div class="table-card">
+  <div class="empty-state"><i class="bi bi-globe2"></i>
+    {% if q or company or registrar %}Nenhum domínio para o filtro.{% else %}Nenhum domínio cadastrado ainda.{% endif %}
   </div>
 </div>
+{% endif %}
 {% endblock %}

@@ -1,10 +1,53 @@
 {% extends "base.html" %}
 {% block title %}Roteadores{% endblock %}
-{% block content %}
 
+{% block extra_head %}
+<style>
+  .router-grid{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); }
+  .router-card{
+    background:#1e1e1e; border:1px solid #243024; border-radius:16px;
+    padding:1.1rem 1.1rem 0.9rem; display:flex; flex-direction:column; gap:.8rem;
+    border-left:4px solid #5c6b5c;
+    transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+  }
+  .router-card:hover{ transform:translateY(-3px); box-shadow:0 10px 24px rgba(0,0,0,.4); border-color:#2e4b3b; }
+  .router-card.dim{ opacity:.65; }
+  .router-top{ display:flex; align-items:flex-start; gap:.8rem; }
+  .router-avatar{
+    width:50px; height:50px; flex:0 0 50px; border-radius:14px;
+    display:inline-flex; align-items:center; justify-content:center; font-size:1.35rem;
+    background:linear-gradient(135deg,#0f5132,#1e1e1e); color:#46e08a; border:1px solid #2e4b3b;
+  }
+  .router-name{ font-weight:600; color:#e6ffe9; line-height:1.2; word-break:break-word; }
+  .router-sub{ font-size:.8rem; color:#9bb6a6; }
+  .pchip{
+    display:inline-flex; align-items:center; gap:.3rem; font-size:.74rem; font-weight:600;
+    padding:.2rem .55rem; border-radius:999px; background:#15211a; border:1px solid #243024; color:#9bb6a6;
+  }
+  .pchip i{ font-size:.85rem; }
+  .pchip.blue{ background:rgba(13,202,240,.12); border-color:rgba(13,202,240,.35); color:#5ad6ee; }
+  .pchip.green{ background:rgba(0,200,83,.12); border-color:rgba(0,200,83,.35); color:#46e08a; }
+  .pchip.mono{ font-family:var(--bs-font-monospace, monospace); font-weight:500; }
+  .router-chips{ display:flex; flex-wrap:wrap; gap:.4rem; }
+  .router-creds{
+    display:flex; flex-direction:column; gap:.35rem; font-size:.8rem;
+    background:#15211a; border:1px solid #243024; border-radius:10px; padding:.5rem .65rem;
+  }
+  .router-creds .cred{ display:flex; align-items:center; gap:.4rem; color:#9bb6a6; }
+  .router-creds .cred i.lead{ width:1rem; text-align:center; color:#6b7d70; }
+  .router-creds .secret{ font-family:var(--bs-font-monospace, monospace); color:#cfe9d8; }
+  .router-creds .toggle-secret{ cursor:pointer; color:#6b7d70; }
+  .router-creds .toggle-secret:hover{ color:#46e08a; }
+  .router-foot{ display:flex; align-items:center; justify-content:space-between; gap:.5rem; margin-top:auto; padding-top:.75rem; border-top:1px solid #243024; }
+  .router-actions{ display:flex; gap:.35rem; }
+</style>
+{% endblock %}
+
+{% block content %}
 {% set st_meta = {
   'em_uso': ('Em uso','success'), 'disponivel': ('Disponível','info'),
   'manutencao': ('Manutenção','warning'), 'inativo': ('Inativo','secondary') } %}
+{% set st_color = {'em_uso':'#00c853','disponivel':'#0dcaf0','manutencao':'#ffc107','inativo':'#5c6b5c'} %}
 
 <div class="page-header">
   <h1 class="ph-title">
@@ -18,7 +61,7 @@
 <div class="row g-3 mb-3">
   <div class="col-6 col-lg-3">
     <a href="{{ url_for('routers.list_view', status='em_uso') }}" class="text-decoration-none">
-      <div class="card stat-card h-100"><div class="card-body d-flex align-items-center justify-content-between">
+      <div class="card stat-card h-100 {{ 'border-success' if status=='em_uso' }}"><div class="card-body d-flex align-items-center justify-content-between">
         <div><div class="text-muted small">Em uso</div><div class="h3 mb-0 number text-success">{{ totals.em_uso }}</div></div>
         <i class="bi bi-router-fill fs-2 text-success"></i>
       </div></div>
@@ -26,7 +69,7 @@
   </div>
   <div class="col-6 col-lg-3">
     <a href="{{ url_for('routers.list_view', status='disponivel') }}" class="text-decoration-none">
-      <div class="card stat-card h-100" style="border-left-color:#0dcaf0"><div class="card-body d-flex align-items-center justify-content-between">
+      <div class="card stat-card h-100 {{ 'border-info' if status=='disponivel' }}" style="border-left-color:#0dcaf0"><div class="card-body d-flex align-items-center justify-content-between">
         <div><div class="text-muted small">Disponíveis</div><div class="h3 mb-0 number text-info">{{ totals.disponivel }}</div></div>
         <i class="bi bi-box-seam fs-2 text-info"></i>
       </div></div>
@@ -34,7 +77,7 @@
   </div>
   <div class="col-6 col-lg-3">
     <a href="{{ url_for('routers.list_view', status='manutencao') }}" class="text-decoration-none">
-      <div class="card stat-card h-100" style="border-left-color:#ffc107"><div class="card-body d-flex align-items-center justify-content-between">
+      <div class="card stat-card h-100 {{ 'border-warning' if status=='manutencao' }}" style="border-left-color:#ffc107"><div class="card-body d-flex align-items-center justify-content-between">
         <div><div class="text-muted small">Manutenção</div><div class="h3 mb-0 number text-warning">{{ totals.manutencao }}</div></div>
         <i class="bi bi-tools fs-2 text-warning"></i>
       </div></div>
@@ -42,7 +85,7 @@
   </div>
   <div class="col-6 col-lg-3">
     <a href="{{ url_for('routers.list_view') }}" class="text-decoration-none">
-      <div class="card stat-card h-100"><div class="card-body d-flex align-items-center justify-content-between">
+      <div class="card stat-card h-100 {{ 'border-light' if not status }}"><div class="card-body d-flex align-items-center justify-content-between">
         <div><div class="text-muted small">Total</div><div class="h3 mb-0 number">{{ totals.total }}</div></div>
         <i class="bi bi-router fs-2 text-success"></i>
       </div></div>
@@ -50,7 +93,7 @@
   </div>
 </div>
 
-<div class="table-card">
+<div class="table-card mb-3">
   <div class="table-card-tools d-flex flex-wrap align-items-center justify-content-between gap-2">
     <form class="d-flex gap-2 mov-filters" method="get" role="search">
       <div class="input-group search-box">
@@ -65,65 +108,71 @@
       {% if q or status %}<a href="{{ url_for('routers.list_view') }}" class="btn btn-outline-light btn-icon" title="Limpar"><i class="bi bi-x-lg"></i></a>{% endif %}
     </form>
   </div>
+</div>
 
-  <div class="table-responsive">
-    <table class="table table-hover align-middle">
-      <thead>
-        <tr>
-          <th>Local / Equipamento</th><th>IP / Admin</th><th>Wi-Fi (SSID)</th>
-          <th class="text-center">Filtro MAC</th><th class="text-center">Status</th>
-          <th class="text-end" style="width:120px">Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for r in items %}
-        <tr class="{{ '' if r.status != 'inativo' else 'opacity-50' }}">
-          <td class="fw-semibold">
-            {% if r.location %}{{ r.location }}{% else %}<span class="contact-muted">— sem local</span>{% endif %}
-            <small class="text-muted d-block">{{ r.brand or '' }} {{ r.model }}{% if r.label %} · {{ r.label }}{% endif %}</small>
-          </td>
-          <td class="font-monospace small">
-            {% if r.ip_address %}{{ r.ip_address }}{% else %}<span class="contact-muted">—</span>{% endif %}
-            {% if r.admin_user or r.admin_password %}
-            <div class="text-muted">
-              <i class="bi bi-person-lock"></i> {{ r.admin_user or '—' }}
-              {% if r.admin_password %}
-                / <span class="secret" data-secret="{{ r.admin_password }}">••••••</span>
-                <i class="bi bi-eye toggle-secret" role="button" title="Mostrar/ocultar"></i>
-              {% endif %}
-            </div>
-            {% endif %}
-          </td>
-          <td class="small">
-            {% if r.ssid %}<span class="fw-semibold"><i class="bi bi-wifi"></i> {{ r.ssid }}</span>{% else %}<span class="contact-muted">—</span>{% endif %}
-            {% if r.wifi_password %}
-            <div class="font-monospace text-muted">
-              <span class="secret" data-secret="{{ r.wifi_password }}">••••••</span>
-              <i class="bi bi-eye toggle-secret" role="button" title="Mostrar/ocultar"></i>
-            </div>
-            {% endif %}
-          </td>
-          <td class="text-center">
-            {% if r.mac_filtering %}<span class="badge bg-success-subtle text-success-emphasis">Ativo</span>
-            {% else %}<span class="badge bg-secondary-subtle text-secondary-emphasis">Não</span>{% endif %}
-          </td>
-          <td class="text-center">{% set sm = st_meta.get(r.status, ('—','secondary')) %}<span class="badge bg-{{ sm[1] }}-subtle text-{{ sm[1] }}-emphasis">{{ sm[0] }}</span></td>
-          <td class="text-end">
-            <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('routers.edit', rid=r.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
-            <form action="{{ url_for('routers.delete', rid=r.id) }}" method="post" class="d-inline" onsubmit="return confirm('Excluir este roteador?');">
-              <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
-            </form>
-          </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="6"><div class="empty-state"><i class="bi bi-router"></i>
-          {% if q or status %}Nenhum roteador para o filtro.{% else %}Nenhum roteador cadastrado ainda.{% endif %}
-        </div></td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+{% if items %}
+<div class="router-grid">
+  {% for r in items %}
+  {% set sm = st_meta.get(r.status, ('—','secondary')) %}
+  <article class="router-card {{ 'dim' if r.status == 'inativo' }}" style="border-left-color:{{ st_color.get(r.status,'#5c6b5c') }}">
+    <div class="router-top">
+      <span class="router-avatar"><i class="bi bi-router"></i></span>
+      <div class="flex-grow-1 min-w-0">
+        <div class="router-name">{% if r.location %}{{ r.location }}{% else %}{{ r.brand or '' }} {{ r.model }}{% endif %}</div>
+        <div class="router-sub">{{ r.brand or '' }} {{ r.model }}{% if r.label %} · {{ r.label }}{% endif %}</div>
+      </div>
+      <span class="badge bg-{{ sm[1] }}-subtle text-{{ sm[1] }}-emphasis">{{ sm[0] }}</span>
+    </div>
+
+    <div class="router-chips">
+      {% if r.ip_address %}<span class="pchip blue mono"><i class="bi bi-hdd-network"></i> {{ r.ip_address }}</span>{% endif %}
+      {% if r.ssid %}<span class="pchip"><i class="bi bi-wifi"></i> {{ r.ssid }}</span>{% endif %}
+      {% if r.mac_filtering %}<span class="pchip green" title="Filtro de MAC ativo"><i class="bi bi-shield-check"></i> Filtro MAC</span>{% endif %}
+      {% if r.patrimony %}<span class="pchip mono" title="Patrimônio"><i class="bi bi-tag"></i> {{ r.patrimony }}</span>{% endif %}
+    </div>
+
+    {% if r.admin_user or r.admin_password or r.wifi_password %}
+    <div class="router-creds">
+      {% if r.admin_user or r.admin_password %}
+      <div class="cred">
+        <i class="bi bi-person-lock lead"></i>
+        <span>{{ r.admin_user or '—' }}</span>
+        {% if r.admin_password %}
+          <span class="secret" data-secret="{{ r.admin_password }}">••••••</span>
+          <i class="bi bi-eye toggle-secret" role="button" title="Mostrar/ocultar"></i>
+        {% endif %}
+      </div>
+      {% endif %}
+      {% if r.wifi_password %}
+      <div class="cred">
+        <i class="bi bi-key lead"></i>
+        <span class="text-muted">Wi-Fi</span>
+        <span class="secret" data-secret="{{ r.wifi_password }}">••••••</span>
+        <i class="bi bi-eye toggle-secret" role="button" title="Mostrar/ocultar"></i>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="router-foot">
+      <span></span>
+      <div class="router-actions">
+        <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('routers.edit', rid=r.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
+        <form action="{{ url_for('routers.delete', rid=r.id) }}" method="post" class="d-inline" onsubmit="return confirm('Excluir o roteador “{{ r.location or r.model }}”?');">
+          <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
+        </form>
+      </div>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<div class="table-card">
+  <div class="empty-state"><i class="bi bi-router"></i>
+    {% if q or status %}Nenhum roteador para o filtro.{% else %}Nenhum roteador cadastrado ainda.{% endif %}
   </div>
 </div>
+{% endif %}
 
 <script>
   document.querySelectorAll('.toggle-secret').forEach(function(btn){

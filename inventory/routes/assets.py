@@ -22,6 +22,38 @@ def _only_admin():
         abort(403)
 
 
+def _person_sector(p) -> str:
+    """Setor de uma pessoa, deduzido dos próprios ativos (máquina/celular)."""
+    for m in p["machines"]:
+        if m.sector:
+            return m.sector.strip()
+    for d in p["mobiles"]:
+        if d.sector:
+            return d.sector.strip()
+    return ""
+
+
+def _group_by_sector(people: list) -> list:
+    """Agrupa pessoas por setor. Retorna [{name, items, maquinas, celulares}],
+    setores em ordem alfabética e 'Sem setor' por último."""
+    grupos = {}
+    for p in people:
+        setor = _person_sector(p)
+        grupos.setdefault(setor, []).append(p)
+    nomeados = sorted((s for s in grupos if s), key=lambda s: s.lower())
+    ordem = nomeados + ([""] if "" in grupos else [])
+    out = []
+    for s in ordem:
+        itens = grupos[s]
+        out.append({
+            "name": s or None,
+            "items": itens,
+            "maquinas": sum(len(p["machines"]) for p in itens),
+            "celulares": sum(len(p["mobiles"]) for p in itens),
+        })
+    return out
+
+
 @bp.route("")
 def list_view():
     q = (request.args.get("q") or "").strip().lower()
@@ -33,7 +65,9 @@ def list_view():
         "maquinas": sum(len(p["machines"]) for p in people),
         "celulares": sum(len(p["mobiles"]) for p in people),
     }
-    return render_template("assets/list.html", people=people, totals=totals, q=request.args.get("q") or "")
+    grupos = _group_by_sector(people)
+    return render_template("assets/list.html", people=people, grupos=grupos,
+                           totals=totals, q=request.args.get("q") or "")
 
 
 @bp.route("/export")

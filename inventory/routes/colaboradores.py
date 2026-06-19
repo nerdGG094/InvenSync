@@ -99,8 +99,18 @@ def list_view():
             | (User.email.ilike(like))
         )
     items = query.order_by(User.name).all()
+
+    # Agrupa por setor (alfabético; "Sem setor" por último).
+    grupos_map = {}
+    for p in items:
+        setor = (p.sector or "").strip()
+        grupos_map.setdefault(setor, []).append(p)
+    nomeados = sorted((s for s in grupos_map if s), key=lambda s: s.lower())
+    ordem = nomeados + ([""] if "" in grupos_map else [])
+    grupos = [{"name": s or None, "items": grupos_map[s]} for s in ordem]
+
     return render_template("colaboradores/list.html", items=items, q=q,
-                           asset_counts=_asset_counts())
+                           grupos=grupos, asset_counts=_asset_counts())
 
 
 @bp.route("/new", methods=["GET", "POST"])

@@ -1,10 +1,45 @@
 {% extends "base.html" %}
 {% block title %}Licenças & Garantias{% endblock %}
+
+{% block extra_head %}
+<style>
+  .reg-grid{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fill, minmax(310px, 1fr)); }
+  .reg-card{
+    background:#1e1e1e; border:1px solid #243024; border-radius:16px;
+    padding:1.1rem 1.1rem 0.9rem; display:flex; flex-direction:column; gap:.8rem;
+    border-left:4px solid #5c6b5c;
+    transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+  }
+  .reg-card:hover{ transform:translateY(-3px); box-shadow:0 10px 24px rgba(0,0,0,.4); border-color:#2e4b3b; }
+  .reg-card.dim{ opacity:.7; }
+  .reg-top{ display:flex; align-items:flex-start; gap:.8rem; }
+  .reg-avatar{
+    width:48px; height:48px; flex:0 0 48px; border-radius:14px;
+    display:inline-flex; align-items:center; justify-content:center; font-size:1.25rem;
+    background:linear-gradient(135deg,#0f5132,#1e1e1e); color:#46e08a; border:1px solid #2e4b3b;
+  }
+  .reg-name{ font-weight:600; color:#e6ffe9; line-height:1.2; word-break:break-word; }
+  .reg-sub{ font-size:.8rem; color:#9bb6a6; }
+  .pchip{
+    display:inline-flex; align-items:center; gap:.3rem; font-size:.74rem; font-weight:600;
+    padding:.2rem .55rem; border-radius:999px; background:#15211a; border:1px solid #243024; color:#9bb6a6;
+  }
+  .pchip i{ font-size:.85rem; }
+  .pchip.blue{ background:rgba(13,202,240,.12); border-color:rgba(13,202,240,.35); color:#5ad6ee; }
+  .pchip.green{ background:rgba(0,200,83,.12); border-color:rgba(0,200,83,.35); color:#46e08a; }
+  .reg-chips{ display:flex; flex-wrap:wrap; gap:.4rem; }
+  .reg-foot{ display:flex; align-items:center; justify-content:space-between; gap:.5rem; margin-top:auto; padding-top:.75rem; border-top:1px solid #243024; }
+  .reg-actions{ display:flex; gap:.35rem; }
+</style>
+{% endblock %}
+
 {% block content %}
 {% set st_meta = {
   'vencido': ('Vencido','danger'), 'vencendo': ('Vence em breve','warning'),
   'vigente': ('Vigente','success'), 'sem_data': ('Sem data','secondary') } %}
+{% set st_color = {'vencido':'#dc3545','vencendo':'#ffc107','vigente':'#198754','sem_data':'#5c6b5c'} %}
 {% set kind_lbl = {'licenca':'Licença','garantia':'Garantia','contrato':'Contrato','certificado':'Certificado','outro':'Outro'} %}
+{% set kind_icon = {'licenca':'bi-patch-check','garantia':'bi-shield-check','contrato':'bi-file-earmark-text','certificado':'bi-award','outro':'bi-tag'} %}
 
 <div class="page-header">
   <h1 class="ph-title">
@@ -43,7 +78,7 @@
   </div>
 </div>
 
-<div class="table-card">
+<div class="table-card mb-3">
   <div class="table-card-tools d-flex flex-wrap align-items-center gap-2">
     <form class="d-flex gap-2" method="get" role="search">
       <div class="input-group search-box">
@@ -58,39 +93,48 @@
       {% if q or kind %}<a href="{{ url_for('licenses.list_view') }}" class="btn btn-outline-light btn-icon"><i class="bi bi-x-lg"></i></a>{% endif %}
     </form>
   </div>
+</div>
 
-  <div class="table-responsive">
-    <table class="table table-hover align-middle">
-      <thead><tr><th>Nome</th><th>Tipo</th><th>Fornecedor</th><th>Vínculo</th><th class="text-center">Vencimento</th><th class="text-center">Status</th><th class="text-end" style="width:110px">Ações</th></tr></thead>
-      <tbody>
-        {% for o in items %}
-        <tr class="{{ 'opacity-75' if o.status=='vencido' }}">
-          <td class="fw-semibold">{{ o.name }}{% if o.seats %}<small class="text-muted d-block">{{ o.seats }} licença(s)</small>{% endif %}</td>
-          <td><span class="badge bg-secondary-subtle text-secondary-emphasis">{{ kind_lbl.get(o.kind, o.kind) }}</span></td>
-          <td class="small">{{ o.vendor or '—' }}</td>
-          <td class="small">{{ o.assigned_to or '—' }}</td>
-          <td class="text-center number">{{ o.expiry_date.strftime('%d/%m/%Y') if o.expiry_date else '—' }}</td>
-          <td class="text-center">
-            {% set sm = st_meta.get(o.status, ('—','secondary')) %}
-            <span class="badge bg-{{ sm[1] }}-subtle text-{{ sm[1] }}-emphasis">{{ sm[0] }}</span>
-            {% if o.days_left is not none and o.status in ('vencendo','vencido') %}
-              <small class="d-block text-muted">{{ o.days_left }}d</small>
-            {% endif %}
-          </td>
-          <td class="text-end">
-            <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('licenses.edit', lid=o.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
-            <form action="{{ url_for('licenses.delete', lid=o.id) }}" method="post" class="d-inline" onsubmit="return confirm('Excluir este registro?');">
-              <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
-            </form>
-          </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="7"><div class="empty-state"><i class="bi bi-patch-check"></i>
-          {% if q or kind %}Nenhum registro para o filtro.{% else %}Nenhuma licença ou garantia cadastrada ainda.{% endif %}
-        </div></td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+{% if items %}
+<div class="reg-grid">
+  {% for o in items %}
+  {% set sm = st_meta.get(o.status, ('—','secondary')) %}
+  <article class="reg-card {{ 'dim' if o.status == 'vencido' }}" style="border-left-color:{{ st_color.get(o.status,'#5c6b5c') }}">
+    <div class="reg-top">
+      <span class="reg-avatar"><i class="bi {{ kind_icon.get(o.kind, 'bi-patch-check') }}"></i></span>
+      <div class="flex-grow-1 min-w-0">
+        <div class="reg-name">{{ o.name }}</div>
+        <div class="reg-sub">{{ kind_lbl.get(o.kind, o.kind) }}{% if o.seats %} · {{ o.seats }} licença(s){% endif %}</div>
+      </div>
+      <div class="text-end">
+        <span class="badge bg-{{ sm[1] }}-subtle text-{{ sm[1] }}-emphasis">{{ sm[0] }}</span>
+        {% if o.days_left is not none and o.status in ('vencendo','vencido') %}<div class="text-muted small mt-1">{{ o.days_left }}d</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="reg-chips">
+      {% if o.vendor %}<span class="pchip"><i class="bi bi-shop"></i> {{ o.vendor }}</span>{% endif %}
+      {% if o.assigned_to %}<span class="pchip green"><i class="bi bi-link-45deg"></i> {{ o.assigned_to }}</span>{% endif %}
+      {% if o.expiry_date %}<span class="pchip blue"><i class="bi bi-calendar-event"></i> {{ o.expiry_date.strftime('%d/%m/%Y') }}</span>{% endif %}
+    </div>
+
+    <div class="reg-foot">
+      <span></span>
+      <div class="reg-actions">
+        <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('licenses.edit', lid=o.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
+        <form action="{{ url_for('licenses.delete', lid=o.id) }}" method="post" class="d-inline" onsubmit="return confirm('Excluir “{{ o.name }}”?');">
+          <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
+        </form>
+      </div>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<div class="table-card">
+  <div class="empty-state"><i class="bi bi-patch-check"></i>
+    {% if q or kind %}Nenhum registro para o filtro.{% else %}Nenhuma licença ou garantia cadastrada ainda.{% endif %}
   </div>
 </div>
+{% endif %}
 {% endblock %}

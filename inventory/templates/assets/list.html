@@ -1,7 +1,61 @@
 {% extends "base.html" %}
 {% block title %}Ativos por Colaborador{% endblock %}
-{% block content %}
 
+{% block extra_head %}
+<style>
+  .asset-grid{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); }
+
+  .asset-card{
+    background:#1e1e1e; border:1px solid #243024; border-radius:16px;
+    padding:1.1rem 1.1rem 0.9rem; display:flex; flex-direction:column; gap:.85rem;
+    border-left:4px solid #00c853;
+    transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+  }
+  .asset-card:hover{ transform:translateY(-3px); box-shadow:0 10px 24px rgba(0,0,0,.4); border-color:#2e4b3b; }
+
+  .asset-top{ display:flex; align-items:center; gap:.8rem; }
+  .asset-avatar{
+    width:50px; height:50px; flex:0 0 50px; border-radius:50%;
+    display:inline-flex; align-items:center; justify-content:center;
+    background:linear-gradient(135deg,#0f5132,#00c853); color:#fff;
+    font-weight:700; font-size:1.05rem; text-transform:uppercase;
+  }
+  .asset-name{ font-weight:600; color:#e6ffe9; line-height:1.2; word-break:break-word; }
+  .asset-sub{ font-size:.8rem; color:#9bb6a6; }
+
+  .pchip{
+    display:inline-flex; align-items:center; gap:.3rem; font-size:.74rem; font-weight:600;
+    padding:.2rem .55rem; border-radius:999px; background:#15211a; border:1px solid #243024; color:#9bb6a6;
+  }
+  .pchip i{ font-size:.85rem; }
+  .pchip.blue{ background:rgba(13,202,240,.12); border-color:rgba(13,202,240,.35); color:#5ad6ee; }
+  .pchip.amber{ background:rgba(255,193,7,.12); border-color:rgba(255,193,7,.35); color:#ffce6a; }
+  .asset-chips{ display:flex; flex-wrap:wrap; gap:.4rem; }
+
+  .asset-devices{ display:flex; flex-direction:column; gap:.3rem; font-size:.82rem; color:#9bb6a6; }
+  .asset-devices .dev{ display:flex; align-items:center; gap:.45rem; }
+  .asset-devices .dev i{ width:1rem; text-align:center; }
+  .asset-devices .more{ color:#6b7d70; font-style:italic; }
+
+  .asset-foot{ display:flex; gap:.5rem; margin-top:auto; padding-top:.75rem; border-top:1px solid #243024; }
+
+  .group-section{ margin-bottom:1.6rem; }
+  .group-head{
+    display:flex; align-items:center; gap:.55rem; margin:.25rem 0 .8rem;
+    font-weight:700; color:#cfe9d8; font-size:1.02rem;
+    padding-bottom:.5rem; border-bottom:1px solid #243024;
+  }
+  .group-head i{ color:#46e08a; }
+  .group-head.no-sector, .group-head.no-sector i{ color:#9bb6a6; }
+  .group-head .count{
+    font-size:.78rem; font-weight:600; color:#9bb6a6;
+    background:#15211a; border:1px solid #243024; border-radius:999px; padding:.1rem .55rem;
+  }
+  .group-head .gtotals{ margin-left:auto; display:flex; gap:.4rem; }
+</style>
+{% endblock %}
+
+{% block content %}
 <div class="page-header">
   <h1 class="ph-title">
     <span class="ph-icon"><i class="bi bi-person-badge"></i></span>
@@ -32,7 +86,7 @@
   </div>
 </div>
 
-<div class="table-card">
+<div class="table-card mb-3">
   <div class="table-card-tools">
     <form class="d-flex gap-2" method="get" role="search">
       <div class="input-group search-box">
@@ -43,27 +97,63 @@
       {% if q %}<a href="{{ url_for('assets.list_view') }}" class="btn btn-outline-light btn-icon"><i class="bi bi-x-lg"></i></a>{% endif %}
     </form>
   </div>
-  <div class="table-responsive">
-    <table class="table table-hover align-middle">
-      <thead><tr><th>Colaborador</th><th class="text-center">Máquinas</th><th class="text-center">Celulares</th><th class="text-end">Ações</th></tr></thead>
-      <tbody>
-        {% for p in people %}
-        <tr>
-          <td class="fw-semibold"><i class="bi bi-person-circle me-1 text-muted"></i>{{ p.name }}</td>
-          <td class="text-center">{% if p.machines %}<span class="badge bg-info-subtle text-info-emphasis">{{ p.machines|length }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
-          <td class="text-center">{% if p.mobiles %}<span class="badge bg-warning-subtle text-warning-emphasis">{{ p.mobiles|length }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
-          <td class="text-end">
-            <a class="btn btn-sm btn-outline-light" href="{{ url_for('assets.detail', name=p.name) }}"><i class="bi bi-eye"></i> Ver</a>
-            <a class="btn btn-sm btn-outline-light" href="{{ url_for('assets.termo', name=p.name) }}" target="_blank"><i class="bi bi-file-earmark-text"></i> Termo</a>
-          </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="4"><div class="empty-state"><i class="bi bi-person-badge"></i>
-          {% if q %}Nenhum colaborador para o filtro.{% else %}Nenhum ativo vinculado a colaboradores ainda.{% endif %}
-        </div></td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+</div>
+
+{% if people %}
+{% for g in grupos %}
+<div class="group-section">
+  <div class="group-head {{ 'no-sector' if not g.name }}">
+    <i class="bi {{ 'bi-diagram-3' if g.name else 'bi-dash-circle' }}"></i>
+    {{ g.name or 'Sem setor' }}
+    <span class="count">{{ g.items|length }}</span>
+    <span class="gtotals">
+      {% if g.maquinas %}<span class="pchip blue"><i class="bi bi-pc-display"></i> {{ g.maquinas }}</span>{% endif %}
+      {% if g.celulares %}<span class="pchip amber"><i class="bi bi-phone"></i> {{ g.celulares }}</span>{% endif %}
+    </span>
+  </div>
+  <div class="asset-grid">
+  {% for p in g.items %}
+  {% set parts = p.name.split() %}
+  {% set initials = (parts[0][0] ~ (parts[-1][0] if parts|length > 1 else ''))|upper %}
+  <article class="asset-card">
+    <div class="asset-top">
+      <span class="asset-avatar">{{ initials or '?' }}</span>
+      <div class="flex-grow-1 min-w-0">
+        <div class="asset-name">{{ p.name }}</div>
+      </div>
+    </div>
+
+    <div class="asset-chips">
+      {% if p.machines %}<span class="pchip blue"><i class="bi bi-pc-display"></i> {{ p.machines|length }} máquina{{ 's' if p.machines|length != 1 }}</span>{% endif %}
+      {% if p.mobiles %}<span class="pchip amber"><i class="bi bi-phone"></i> {{ p.mobiles|length }} celular{{ 'es' if p.mobiles|length != 1 }}</span>{% endif %}
+      <span class="pchip"><i class="bi bi-collection"></i> {{ p.total }} no total</span>
+    </div>
+
+    <div class="asset-devices">
+      {% for m in p.machines[:3] %}
+        <div class="dev"><i class="bi bi-pc-display text-info"></i> {{ (m.brand ~ ' ' if m.brand else '') ~ (m.model or m.name or 'Máquina') }}</div>
+      {% endfor %}
+      {% for d in p.mobiles[:3] %}
+        <div class="dev"><i class="bi bi-phone text-warning"></i> {{ (d.brand ~ ' ' if d.brand else '') ~ d.model }}{% if d.phone_number %} · {{ d.phone_number }}{% endif %}</div>
+      {% endfor %}
+      {% set extra = (p.machines|length - 3 if p.machines|length > 3 else 0) + (p.mobiles|length - 3 if p.mobiles|length > 3 else 0) %}
+      {% if extra > 0 %}<div class="more">+{{ extra }} item{{ 's' if extra != 1 }}…</div>{% endif %}
+    </div>
+
+    <div class="asset-foot">
+      <a class="btn btn-sm btn-outline-light flex-grow-1" href="{{ url_for('assets.detail', name=p.name) }}"><i class="bi bi-eye"></i> Ver</a>
+      <a class="btn btn-sm btn-outline-light flex-grow-1" href="{{ url_for('assets.termo', name=p.name) }}" target="_blank"><i class="bi bi-file-earmark-text"></i> Termo</a>
+    </div>
+  </article>
+  {% endfor %}
   </div>
 </div>
+{% endfor %}
+{% else %}
+<div class="table-card">
+  <div class="empty-state"><i class="bi bi-person-badge"></i>
+    {% if q %}Nenhum colaborador para o filtro.{% else %}Nenhum ativo vinculado a colaboradores ainda.{% endif %}
+  </div>
+</div>
+{% endif %}
 {% endblock %}

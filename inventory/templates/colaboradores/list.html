@@ -1,6 +1,72 @@
 {% extends "base.html" %}
 {% block title %}Colaboradores{% endblock %}
+
+{% block extra_head %}
+<style>
+  .people-grid{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fill, minmax(290px, 1fr)); }
+
+  .person-card{
+    position:relative; background:#1e1e1e; border:1px solid #243024; border-radius:16px;
+    padding:1.1rem 1.1rem 0.9rem; display:flex; flex-direction:column; gap:.85rem;
+    border-left:4px solid #00c853;
+    transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+  }
+  .person-card:hover{ transform:translateY(-3px); box-shadow:0 10px 24px rgba(0,0,0,.4); border-color:#2e4b3b; border-left-color:#00e676; }
+  .person-card.is-inactive{ border-left-color:#5c6b5c; opacity:.7; }
+  .person-card.is-inactive .person-avatar{ filter:grayscale(.7); }
+
+  .person-top{ display:flex; align-items:flex-start; gap:.8rem; }
+  .person-avatar{
+    width:54px; height:54px; flex:0 0 54px; border-radius:50%;
+    display:inline-flex; align-items:center; justify-content:center;
+    background:linear-gradient(135deg,#0f5132,#00c853); color:#fff;
+    font-weight:700; font-size:1.1rem; text-transform:uppercase; object-fit:cover;
+  }
+  .person-name{ font-weight:600; color:#e6ffe9; line-height:1.2; word-break:break-word; }
+  .person-mail{ font-size:.82rem; color:#9bb6a6; word-break:break-all; }
+  .person-mail.muted{ color:#6b7d70; font-style:italic; }
+
+  .person-chips{ display:flex; flex-wrap:wrap; gap:.4rem; }
+  .pchip{
+    display:inline-flex; align-items:center; gap:.3rem; font-size:.74rem; font-weight:600;
+    padding:.2rem .55rem; border-radius:999px; text-decoration:none;
+    background:#15211a; border:1px solid #243024; color:#9bb6a6;
+  }
+  .pchip i{ font-size:.85rem; }
+  .pchip.green{ background:rgba(0,200,83,.12); border-color:rgba(0,200,83,.35); color:#46e08a; }
+  .pchip.blue{ background:rgba(13,202,240,.12); border-color:rgba(13,202,240,.35); color:#5ad6ee; }
+  .pchip.amber{ background:rgba(255,176,32,.12); border-color:rgba(255,176,32,.35); color:#ffce6a; }
+  a.pchip:hover{ filter:brightness(1.15); }
+
+  .person-foot{
+    display:flex; align-items:center; justify-content:space-between; gap:.5rem;
+    margin-top:auto; padding-top:.75rem; border-top:1px solid #243024;
+  }
+  .person-foot .form-switch .form-check-input{ width:2.3em; height:1.15em; cursor:pointer; }
+  .person-foot .form-switch .form-check-input:checked{ background-color:#00c853; border-color:#00c853; }
+  .person-actions{ display:flex; gap:.35rem; }
+
+  .summary-chips{ display:flex; flex-wrap:wrap; gap:.5rem; }
+
+  .group-section{ margin-bottom:1.6rem; }
+  .group-head{
+    display:flex; align-items:center; gap:.55rem; margin:.25rem 0 .8rem;
+    font-weight:700; color:#cfe9d8; font-size:1.02rem;
+    padding-bottom:.5rem; border-bottom:1px solid #243024;
+  }
+  .group-head i{ color:#46e08a; }
+  .group-head .count{
+    font-size:.78rem; font-weight:600; color:#9bb6a6;
+    background:#15211a; border:1px solid #243024; border-radius:999px; padding:.1rem .55rem;
+  }
+  .group-head.no-sector i, .group-head.no-sector{ color:#9bb6a6; }
+</style>
+{% endblock %}
+
 {% block content %}
+{% set ativos = items|selectattr('is_active')|list|length %}
+{% set com_login = items|selectattr('can_login')|list|length %}
+{% set admins = items|selectattr('is_admin')|list|length %}
 
 <div class="page-header">
   <h1 class="ph-title">
@@ -13,8 +79,8 @@
   </a>
 </div>
 
-<div class="table-card">
-  <div class="table-card-tools">
+<div class="table-card mb-3">
+  <div class="table-card-tools d-flex flex-wrap align-items-center justify-content-between gap-2">
     <form class="d-flex search-box" method="get" role="search">
       <div class="input-group">
         <span class="input-group-text"><i class="bi bi-search"></i></span>
@@ -24,87 +90,104 @@
       <a href="{{ url_for('colaboradores.list_view') }}" class="btn btn-outline-light ms-2" title="Limpar"><i class="bi bi-x-lg"></i></a>
       {% endif %}
     </form>
-  </div>
-
-  <div class="table-responsive">
-    <table class="table table-hover align-middle">
-      <thead>
-        <tr>
-          <th style="min-width:200px">Nome</th>
-          <th>Departamento / Setor</th>
-          <th>E-mail</th>
-          <th style="width:150px">Acesso</th>
-          <th style="width:110px">Status</th>
-          <th class="text-end" style="width:170px">Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for c in items %}
-        {% set is_self = (current_user.is_authenticated and c.id == current_user.id) %}
-        {% set ac = asset_counts.get((c.name or '')|lower|trim, 0) %}
-        <tr class="{{ '' if c.is_active else 'opacity-50' }}">
-          <td class="fw-semibold">
-            <i class="bi bi-person-fill text-success me-1 small"></i> {{ c.name }}
-            {% if ac %}
-              <a href="{{ url_for('assets.detail', name=c.name) }}" class="badge bg-secondary-subtle text-secondary-emphasis text-decoration-none ms-1"
-                 title="Vinculado(a) a {{ ac }} equipamento(s)"><i class="bi bi-pc-display"></i> {{ ac }}</a>
-            {% endif %}
-          </td>
-          <td>{% if c.sector %}{{ c.sector }}{% else %}<span class="contact-muted">—</span>{% endif %}</td>
-          <td>{% if c.email %}<a href="mailto:{{ c.email }}" class="text-decoration-none">{{ c.email }}</a>{% else %}<span class="contact-muted">—</span>{% endif %}</td>
-          <td>
-            {% if c.can_login and c.is_admin %}
-              <span class="badge bg-success-subtle text-success" title="Login com acesso total"><i class="bi bi-shield-check me-1"></i>Admin</span>
-            {% elif c.can_login %}
-              <span class="badge bg-info-subtle text-info-emphasis" title="Login comum (só Chamados)"><i class="bi bi-box-arrow-in-right me-1"></i>Login</span>
-            {% else %}
-              <span class="badge bg-secondary-subtle text-secondary" title="Sem acesso ao sistema"><i class="bi bi-person me-1"></i>Sem login</span>
-            {% endif %}
-            {% if c.is_2fa_enabled %}
-              <span class="badge bg-success-subtle text-success" title="2FA ativo"><i class="bi bi-shield-lock"></i></span>
-            {% endif %}
-          </td>
-          <td>
-            {% if c.is_active %}
-              <span class="badge bg-success-subtle text-success">Ativo</span>
-            {% else %}
-              <span class="badge bg-secondary-subtle text-secondary">Inativo</span>
-            {% endif %}
-          </td>
-          <td class="text-end">
-            <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('colaboradores.edit', cid=c.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
-            {% if c.is_2fa_enabled %}
-            <form action="{{ url_for('colaboradores.reset_2fa', cid=c.id) }}" method="post" class="d-inline"
-                  onsubmit="return confirm('Resetar o 2FA de “{{ c.name }}”? Entrará só com a senha até reativar.');">
-              <button class="btn btn-sm btn-outline-warning btn-icon" title="Resetar 2FA"><i class="bi bi-shield-slash"></i></button>
-            </form>
-            {% endif %}
-            {% if not is_self %}
-            <form action="{{ url_for('colaboradores.toggle_active', cid=c.id) }}" method="post" class="d-inline">
-              <button class="btn btn-sm btn-outline-light btn-icon" title="{{ 'Inativar' if c.is_active else 'Ativar' }}">
-                <i class="bi bi-toggle2-{{ 'on text-success' if c.is_active else 'off text-secondary' }}"></i>
-              </button>
-            </form>
-            <form action="{{ url_for('colaboradores.delete', cid=c.id) }}" method="post" class="d-inline" onsubmit="return confirm('{% if ac %}Atenção: “{{ c.name }}” ainda está vinculado(a) a {{ ac }} equipamento(s). O nome continuará aparecendo no seletor de responsável até você reatribuir esses equipamentos.\n\n{% endif %}Excluir “{{ c.name }}” definitivamente?');">
-              <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
-            </form>
-            {% else %}
-            <span class="mov-meta ms-1" title="Você não pode desativar/excluir a si mesmo"><i class="bi bi-lock"></i> você</span>
-            {% endif %}
-          </td>
-        </tr>
-        {% else %}
-        <tr>
-          <td colspan="6">
-            <div class="empty-state">
-              <i class="bi bi-person-vcard"></i>
-              {% if q %}Nenhuma pessoa encontrada para “{{ q }}”.{% else %}Nenhuma pessoa cadastrada ainda.{% endif %}
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div class="summary-chips">
+      <span class="pchip green"><i class="bi bi-check-circle"></i> {{ ativos }} ativos</span>
+      <span class="pchip"><i class="bi bi-slash-circle"></i> {{ items|length - ativos }} inativos</span>
+      <span class="pchip blue"><i class="bi bi-box-arrow-in-right"></i> {{ com_login }} com login</span>
+      <span class="pchip amber"><i class="bi bi-shield-check"></i> {{ admins }} admins</span>
+    </div>
   </div>
 </div>
+
+{% if items %}
+{% for g in grupos %}
+<div class="group-section">
+  <div class="group-head {{ 'no-sector' if not g.name }}">
+    <i class="bi {{ 'bi-diagram-3' if g.name else 'bi-dash-circle' }}"></i>
+    {{ g.name or 'Sem setor' }}
+    <span class="count">{{ g.items|length }}</span>
+  </div>
+  <div class="people-grid">
+  {% for c in g.items %}
+  {% set is_self = (current_user.is_authenticated and c.id == current_user.id) %}
+  {% set ac = asset_counts.get((c.name or '')|lower|trim, 0) %}
+  <article class="person-card {{ '' if c.is_active else 'is-inactive' }}">
+    <div class="person-top">
+      {% if c.photo %}
+        <img class="person-avatar" src="{{ url_for('static', filename='uploads/avatars/' ~ c.photo) }}" alt="">
+      {% else %}
+        <span class="person-avatar">{{ c.initials }}</span>
+      {% endif %}
+      <div class="flex-grow-1 min-w-0">
+        <div class="person-name">{{ c.name }}{% if is_self %} <span class="text-muted small">(você)</span>{% endif %}</div>
+        {% if c.email %}
+          <a class="person-mail text-decoration-none" href="mailto:{{ c.email }}">{{ c.email }}</a>
+        {% else %}
+          <div class="person-mail muted">sem e-mail</div>
+        {% endif %}
+      </div>
+      {% if c.can_login and c.is_admin %}
+        <span class="pchip amber" title="Login com acesso total"><i class="bi bi-shield-check"></i> Admin</span>
+      {% elif c.can_login %}
+        <span class="pchip blue" title="Login comum (só Chamados)"><i class="bi bi-box-arrow-in-right"></i> Login</span>
+      {% else %}
+        <span class="pchip" title="Sem acesso ao sistema"><i class="bi bi-person"></i> Sem login</span>
+      {% endif %}
+    </div>
+
+    <div class="person-chips">
+      {% if c.sector %}
+        <span class="pchip"><i class="bi bi-diagram-3"></i> {{ c.sector }}</span>
+      {% endif %}
+      {% if ac %}
+        <a class="pchip blue" href="{{ url_for('assets.detail', name=c.name) }}" title="Vinculado(a) a {{ ac }} equipamento(s)"><i class="bi bi-pc-display"></i> {{ ac }} equip.</a>
+      {% endif %}
+      {% if c.is_2fa_enabled %}
+        <span class="pchip green" title="Autenticação em dois fatores ativa"><i class="bi bi-shield-lock"></i> 2FA</span>
+      {% endif %}
+      {% if not c.sector and not ac and not c.is_2fa_enabled %}
+        <span class="pchip"><i class="bi bi-dash"></i> sem detalhes</span>
+      {% endif %}
+    </div>
+
+    <div class="person-foot">
+      {% if is_self %}
+        <span class="pchip green"><i class="bi bi-check-circle"></i> Ativo</span>
+      {% else %}
+        <form action="{{ url_for('colaboradores.toggle_active', cid=c.id) }}" method="post" class="form-check form-switch mb-0 d-flex align-items-center gap-2">
+          <input class="form-check-input mt-0" type="checkbox" role="switch"
+                 {{ 'checked' if c.is_active else '' }} onchange="this.form.submit()">
+          <span class="small {{ 'text-success' if c.is_active else 'text-secondary' }}">{{ 'Ativo' if c.is_active else 'Inativo' }}</span>
+        </form>
+      {% endif %}
+
+      <div class="person-actions">
+        <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('colaboradores.edit', cid=c.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
+        {% if c.is_2fa_enabled %}
+        <form action="{{ url_for('colaboradores.reset_2fa', cid=c.id) }}" method="post" class="d-inline"
+              onsubmit="return confirm('Resetar o 2FA de “{{ c.name }}”? Entrará só com a senha até reativar.');">
+          <button class="btn btn-sm btn-outline-warning btn-icon" title="Resetar 2FA"><i class="bi bi-shield-slash"></i></button>
+        </form>
+        {% endif %}
+        {% if not is_self %}
+        <form action="{{ url_for('colaboradores.delete', cid=c.id) }}" method="post" class="d-inline"
+              onsubmit="return confirm('{% if ac %}Atenção: “{{ c.name }}” ainda está vinculado(a) a {{ ac }} equipamento(s). O nome continuará no seletor de responsável até você reatribuir esses equipamentos.\n\n{% endif %}Excluir “{{ c.name }}” definitivamente?');">
+          <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </article>
+  {% endfor %}
+  </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="table-card">
+  <div class="empty-state">
+    <i class="bi bi-person-vcard"></i>
+    {% if q %}Nenhuma pessoa encontrada para “{{ q }}”.{% else %}Nenhuma pessoa cadastrada ainda.{% endif %}
+  </div>
+</div>
+{% endif %}
 {% endblock %}
