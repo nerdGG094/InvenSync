@@ -82,6 +82,34 @@ def _seed_people_into_users():
     except Exception:  # noqa: BLE001
         db.session.rollback()
 
+def _backfill_patrimony():
+    """Gera nº de patrimônio para máquinas/celulares já cadastrados sem o campo.
+
+    Idempotente: só preenche quem está com `patrimony` vazio, continuando a
+    sequência única da empresa (PAT-0001, PAT-0002, ...). Ordena por id para
+    uma atribuição estável (máquinas primeiro, depois celulares)."""
+    from .models.machine import Machine
+    from .models.mobile import MobileDevice
+    from .services import patrimony
+    try:
+        faltantes = []
+        for m in Machine.query.order_by(Machine.id.asc()).all():
+            if not (m.patrimony or "").strip():
+                faltantes.append(m)
+        for d in MobileDevice.query.order_by(MobileDevice.id.asc()).all():
+            if not (d.patrimony or "").strip():
+                faltantes.append(d)
+        if not faltantes:
+            return
+        seq = patrimony.current_max_seq()
+        for obj in faltantes:
+            seq += 1
+            obj.patrimony = patrimony.format_seq(seq)
+        db.session.commit()
+    except Exception:  # noqa: BLE001
+        db.session.rollback()
+
+
 def _seed_departments_from_sectors():
     """Popula a tabela `department` com os setores já existentes nos colaboradores.
 
@@ -173,6 +201,8 @@ def create_app():
         _seed_people_into_users()
         # Popula os departamentos a partir dos setores já usados nos colaboradores.
         _seed_departments_from_sectors()
+        # Gera nº de patrimônio para máquinas/celulares já cadastrados sem o campo.
+        _backfill_patrimony()
         db.session.commit()
 
     # Loader do usuário

@@ -7,7 +7,7 @@ from ..extensions import db
 from ..repositories import mobile_repo
 from ..forms.mobile import MobileForm
 from ..models.mobile import MobileDevice
-from ..services import people
+from ..services import people, patrimony
 
 bp = Blueprint("mobile", __name__)
 
@@ -86,6 +86,9 @@ def list_view():
 def new():
     form = MobileForm()
     _populate(form)
+    # Sugere um nº de patrimônio automático (editável pelo usuário).
+    if request.method == "GET" and not form.patrimony.data:
+        form.patrimony.data = patrimony.next_patrimony()
     if form.validate_on_submit():
         mobile_repo.create_mobile(**_to_kwargs(form))
         flash("Celular cadastrado!", "success")

@@ -7,7 +7,7 @@ from ..extensions import db
 from ..repositories import machine_repo
 from ..forms.machines import MachineForm
 from ..models.machine import Machine
-from ..services import people
+from ..services import people, patrimony
 
 bp = Blueprint("machines", __name__)
 
@@ -74,8 +74,12 @@ def list_view():
 def new():
     form = MachineForm()
     form.assigned_user.choices = people.user_choices("— Selecione —")
-    if request.method == "GET" and not form.kind.data:
-        form.kind.data = request.args.get("kind") or "computador"
+    if request.method == "GET":
+        if not form.kind.data:
+            form.kind.data = request.args.get("kind") or "computador"
+        # Sugere um nº de patrimônio automático (editável pelo usuário).
+        if not form.patrimony.data:
+            form.patrimony.data = patrimony.next_patrimony()
     if form.validate_on_submit():
         machine_repo.create_machine(**_form_to_kwargs(form))
         flash("Máquina cadastrada!", "success")

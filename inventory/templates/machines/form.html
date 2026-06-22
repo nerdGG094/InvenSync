@@ -76,6 +76,7 @@
           <div class="col-12 col-md-4">
             {{ form.patrimony.label(class="form-label fw-semibold") }}
             {{ form.patrimony(class="form-control" + (" is-invalid" if form.patrimony.errors else ""), placeholder="Nº patrimônio") }}
+            <div class="form-text">Gerado automaticamente — pode editar.</div>
             {{ field_error(form.patrimony) }}
           </div>
           <div class="col-12 col-md-4">

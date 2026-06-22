@@ -106,6 +106,7 @@
           <div class="col-12 col-md-3">
             {{ form.patrimony.label(class="form-label fw-semibold") }}
             {{ form.patrimony(class="form-control" + (" is-invalid" if form.patrimony.errors else "")) }}
+            <div class="form-text">Gerado automaticamente — pode editar.</div>
             {{ field_error(form.patrimony) }}
           </div>
         </div>
