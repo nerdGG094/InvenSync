@@ -23,6 +23,9 @@ class Machine(db.Model):
 
     is_active = db.Column(db.Boolean, nullable=False, default=True,
                           server_default=db.text("true"))    # em uso / ativo
+    # Etiqueta QR já colada no aparelho (marcada pelo analista na tela de Etiquetas).
+    label_applied = db.Column(db.Boolean, nullable=False, default=False,
+                              server_default=db.text("false"))
     created_at = db.Column(db.DateTime, server_default=db.func.now())
 
     def __repr__(self) -> str:

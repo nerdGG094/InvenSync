@@ -29,6 +29,7 @@ class MachineForm(FlaskForm):
     serial_number = StringField("Nº de Série", validators=[Optional(), Length(max=120)])
     notes = TextAreaField("Observações", validators=[Optional()])
     is_active = BooleanField("Em uso / ativo", default=True)
+    label_applied = BooleanField("Etiqueta QR colada no aparelho", default=False)
     submit = SubmitField("Salvar")
 
 

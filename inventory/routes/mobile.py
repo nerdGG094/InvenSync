@@ -58,6 +58,7 @@ def _to_kwargs(form: MobileForm) -> dict:
         status=form.status.data or "em_uso",
         handed_at=form.handed_at.data,
         notes=s(form.notes.data),
+        label_applied=bool(form.label_applied.data),
     )
 
 

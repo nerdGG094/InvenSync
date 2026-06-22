@@ -29,4 +29,5 @@ class MobileForm(FlaskForm):
     status = SelectField("Status", choices=STATUS_CHOICES, validators=[DataRequired()])
     handed_at = DateField("Data de entrega", validators=[Optional()])
     notes = TextAreaField("Observações", validators=[Optional()])
+    label_applied = BooleanField("Etiqueta QR colada no aparelho", default=False)
     submit = SubmitField("Salvar")

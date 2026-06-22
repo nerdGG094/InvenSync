@@ -9,7 +9,7 @@ _ALLOWED = {
     "label", "brand", "model", "serial_number", "patrimony",
     "ip_address", "mac_address", "admin_user", "admin_password",
     "ssid", "wifi_password", "ssid_guest", "wifi_password_guest",
-    "mac_filtering", "linked_macs", "location", "status", "notes",
+    "mac_filtering", "linked_macs", "location", "status", "notes", "label_applied",
 }
 
 

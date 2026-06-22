@@ -26,6 +26,10 @@ def _run_light_migrations():
         # Celular compartilhado: até 2 funcionários adicionais no mesmo aparelho.
         'ALTER TABLE mobile_device ADD COLUMN IF NOT EXISTS assigned_employee_2 VARCHAR(150)',
         'ALTER TABLE mobile_device ADD COLUMN IF NOT EXISTS assigned_employee_3 VARCHAR(150)',
+        # Etiqueta QR aplicada no aparelho (controle do analista na tela de Etiquetas).
+        'ALTER TABLE machine ADD COLUMN IF NOT EXISTS label_applied BOOLEAN NOT NULL DEFAULT false',
+        'ALTER TABLE router ADD COLUMN IF NOT EXISTS label_applied BOOLEAN NOT NULL DEFAULT false',
+        'ALTER TABLE mobile_device ADD COLUMN IF NOT EXISTS label_applied BOOLEAN NOT NULL DEFAULT false',
     ]
     for sql in stmts:
         try:

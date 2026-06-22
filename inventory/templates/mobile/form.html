@@ -122,6 +122,12 @@
           </div>
         </div>
 
+        <div class="form-check form-switch mt-3">
+          {{ form.label_applied(class="form-check-input", role="switch", id="labelAppliedSwitch") }}
+          <label class="form-check-label" for="labelAppliedSwitch"><i class="bi bi-qr-code me-1"></i>Etiqueta QR colada no aparelho</label>
+          <div class="form-text">Ligue ao colar a etiqueta física neste aparelho.</div>
+        </div>
+
         <div class="mt-3">
           {{ form.notes.label(class="form-label fw-semibold") }}
           {{ form.notes(class="form-control", rows=2, placeholder="Observações (acessórios, termo de responsabilidade, etc.)") }}

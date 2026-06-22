@@ -43,6 +43,7 @@ def _form_to_kwargs(form: MachineForm) -> dict:
         serial_number=s(form.serial_number.data),
         notes=s(form.notes.data),
         is_active=bool(form.is_active.data),
+        label_applied=bool(form.label_applied.data),
     )
 
 

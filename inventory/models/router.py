@@ -35,6 +35,9 @@ class Router(db.Model):
     # status: em_uso | disponivel | manutencao | inativo
     status = db.Column(db.String(15), nullable=False, default="em_uso",
                        server_default="em_uso", index=True)
+    # Etiqueta QR já colada no aparelho (marcada pelo analista na tela de Etiquetas).
+    label_applied = db.Column(db.Boolean, nullable=False, default=False,
+                              server_default=db.text("false"))
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
 

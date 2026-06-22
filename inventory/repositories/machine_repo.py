@@ -7,7 +7,7 @@ from ..models.machine import Machine
 
 _ALLOWED = {
     "kind", "name", "brand", "model", "assigned_user", "ip_address",
-    "sector", "patrimony", "serial_number", "notes", "is_active",
+    "sector", "patrimony", "serial_number", "notes", "is_active", "label_applied",
 }
 
 

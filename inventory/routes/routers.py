@@ -34,6 +34,7 @@ def _to_kwargs(form: RouterForm) -> dict:
         linked_macs=s(form.linked_macs.data),
         status=form.status.data or "em_uso",
         notes=s(form.notes.data),
+        label_applied=bool(form.label_applied.data),
     )
 
 
