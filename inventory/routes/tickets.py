@@ -16,7 +16,6 @@ from ..forms.tickets import (TicketForm, CommentForm, STATUS_CHOICES,
                              CATEGORY_CHOICES, PRIORITY_CHOICES)
 from ..models.ticket import Ticket
 from ..models.user import User
-from ..models.machine import Machine
 from ..services import people, whatsapp, audit
 from ..services.exports import xlsx_response
 
@@ -25,43 +24,19 @@ STATUS_LABELS = dict(STATUS_CHOICES)
 bp = Blueprint("tickets", __name__)
 
 
-KIND_LABELS = {"computador": "Computador", "notebook": "Notebook", "impressora": "Impressora"}
-
-
-def _machine_label(m: Machine) -> str:
-    # Lidera pelo usuário (depois modelo e tipo), para facilitar a escolha.
-    user = m.assigned_user or "s/ usuário"
-    return f"{user} · {m.model or '—'} · {KIND_LABELS.get(m.kind, m.kind)}"
-
-
-def _machines_info() -> dict:
-    """Dados das máquinas para auto-preencher o chamado ao selecionar."""
-    info = {}
-    for m in Machine.query.all():
-        info[m.id] = {
-            "user": m.assigned_user or "",
-            "sector": m.sector or "",
-            "ip": m.ip_address or "",
-            "model": m.model or "",
-            "kind": KIND_LABELS.get(m.kind, m.kind),
-        }
-    return info
-
-
 def _users_info() -> dict:
     """Mapa usuário (cadastrado em Máquinas) -> setor."""
     return people.users_sector_map()
 
 
 def _populate(form: TicketForm):
-    # Atribuição só para quem opera o sistema (tem login ativo) — normalmente TI.
+    # Responsáveis (atendentes): apenas o time de TI — usuários do departamento
+    # "Tecnologia" com login ativo. São eles que atendem os chamados.
     users = (User.query
              .filter_by(is_active=True, can_login=True)
+             .filter(db.func.lower(User.sector) == "tecnologia")
              .order_by(User.name).all())
     form.assigned_to_id.choices = [(0, "— Não atribuído —")] + [(u.id, u.name) for u in users]
-    machines = Machine.query.order_by(Machine.assigned_user.asc().nullslast(),
-                                      Machine.model.asc()).all()
-    form.machine_id.choices = [(0, "— Nenhuma —")] + [(m.id, _machine_label(m)) for m in machines]
     form.requester.choices = people.user_choices()
 
 
@@ -78,7 +53,6 @@ def _to_kwargs(form: TicketForm) -> dict:
         priority=form.priority.data or "media",
         status=form.status.data or "aberto",
         assigned_to_id=form.assigned_to_id.data or None,
-        machine_id=form.machine_id.data or None,
         resolution=s(form.resolution.data),
     )
 
@@ -279,8 +253,7 @@ def new():
         flash(f"Chamado {t.code} aberto!", "success")
         return redirect(url_for("tickets.detail", tid=t.id))
     return render_template("tickets/form.html", form=form, title="Novo Chamado",
-                           machines_info=_machines_info(), users_info=_users_info(),
-                           is_admin=is_admin)
+                           users_info=_users_info(), is_admin=is_admin)
 
 
 @bp.route("/<int:tid>")
@@ -410,14 +383,13 @@ def edit(tid):
         form.requester.choices.append((t.requester, t.requester))
     if request.method == "GET":
         form.assigned_to_id.data = t.assigned_to_id or 0
-        form.machine_id.data = t.machine_id or 0
         form.requester.data = t.requester or ""
     if form.validate_on_submit():
         ticket_repo.update_ticket(t, **_to_kwargs(form))
         flash("Chamado atualizado!", "success")
         return redirect(url_for("tickets.detail", tid=t.id))
     return render_template("tickets/form.html", form=form, title=f"Editar {t.code}",
-                           machines_info=_machines_info(), users_info=_users_info())
+                           users_info=_users_info())
 
 
 @bp.route("/<int:tid>/delete", methods=["POST"])

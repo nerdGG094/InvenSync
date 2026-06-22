@@ -33,15 +33,6 @@
         </div>
 
         {% if is_admin %}
-        <div class="mb-3">
-          {{ form.machine_id.label(class="form-label fw-semibold") }}
-          <div class="input-group">
-            <span class="input-group-text"><i class="bi bi-pc-display"></i></span>
-            {{ form.machine_id(class="form-select", id="machine_id") }}
-          </div>
-          <div id="machineInfo" class="form-text">Selecione a máquina do usuário — o solicitante e o setor são preenchidos automaticamente.</div>
-        </div>
-
         <div class="row g-3">
           <div class="col-12 col-md-6">
             {{ form.requester.label(class="form-label fw-semibold") }}
@@ -49,13 +40,13 @@
               <span class="input-group-text"><i class="bi bi-person"></i></span>
               {{ form.requester(class="form-select" + (" is-invalid" if form.requester.errors else ""), id="requester") }}
             </div>
-            <div class="form-text">Usuários cadastrados em Máquinas.</div>
+            <div class="form-text">Usuário que está abrindo o chamado.</div>
             {{ field_error(form.requester) }}
           </div>
           <div class="col-12 col-md-6">
             {{ form.sector.label(class="form-label fw-semibold") }}
             {{ form.sector(class="form-control" + (" is-invalid" if form.sector.errors else ""), id="sector", placeholder="Preenchido automaticamente") }}
-            <div class="form-text">Vem automático do cadastro da máquina.</div>
+            <div class="form-text">Vem automático do cadastro do usuário.</div>
             {{ field_error(form.sector) }}
           </div>
         </div>
@@ -105,49 +96,15 @@
 
 <script>
   (function(){
-    const MINFO = {{ (machines_info or {})|tojson }};   // máquina -> {user, sector, ...}
-    const UINFO = {{ (users_info or {})|tojson }};       // usuário -> setor
-    const sel = document.getElementById('machine_id');
+    const UINFO = {{ (users_info or {})|tojson }};   // usuário -> setor
     const req = document.getElementById('requester');
     const sec = document.getElementById('sector');
-    const box = document.getElementById('machineInfo');
-
-    function setRequester(name){
-      if (!req || !name) return;
-      // Garante a opção no combobox e seleciona
-      if (![...req.options].some(o => o.value === name)) {
-        req.add(new Option(name, name));
-      }
-      req.value = name;
-    }
-
-    function describe(info){
-      if (!box) return;
-      if (!info) { box.textContent = 'Selecione a máquina do usuário — o solicitante e o setor são preenchidos automaticamente.'; return; }
-      let txt = info.kind + ' · ' + (info.model || '—');
-      if (info.user)   txt += ' · ' + info.user;
-      if (info.sector) txt += ' · ' + info.sector;
-      if (info.ip)     txt += ' · IP ' + info.ip;
-      box.innerHTML = '<i class="bi bi-info-circle me-1"></i>' + txt;
-    }
-
-    // Selecionar a MÁQUINA preenche solicitante + setor
-    if (sel) sel.addEventListener('change', function(){
-      const info = MINFO[this.value];
-      if (info){
-        if (info.user)   setRequester(info.user);
-        if (sec && info.sector) sec.value = info.sector;
-      }
-      describe(info);
-    });
 
     // Selecionar o SOLICITANTE preenche o setor automaticamente
     if (req) req.addEventListener('change', function(){
       const setor = UINFO[this.value];
       if (sec && setor) sec.value = setor;
     });
-
-    if (sel && sel.value && MINFO[sel.value]) describe(MINFO[sel.value]);
   })();
 </script>
 {% endblock %}

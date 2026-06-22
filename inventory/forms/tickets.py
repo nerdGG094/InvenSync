@@ -28,7 +28,7 @@ STATUS_CHOICES = [
 
 class TicketForm(FlaskForm):
     title = StringField("Título / Assunto", validators=[DataRequired(), Length(min=2, max=200)])
-    # choices são preenchidas na rota com os usuários cadastrados em Máquinas
+    # choices são preenchidas na rota com os usuários (quem está abrindo o chamado)
     requester = SelectField("Solicitante", validators=[Optional()], choices=[])
     sector = StringField("Setor", validators=[Optional(), Length(max=120)])
     category = SelectField("Categoria", choices=CATEGORY_CHOICES, validators=[DataRequired()])
@@ -36,7 +36,6 @@ class TicketForm(FlaskForm):
     # Opcional: usuário comum não envia status (servidor usa 'aberto')
     status = SelectField("Status", choices=STATUS_CHOICES, validators=[Optional()])
     assigned_to_id = SelectField("Responsável (atendente)", coerce=int, validators=[Optional()])
-    machine_id = SelectField("Máquina relacionada", coerce=int, validators=[Optional()])
     description = TextAreaField("Descrição", validators=[Optional()])
     resolution = TextAreaField("Resolução (o que foi feito)", validators=[Optional()])
     submit = SubmitField("Salvar")
