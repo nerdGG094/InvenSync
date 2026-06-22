@@ -19,6 +19,7 @@
   .qr-label .info .pat { font-family:monospace; color:#111; }
   .lbl-pick { position:absolute; top:6px; right:6px; }
   .qr-wrap { position:relative; }
+  .dept-hidden { display:none !important; }   /* oculto pelo filtro de departamento */
   @media print {
     @page { margin:8mm; }
     body { background:#fff !important; }
@@ -47,16 +48,37 @@
     <a href="{{ url_for('labels.index', kind='machine') }}" class="btn btn-sm {{ 'btn-primary' if kind=='machine' else 'btn-outline-light' }}"><i class="bi bi-pc-display"></i> Máquinas</a>
     <a href="{{ url_for('labels.index', kind='router') }}" class="btn btn-sm {{ 'btn-primary' if kind=='router' else 'btn-outline-light' }}"><i class="bi bi-router"></i> Roteadores</a>
     <a href="{{ url_for('labels.index', kind='mobile') }}" class="btn btn-sm {{ 'btn-primary' if kind=='mobile' else 'btn-outline-light' }}"><i class="bi bi-phone"></i> Celulares</a>
-    <div class="ms-auto small text-muted">Marque as etiquetas e use “Ocultar não marcadas” para imprimir só as selecionadas.</div>
-    <button class="btn btn-sm btn-outline-light" id="btnHide" type="button"><i class="bi bi-funnel"></i> Ocultar não marcadas</button>
-    <button class="btn btn-sm btn-outline-light" id="btnAll" type="button"><i class="bi bi-eye"></i> Mostrar todas</button>
   </div>
+
+  <hr class="my-2" style="border-color:#243024">
+
+  <div class="d-flex flex-wrap gap-2 align-items-center">
+    <label for="deptFilter" class="text-muted small mb-0"><i class="bi bi-diagram-3 me-1"></i>Departamento:</label>
+    <select id="deptFilter" class="form-select form-select-sm" style="max-width:240px">
+      <option value="">Todos</option>
+      {% set depts = items|map(attribute='sector')|select|unique|sort %}
+      {% for d in depts %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
+    </select>
+
+    <div class="form-check ms-2 mb-0">
+      <input class="form-check-input" type="checkbox" id="chkAll" checked>
+      <label class="form-check-label small fw-semibold" for="chkAll">Selecionar todas</label>
+    </div>
+    <span class="small text-muted ms-1">Selecionadas: <strong id="selCount">{{ items|length }}</strong></span>
+
+    <div class="ms-auto d-flex flex-wrap gap-2">
+      <button class="btn btn-sm btn-outline-light" id="btnHide" type="button"><i class="bi bi-funnel"></i> Ocultar não marcadas</button>
+      <button class="btn btn-sm btn-outline-light" id="btnAll" type="button"><i class="bi bi-eye"></i> Mostrar todas</button>
+    </div>
+  </div>
+
+  <div class="small text-muted mt-2">Para imprimir só uma: desmarque <strong>Selecionar todas</strong> e marque apenas a etiqueta desejada. A impressão sai exatamente com as etiquetas marcadas (o botão “Ocultar não marcadas” é só pré-visualização na tela).</div>
 </div>
 
 {% if items %}
 <div class="label-grid">
   {% for it in items %}
-  <div class="qr-label qr-wrap" data-label>
+  <div class="qr-label qr-wrap" data-label data-dept="{{ it.sector or '' }}">
     <input type="checkbox" class="form-check-input lbl-pick" checked title="Incluir na impressão">
     <img class="qr" src="{{ url_for('labels.qr_png', kind=it.kind, oid=it.id) }}" alt="QR">
     <div class="info">
@@ -75,13 +97,68 @@
 
 <script>
 (function(){
-  const labels = () => Array.from(document.querySelectorAll('[data-label]'));
-  document.getElementById('btnHide').addEventListener('click', function(){
-    labels().forEach(l => { const c = l.querySelector('.lbl-pick'); l.classList.toggle('qr-hide-print', !c.checked); });
+  const cards = () => Array.from(document.querySelectorAll('[data-label]'));
+  const visible = () => cards().filter(c => !c.classList.contains('dept-hidden'));
+
+  const dept   = document.getElementById('deptFilter');
+  const chkAll = document.getElementById('chkAll');
+  const selCt  = document.getElementById('selCount');
+  const btnHide = document.getElementById('btnHide');
+  const btnAll  = document.getElementById('btnAll');
+
+  // ===== Filtro por departamento (oculta os que não batem; não imprimem) =====
+  function applyDept(){
+    const val = (dept ? dept.value : '').trim().toLowerCase();
+    cards().forEach(c => {
+      const d = (c.dataset.dept || '').trim().toLowerCase();
+      c.classList.toggle('dept-hidden', val !== '' && d !== val);
+    });
+    updateCount();
+  }
+
+  // ===== Contador + estado do "Selecionar todas" (considera só os visíveis) =====
+  function updateCount(){
+    const vis = visible();
+    const marc = vis.filter(c => { const p = c.querySelector('.lbl-pick'); return p && p.checked; });
+    if (selCt) selCt.textContent = marc.length;
+    if (chkAll){
+      chkAll.checked = vis.length > 0 && marc.length === vis.length;
+      chkAll.indeterminate = marc.length > 0 && marc.length < vis.length;
+    }
+  }
+
+  // ===== Selecionar/Desmarcar todas (apenas os visíveis no filtro atual) =====
+  function setAllVisible(on){
+    visible().forEach(c => { const p = c.querySelector('.lbl-pick'); if (p) p.checked = on; });
+    updateCount();
+  }
+
+  if (dept)   dept.addEventListener('change', applyDept);
+  if (chkAll) chkAll.addEventListener('change', function(){ setAllVisible(this.checked); });
+  document.querySelectorAll('.lbl-pick').forEach(p => p.addEventListener('change', updateCount));
+
+  if (btnHide) btnHide.addEventListener('click', function(){
+    visible().forEach(l => { const c = l.querySelector('.lbl-pick'); l.classList.toggle('qr-hide-print', !c.checked); });
   });
-  document.getElementById('btnAll').addEventListener('click', function(){
-    labels().forEach(l => { l.classList.remove('qr-hide-print'); l.querySelector('.lbl-pick').checked = true; });
+  if (btnAll) btnAll.addEventListener('click', function(){
+    if (dept) dept.value = '';
+    cards().forEach(l => l.classList.remove('qr-hide-print'));
+    applyDept();          // volta a mostrar todos os departamentos
+    setAllVisible(true);  // e marca todas
   });
+
+  // ===== Impressão SEMPRE respeita os checkboxes (sem depender de botão) =====
+  // Antes de abrir o diálogo de impressão, esconde tudo que não está marcado.
+  // (Os ocultos pelo filtro de departamento já não imprimem via .dept-hidden.)
+  function syncPrint(){
+    cards().forEach(c => {
+      const p = c.querySelector('.lbl-pick');
+      c.classList.toggle('qr-hide-print', !(p && p.checked));
+    });
+  }
+  window.addEventListener('beforeprint', syncPrint);
+
+  applyDept();   // estado inicial
 })();
 </script>
 {% endblock %}
