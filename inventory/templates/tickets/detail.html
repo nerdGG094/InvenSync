@@ -69,7 +69,13 @@
       <div class="timeline">
         {% for c in t.comments %}
         <div class="tl-item">
-          <div class="tl-meta">
+          <div class="tl-meta d-flex align-items-center gap-2 flex-wrap">
+            {% if c.author and c.author.photo %}
+              <img src="{{ url_for('static', filename='uploads/avatars/' ~ c.author.photo) }}" alt=""
+                   style="width:24px;height:24px;border-radius:50%;object-fit:cover;border:1px solid #2e4b3b">
+            {% else %}
+              <span class="avatar-circle" style="width:24px;height:24px;flex-basis:24px;font-size:.7rem">{{ c.author.initials if c.author else '?' }}</span>
+            {% endif %}
             <strong class="text-success-emphasis">{{ c.author.name if c.author else 'Sistema' }}</strong>
             · {{ c.created_at.strftime('%d/%m/%Y %H:%M') if c.created_at else '' }}
             {% if c.status_to %}
@@ -94,9 +100,21 @@
         </div>
         <div class="d-flex flex-wrap align-items-end gap-2">
           {% if is_admin %}
-          <div>
-            {{ comment_form.new_status.label(class="form-label fw-semibold mb-1") }}
-            {{ comment_form.new_status(class="form-select form-select-sm", style="min-width:170px") }}
+          {% set st_btn = {
+              '':            ('Manter status',  'bi-dash-lg',        'light'),
+              'aberto':      ('Aberto',         'bi-envelope-open',  'info'),
+              'em_andamento':('Em andamento',   'bi-gear',           'warning'),
+              'resolvido':   ('Resolvido',      'bi-check2-circle',  'success'),
+              'cancelado':   ('Cancelado',      'bi-x-circle',       'secondary')
+          } %}
+          <div class="d-flex flex-wrap gap-2" role="group" aria-label="Mudar status para">
+            {% for val, label in comment_form.new_status.choices %}
+              {% set b = st_btn.get(val, (label, 'bi-circle', 'light')) %}
+              <input type="radio" class="btn-check" name="new_status" id="ns-{{ val or 'keep' }}"
+                     value="{{ val }}" {{ 'checked' if loop.first }} autocomplete="off">
+              <label class="btn btn-outline-{{ b[2] }} btn-sm" for="ns-{{ val or 'keep' }}"
+                     title="{{ b[0] }}"><i class="bi {{ b[1] }}"></i></label>
+            {% endfor %}
           </div>
           {% endif %}
           <button class="btn btn-primary"><i class="bi bi-send"></i> Adicionar andamento</button>
@@ -155,14 +173,6 @@
       <dl class="meta-list mb-0">
         <dt>Solicitante</dt><dd>{{ t.requester or '—' }}{% if t.sector %} <span class="text-muted">· {{ t.sector }}</span>{% endif %}</dd>
         <dt>Responsável</dt><dd>{{ t.assigned_to.name if t.assigned_to else 'Não atribuído' }}</dd>
-        <dt>Máquina</dt>
-        <dd>
-          {% if t.machine %}
-            <a href="{{ url_for('machines.edit', mid=t.machine.id) }}" class="text-decoration-none">
-              {{ t.machine.model or '—' }}{% if t.machine.ip_address %} <span class="font-monospace text-muted">({{ t.machine.ip_address }})</span>{% endif %}
-            </a>
-          {% else %}—{% endif %}
-        </dd>
         <dt>Aberto por</dt><dd>{{ t.opened_by.name if t.opened_by else '—' }}</dd>
         <dt>Criado em</dt><dd class="number">{{ t.created_at.strftime('%d/%m/%Y %H:%M') if t.created_at else '—' }}</dd>
         <dt>Atualizado</dt><dd class="number">{{ t.updated_at.strftime('%d/%m/%Y %H:%M') if t.updated_at else '—' }}</dd>

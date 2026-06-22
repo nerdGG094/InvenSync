@@ -63,7 +63,40 @@ def list_view():
     q = (request.args.get("q") or "").strip()
     status = (request.args.get("status") or "").strip()
     priority = (request.args.get("priority") or "").strip()
-    items = ticket_repo.list_tickets(q or None, status or None, priority or None)
+    period = (request.args.get("period") or "hoje").strip()
+    date_from_s = (request.args.get("from") or "").strip()
+    date_to_s = (request.args.get("to") or "").strip()
+
+    # Filtro por data (padrão: somente os de hoje, p/ não acumular a lista)
+    date_from = date_to = None
+    today = datetime.now().date()
+    if period == "custom":
+        try:
+            date_from = datetime.strptime(date_from_s, "%Y-%m-%d") if date_from_s else None
+        except ValueError:
+            date_from = None
+        try:
+            date_to = (datetime.strptime(date_to_s, "%Y-%m-%d") + timedelta(days=1)
+                       - timedelta(seconds=1)) if date_to_s else None
+        except ValueError:
+            date_to = None
+        if not date_from and not date_to:
+            period = "todos"
+    elif period == "7":
+        date_from = datetime.combine(today - timedelta(days=6), datetime.min.time())
+    elif period == "30":
+        date_from = datetime.combine(today - timedelta(days=29), datetime.min.time())
+    elif period == "todos":
+        pass
+    else:
+        period = "hoje"
+        date_from = datetime.combine(today, datetime.min.time())
+
+    # Sem filtro de status, pendentes (aberto/em andamento) aparecem sempre,
+    # mesmo fora do período — para nada em aberto sumir da lista.
+    items = ticket_repo.list_tickets(q or None, status or None, priority or None,
+                                     date_from=date_from, date_to=date_to,
+                                     include_open_always=not status)
 
     cnt = db.session.query(Ticket.status, func.count(Ticket.id))
     # Usuário comum só vê os próprios chamados
@@ -79,7 +112,9 @@ def list_view():
         "total": sum(counts.values()),
     }
     return render_template("tickets/list.html", items=items, q=q, status=status,
-                           priority=priority, totals=totals, is_admin=current_user.is_admin)
+                           priority=priority, period=period, date_from=date_from_s,
+                           date_to=date_to_s, totals=totals,
+                           is_admin=current_user.is_admin)
 
 
 @bp.route("/export")
@@ -295,6 +330,29 @@ def comment(tid):
     else:
         flash("Escreva o andamento antes de enviar.", "warning")
     return redirect(url_for("tickets.detail", tid=t.id))
+
+
+@bp.route("/<int:tid>/assumir", methods=["POST"])
+@login_required
+def assume(tid):
+    """Analista de TI assume o chamado, atribuindo-o a si mesmo."""
+    if not current_user.is_admin:
+        abort(403)
+    t = ticket_repo.get_ticket(tid)
+    # Atribui a mim e, se ainda estava só aberto, passa para "em andamento".
+    t.assigned_to_id = current_user.id
+    new_status = "em_andamento" if t.status == "aberto" else None
+    ticket_repo.add_comment(
+        t, body=f"Chamado assumido por {current_user.name}.",
+        author_id=current_user.id, new_status=new_status,
+    )
+    audit.record("update", "ticket", t.id, f"Assumiu o chamado {t.code}")
+    whatsapp.notify_user(
+        t.opened_by,
+        f"👤 *Chamado {t.code}* foi assumido por {current_user.name} e está em atendimento."
+    )
+    flash(f"Você assumiu o chamado {t.code}.", "success")
+    return redirect(request.referrer or url_for("tickets.list_view"))
 
 
 ALLOWED_ATTACH_EXT = {

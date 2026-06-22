@@ -34,6 +34,10 @@ class Config:
     SQLALCHEMY_DATABASE_URI = DATABASE_URL
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+    # Proteção CSRF (Flask-WTF). Token válido por toda a sessão — evita que
+    # páginas abertas há muito tempo falhem ao enviar (comum em uso interno).
+    WTF_CSRF_TIME_LIMIT = None
+
     # Recarrega templates alterados sem precisar reiniciar o servidor
     # (conveniente mesmo rodando em produção via waitress).
     TEMPLATES_AUTO_RELOAD = True

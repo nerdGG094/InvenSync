@@ -2,7 +2,7 @@ import re
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import or_
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import joinedload
 
 from ..extensions import db
@@ -25,9 +25,15 @@ def next_code() -> str:
     return f"CH-{mx + 1:04d}"
 
 
+OPEN_STATUSES = ("aberto", "em_andamento")
+
+
 def list_tickets(search: Optional[str] = None, status: Optional[str] = None,
                  priority: Optional[str] = None,
-                 assigned_to_id: Optional[int] = None) -> List[Ticket]:
+                 assigned_to_id: Optional[int] = None,
+                 date_from: Optional[datetime] = None,
+                 date_to: Optional[datetime] = None,
+                 include_open_always: bool = False) -> List[Ticket]:
     query = Ticket.query.options(
         joinedload(Ticket.assigned_to), joinedload(Ticket.opened_by),
         joinedload(Ticket.machine),
@@ -47,6 +53,19 @@ def list_tickets(search: Optional[str] = None, status: Optional[str] = None,
         query = query.filter(Ticket.priority == priority)
     if assigned_to_id:
         query = query.filter(Ticket.assigned_to_id == assigned_to_id)
+    if date_from or date_to:
+        conds = []
+        if date_from:
+            conds.append(Ticket.created_at >= date_from)
+        if date_to:
+            conds.append(Ticket.created_at <= date_to)
+        date_clause = and_(*conds)
+        # Chamados pendentes (aberto/em andamento) nunca somem por causa da data,
+        # para nada em aberto ficar oculto na lista.
+        if include_open_always:
+            query = query.filter(or_(date_clause, Ticket.status.in_(OPEN_STATUSES)))
+        else:
+            query = query.filter(date_clause)
 
     # Ordena: abertos/em andamento primeiro, depois por prioridade e data
     prio = {"urgente": 0, "alta": 1, "media": 2, "baixa": 3}

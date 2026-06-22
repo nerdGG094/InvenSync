@@ -1,8 +1,8 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_login import current_user
 from sqlalchemy import text
-from .extensions import db, login_manager
+from .extensions import db, login_manager, csrf
 from .config import Config
 
 
@@ -160,6 +160,15 @@ def create_app():
     login_manager.login_view = "auth.login"
     login_manager.login_message = None
     login_manager.needs_refresh_message = None
+    csrf.init_app(app)
+
+    # Falha de CSRF (token ausente/expirado): mensagem amigável + volta à página.
+    from flask_wtf.csrf import CSRFError
+
+    @app.errorhandler(CSRFError)
+    def _handle_csrf_error(e):
+        flash("Sessão expirada ou formulário inválido. Tente novamente.", "warning")
+        return redirect(request.referrer or url_for("auth.login"))
 
     # Importa modelos para o SQLAlchemy conhecer
     from .models.user import User

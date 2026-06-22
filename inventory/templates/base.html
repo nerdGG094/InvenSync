@@ -9,6 +9,9 @@
   <meta name="theme-color" content="#0f5132">
   <meta name="color-scheme" content="dark light">
 
+  <!-- Token CSRF (injetado automaticamente em todos os forms POST via JS) -->
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+
   <!-- Favicon / App Icons -->
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
   <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
@@ -431,6 +434,28 @@
       var t = (a.textContent || '').replace(/\s+/g, ' ').trim();
       if (t) a.setAttribute('title', t);
     });
+  })();
+</script>
+
+<script>
+  // Proteção CSRF: garante o campo "csrf_token" em todo form POST que ainda
+  // não o tenha (os FlaskForm já trazem via hidden_tag). Cobre também forms
+  // criados dinamicamente, via listener de submit em fase de captura.
+  (function(){
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    if(!meta) return;
+    var token = meta.getAttribute('content');
+    function ensure(form){
+      if(!form || (form.method||'').toLowerCase() !== 'post') return;
+      if(form.querySelector('input[name="csrf_token"]')) return;
+      var i = document.createElement('input');
+      i.type = 'hidden'; i.name = 'csrf_token'; i.value = token;
+      form.appendChild(i);
+    }
+    document.addEventListener('DOMContentLoaded', function(){
+      document.querySelectorAll('form').forEach(ensure);
+    });
+    document.addEventListener('submit', function(e){ ensure(e.target); }, true);
   })();
 </script>
 
