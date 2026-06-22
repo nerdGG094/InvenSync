@@ -1,28 +1,68 @@
-# 📦 InvenSync — Documentação Técnica
+# 📦 InvenSync — Documentação Técnica Completa
 
-> Sistema de controle de almoxarifado de **TI** (toner, cilindros, periféricos, peças e ativos)
-> da **Refrigerantes Jaboti**. Aplicação web em **Flask** com banco **PostgreSQL**, servida em
-> produção via **waitress** e gerenciada por um **launcher** desktop (PyQt5).
+> **InvenSync** — sistema de gestão de almoxarifado e ativos de **TI** da **Refrigerantes Jaboti**.
+> Controla estoque (toner, cilindros, periféricos, peças), parque de máquinas, celulares, chips,
+> roteadores, colaboradores, chamados de suporte, base de conhecimento, cofre de senhas, licenças,
+> domínios, monitoramento de uptime e auditoria — tudo numa aplicação web **Flask** sobre **PostgreSQL**,
+> servida em produção por **waitress** e operada por um **launcher** desktop (PyQt5).
+
+> **Stack:** Python 3.12 · Flask 3 · Flask-Login · Flask-WTF (CSRF) · SQLAlchemy 2 · psycopg 3
+> · PostgreSQL 17 · Jinja2 · Bootstrap 5.3 · Bootstrap Icons · Chart.js · `waitress` · `openpyxl`
+> · `qrcode` · `pyotp` (TOTP) · `requests` (CallMeBot) · PyQt5 (launcher)
+> **Segurança:** hash de senha (werkzeug/scrypt) · 2FA TOTP · RBAC por perfil (admin × comum)
+> · `is_active` bloqueia login · trilha de auditoria · segredos só no `.env`
 
 | | |
 |---|---|
 | **Nome** | InvenSync |
-| **Domínio** | Almoxarifado de TI |
-| **Stack** | Python 3.12 · Flask 3 · SQLAlchemy 2 · PostgreSQL 17 · Bootstrap 5 |
-| **Servidor** | waitress (produção) / run.py (dev) |
+| **Domínio** | Almoxarifado & Ativos de TI |
+| **Servidor** | waitress (produção, `0.0.0.0:5090`) / `run.py` (desenvolvimento) |
+| **Banco** | PostgreSQL 17 — `inventario_almox` |
 | **Repositório** | https://github.com/nerdGG094/InvenSync |
+| **Documentação viva** | Admin → **Documentação** (`/docs`) — montada por introspecção do código |
+
+---
+
+## Índice
+
+1. [Visão Geral](#1-visão-geral)
+2. [Arquitetura em Camadas](#2-arquitetura-em-camadas)
+3. [Mapa de Módulos (Blueprints)](#3-mapa-de-módulos-blueprints)
+4. [Bootstrap da Aplicação (`create_app`)](#4-bootstrap-da-aplicação-create_app)
+5. [Autenticação, 2FA e Controle de Acesso (RBAC)](#5-autenticação-2fa-e-controle-de-acesso-rbac)
+6. [Modelo de Dados (ER) e Dicionário](#6-modelo-de-dados-er-e-dicionário-de-dados)
+7. [Diagrama de Classes](#7-diagrama-de-classes-principais)
+8. [Mapa Completo de Rotas](#8-mapa-completo-de-rotas)
+9. [Fluxos de Negócio](#9-fluxos-de-negócio)
+10. [Chamados de Suporte (ciclo de vida)](#10-chamados-de-suporte-ciclo-de-vida)
+11. [Ativos por Colaborador e Termo de Responsabilidade](#11-ativos-por-colaborador-e-termo-de-responsabilidade)
+12. [Monitoramento de Uptime](#12-monitoramento-de-uptime)
+13. [Notificações WhatsApp (CallMeBot)](#13-notificações-whatsapp-callmebot)
+14. [Auditoria](#14-auditoria)
+15. [Implantação (Deployment) e Launcher](#15-implantação-deployment-e-launcher)
+16. [Segurança](#16-segurança)
+17. [Estrutura de Pastas](#17-estrutura-de-pastas)
+18. [Configuração (`.env`)](#18-configuração-env)
+19. [Como Executar](#19-como-executar)
+20. [Mindmap Funcional](#20-mindmap-funcional)
 
 ---
 
 ## 1. Visão Geral
 
-O InvenSync controla o estoque do setor de TI, com cadastro de produtos (com campos específicos
-como marca, modelo, patrimônio, número de série, localização, compatibilidade e validade),
-fornecedores, categorias, e o registro de **movimentações** de entrada e saída. Possui painel com
-indicadores, board **Kanban** de saúde de estoque, relatórios, exportação CSV e gestão de usuários
-com controle de acesso (ativo/inativo).
+O InvenSync nasceu como controle de estoque de TI e cresceu para uma **plataforma de gestão do parque
+de TI** inteira. Hoje reúne, num só lugar:
 
-### Tecnologias
+- **Estoque** — materiais com SKU automático, categorias, fornecedores, movimentações (entrada/saída
+  com anexo de NF), board **Kanban** de saúde de estoque e relatórios/exportação.
+- **Máquinas & Rede** — cadastro de computadores/notebooks/impressoras, celulares (com compartilhamento
+  de aparelho), chips/linhas SIM, roteadores (com credenciais Wi-Fi), limpezas e manutenções, e
+  **etiquetas QR** para os ativos.
+- **Pessoas** — cadastro central de colaboradores (com ou sem login), departamentos e a visão de
+  **ativos por colaborador** com **termo de responsabilidade** imprimível.
+- **Suporte** — chamados (tickets) com comentários, anexos, SLA e painel; **base de conhecimento**.
+- **Administração de TI** — **cofre de senhas**, **licenças & garantias**, **domínios**,
+  **monitoramento de uptime** (ping/HTTP com alerta WhatsApp), **backups** do banco e **auditoria**.
 
 ```mermaid
 mindmap
@@ -36,24 +76,29 @@ mindmap
       psycopg 3
     Banco
       PostgreSQL 17
-      Banco inventario_almox
+      inventario_almox
     Frontend
       Jinja2
       Bootstrap 5.3
       Bootstrap Icons
       Chart.js
+    Integrações
+      CallMeBot WhatsApp
+      QR Code
+      TOTP 2FA
     Operação
       waitress
       Launcher PyQt5
       python-dotenv
+      Monitoramento uptime
 ```
 
 ---
 
 ## 2. Arquitetura em Camadas
 
-A aplicação segue uma arquitetura em camadas (layered), separando apresentação, regras de acesso a
-dados e domínio.
+A aplicação segue uma arquitetura em **camadas** (layered): apresentação (rotas + templates),
+formulários (validação), serviços (regras transversais), repositórios (acesso a dados) e modelos (ORM).
 
 ```mermaid
 flowchart TB
@@ -63,16 +108,18 @@ flowchart TB
 
     subgraph APP["🐍 Aplicação Flask (create_app)"]
         direction TB
-        ROUTES["Camada de Rotas (Blueprints)<br/>auth · dashboard · products · categories<br/>suppliers · movements · reports · users · kanban · health"]
-        FORMS["Formulários (Flask-WTF)<br/>validação de entrada"]
-        SERVICES["Serviços<br/>inventory_service"]
-        REPOS["Repositórios<br/>product · category · supplier · movement"]
-        MODELS["Modelos (SQLAlchemy ORM)<br/>User · Category · Supplier · Product · StockMovement"]
-        EXT["Extensões<br/>db · login_manager"]
+        ROUTES["Camada de Rotas — 30 Blueprints<br/>auth · dashboard · products · categories · suppliers<br/>movements · reports · kanban · machines · mobile · chips<br/>routers · cleanings · maintenance · monitoring · labels<br/>colaboradores · departments · assets · tickets · kb<br/>credentials · licenses · domains · audit · backups<br/>profile · wpp · health · docs"]
+        FORMS["Formulários (Flask-WTF)<br/>validação de entrada + CSRF"]
+        SERVICES["Serviços (transversais)<br/>assets · audit · exports · inventory_service<br/>monitoring · people · twofa · whatsapp · docs"]
+        REPOS["Repositórios (acesso a dados)<br/>product · category · supplier · movement · machine<br/>mobile · chip · router · cleaning · maintenance<br/>ticket · kb · credential · license · domain"]
+        MODELS["Modelos (SQLAlchemy ORM)<br/>22 entidades — User · Product · Machine · Ticket …"]
+        EXT["Extensões<br/>db (SQLAlchemy) · login_manager"]
     end
 
-    subgraph DATA["🗄️ Persistência"]
+    subgraph DATA["🗄️ Persistência & Integrações"]
         PG[("PostgreSQL 17<br/>inventario_almox")]
+        WPP["CallMeBot<br/>(WhatsApp)"]
+        NET["Hosts monitorados<br/>(ICMP / HTTP)"]
     end
 
     BROWSER -->|HTTP| ROUTES
@@ -83,230 +130,97 @@ flowchart TB
     REPOS --> MODELS
     MODELS --> EXT
     EXT -->|SQL via psycopg| PG
+    SERVICES -.->|alertas| WPP
+    SERVICES -.->|ping/http| NET
 ```
 
 ---
 
-## 3. Modelo de Dados (Diagrama Entidade-Relacionamento)
+## 3. Mapa de Módulos (Blueprints)
+
+Os 30 blueprints são agrupados na navegação conforme o menu lateral. **Admin** vê tudo; usuário
+**comum** acessa apenas Chamados, Base de Conhecimento, o próprio Perfil e a autenticação.
 
 ```mermaid
-erDiagram
-    USER ||--o{ STOCK_MOVEMENT : "registra"
-    CATEGORY ||--o{ PRODUCT : "classifica"
-    SUPPLIER ||--o{ PRODUCT : "fornece"
-    PRODUCT ||--o{ STOCK_MOVEMENT : "movimenta"
-
-    USER {
-        int id PK
-        string name
-        string email UK "índice único"
-        string password_hash
-        bool is_admin
-        bool is_active "bloqueia login se falso"
-    }
-
-    CATEGORY {
-        int id PK
-        string name UK
-        text description
-    }
-
-    SUPPLIER {
-        int id PK
-        string name UK
-        string email
-        string phone
-        text notes
-    }
-
-    PRODUCT {
-        int id PK
-        string sku UK "PREFIXO-0001 (auto)"
-        string name
-        text description
-        string item_type "product/raw_material/kit/service"
-        string unit "UN, CX, KG..."
-        int category_id FK
-        int supplier_id FK
-        int min_stock
-        decimal price
-        datetime created_at
-        string brand "Marca - TI"
-        string model "Modelo - TI"
-        string patrimony "Patrimônio - TI"
-        string serial_number "Nº Série - TI"
-        string location "Localização - TI"
-        text compatibility "Compatibilidade - TI"
-        date expiry_date "Validade - TI"
-    }
-
-    STOCK_MOVEMENT {
-        int id PK
-        int product_id FK
-        string movement_type "IN / OUT"
-        int quantity
-        decimal unit_cost
-        text note
-        datetime created_at
-        int user_id FK
-    }
-```
-
-### 3.1 Dicionário de Dados
-
-#### Tabela `user`
-| Campo | Tipo | Nulo | Descrição |
-|---|---|---|---|
-| id | integer (PK) | não | Identificador |
-| name | varchar(120) | não | Nome do usuário |
-| email | varchar(255) UK | não | E-mail (login), índice único |
-| password_hash | varchar(255) | não | Hash da senha (scrypt) |
-| is_admin | boolean | sim | Perfil administrador |
-| is_active | boolean | não | Se inativo, não consegue logar |
-
-#### Tabela `category`
-| Campo | Tipo | Nulo | Descrição |
-|---|---|---|---|
-| id | integer (PK) | não | Identificador |
-| name | varchar(120) UK | não | Nome único da categoria |
-| description | text | sim | Descrição |
-
-#### Tabela `supplier`
-| Campo | Tipo | Nulo | Descrição |
-|---|---|---|---|
-| id | integer (PK) | não | Identificador |
-| name | varchar(200) UK | não | Razão/nome único |
-| email | varchar(255) | sim | Contato |
-| phone | varchar(50) | sim | Telefone |
-| notes | text | sim | Observações |
-
-#### Tabela `product`
-| Campo | Tipo | Nulo | Descrição |
-|---|---|---|---|
-| id | integer (PK) | não | Identificador |
-| sku | varchar(120) UK | não | Código único (gerado `PREFIXO-0001`) |
-| name | varchar(200) | não | Nome do item |
-| description | text | sim | Descrição |
-| item_type | varchar(20) | não | Tipo (product/raw_material/kit/service) |
-| unit | varchar(10) | não | Unidade de medida (UN, CX, KG...) |
-| category_id | integer (FK→category) | sim | Categoria |
-| supplier_id | integer (FK→supplier) | sim | Fornecedor |
-| min_stock | integer | sim | Estoque mínimo (alerta) |
-| price | numeric(12,2) | sim | Preço |
-| created_at | timestamp | sim | Data de criação |
-| brand | varchar(120) | sim | **TI** — Marca (HP, Brother...) |
-| model | varchar(120) | sim | **TI** — Modelo (TN-660...) |
-| patrimony | varchar(60) | sim | **TI** — Nº de patrimônio |
-| serial_number | varchar(120) | sim | **TI** — Nº de série |
-| location | varchar(120) | sim | **TI** — Localização física |
-| compatibility | text | sim | **TI** — Equipamentos compatíveis |
-| expiry_date | date | sim | **TI** — Validade (toner/cilindro) |
-
-#### Tabela `stock_movement`
-| Campo | Tipo | Nulo | Descrição |
-|---|---|---|---|
-| id | integer (PK) | não | Identificador |
-| product_id | integer (FK→product) | não | Produto movimentado |
-| movement_type | varchar(3) | não | `IN` (entrada) ou `OUT` (saída) |
-| quantity | integer | não | Quantidade |
-| unit_cost | numeric(12,2) | sim | Custo unitário (entradas) |
-| note | text | sim | Observação |
-| created_at | timestamp | sim | Data/hora da movimentação |
-| user_id | integer (FK→user) | sim | Quem registrou |
-
-> **Saldo de estoque** = Σ(quantidade `IN`) − Σ(quantidade `OUT`) por produto.
-
----
-
-## 4. Diagrama de Classes (UML)
-
-```mermaid
-classDiagram
-    class User {
-        +int id
-        +str name
-        +str email
-        +str password_hash
-        +bool is_admin
-        +bool is_active
-        +set_password(password)
-        +check_password(password) bool
-    }
-    class Category {
-        +int id
-        +str name
-        +str description
-    }
-    class Supplier {
-        +int id
-        +str name
-        +str email
-        +str phone
-        +str notes
-    }
-    class Product {
-        +int id
-        +str sku
-        +str name
-        +str item_type
-        +str unit
-        +int min_stock
-        +Decimal price
-        +str brand
-        +str model
-        +str patrimony
-        +str serial_number
-        +str location
-        +date expiry_date
-    }
-    class StockMovement {
-        +int id
-        +str movement_type
-        +int quantity
-        +Decimal unit_cost
-        +datetime created_at
-    }
-
-    User "1" --> "0..*" StockMovement : registra
-    Category "1" --> "0..*" Product : classifica
-    Supplier "1" --> "0..*" Product : fornece
-    Product "1" --> "0..*" StockMovement : possui
-```
-
----
-
-## 5. Diagrama de Implantação (Deployment)
-
-```mermaid
-flowchart TB
-    subgraph SERVER["🖥️ Windows Server 2019 — 192.168.0.54"]
-        subgraph LAUNCH["Launcher (PyQt5) — pythonw"]
-            UI["Janela + Bandeja<br/>Iniciar / Parar / Reiniciar<br/>Teste /health"]
-        end
-        subgraph PROC["Processo do Servidor"]
-            WAIT["serve.py<br/>waitress (8 threads)<br/>0.0.0.0:5090"]
-            FLASK["Flask app (create_app)"]
-        end
-        ENVF[".env<br/>SECRET_KEY · credenciais DB"]
-        PG[("PostgreSQL 17<br/>porta 5432<br/>inventario_almox")]
+flowchart LR
+    subgraph ESTOQUE["📦 Estoque"]
+        products & categories & suppliers & movements & kanban & reports
     end
-
-    USERS["👥 Navegadores na rede<br/>(PC / celular / tablet)"]
-
-    UI -->|"subprocess (stdout=logs)"| WAIT
-    WAIT --> FLASK
-    FLASK -->|"lê segredos"| ENVF
-    FLASK -->|"psycopg / SQL"| PG
-    USERS -->|"HTTP :5090"| WAIT
-
-    START["Atalho na Inicialização do Windows"] -.->|"auto-start no login"| LAUNCH
+    subgraph MAQUINAS["🖥️ Máquinas & Rede"]
+        machines & mobile & chips & routers & cleanings & maintenance & monitoring & labels
+    end
+    subgraph PESSOAS["👥 Colaboradores"]
+        colaboradores & departments & assets
+    end
+    subgraph SUPORTE["🎧 Suporte & Conhecimento"]
+        tickets & kb
+    end
+    subgraph CADASTROS["📒 Cadastros"]
+        licenses & domains
+    end
+    subgraph ADMIN["⚙️ Admin"]
+        credentials & audit & backups & wpp & docs
+    end
+    subgraph BASE["🔐 Base"]
+        auth & dashboard & profile & health
+    end
 ```
+
+| Grupo (menu) | Blueprints | Acesso |
+|---|---|---|
+| Painel | `dashboard` | Admin |
+| Estoque | `products` · `categories` · `suppliers` · `movements` · `kanban` · `reports` | Admin |
+| Cadastros | `licenses` · `domains` | Admin |
+| Máquinas & Rede | `machines` · `mobile` · `chips` · `routers` · `cleanings` · `maintenance` · `monitoring` · `labels` | Admin |
+| Colaboradores | `colaboradores` · `departments` · `assets` | Admin |
+| Suporte | `tickets` | Todos |
+| Conhecimento | `kb` | Ver: todos · Editar: Admin |
+| Admin (Cofre/Auditoria) | `credentials` · `audit` | Admin |
+| Perfil / Sistema | `profile` · `wpp` · `backups` · `docs` | Perfil: todos · resto Admin |
+| Infra | `auth` · `health` | Público |
 
 ---
 
-## 6. Diagramas de Sequência
+## 4. Bootstrap da Aplicação (`create_app`)
 
-### 6.1 Login (com bloqueio de usuário inativo)
+Sequência de inicialização ao subir o processo (`run.py`/`serve.py` → `inventory.create_app`):
+
+```mermaid
+sequenceDiagram
+    participant S as serve.py / run.py
+    participant F as create_app()
+    participant CFG as Config (.env)
+    participant DB as SQLAlchemy
+    participant PG as PostgreSQL
+    participant MON as services.monitoring
+
+    S->>F: create_app()
+    F->>CFG: app.config.from_object(Config)
+    F->>DB: db.init_app(app) + login_manager.init_app(app)
+    F->>F: importa os 22 modelos (registra no metadata)
+    F->>DB: db.create_all()
+    DB->>PG: CREATE TABLE IF NOT EXISTS (todas)
+    F->>PG: _run_light_migrations() — ADD COLUMN IF NOT EXISTS (idempotente)
+    F->>PG: cria admin padrão se NÃO houver nenhum usuário
+    F->>PG: _seed_people_into_users() — migra colaborador → user (1x)
+    F->>PG: _seed_departments_from_sectors() — popula departments
+    F->>F: register_blueprint × 30 (com url_prefix)
+    F->>F: before_request _gate_non_admins (RBAC)
+    F->>F: context_processor (avatar_url) + error handlers 403/404/500
+    F->>MON: start_scheduler(app) (thread de uptime, se habilitado)
+    F-->>S: app pronto
+```
+
+> **Migrações leves** (`_run_light_migrations`) são `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`
+> idempotentes — ajustam tabelas já existentes que o `create_all()` não altera (ex.: `totp_secret`,
+> `can_login`, `assigned_employee_2/3`, `nf_filename`). O admin padrão (`admin@local` / senha `admin`)
+> só é criado quando **não existe nenhum usuário** — não ressuscita se for renomeado/excluído.
+
+---
+
+## 5. Autenticação, 2FA e Controle de Acesso (RBAC)
+
+### 5.1 Login com 2FA opcional
 
 ```mermaid
 sequenceDiagram
@@ -314,122 +228,662 @@ sequenceDiagram
     participant B as Navegador
     participant A as auth (rota)
     participant M as User (modelo)
+    participant T as services.twofa
     participant DB as PostgreSQL
 
-    U->>B: preenche e-mail e senha
+    U->>B: e-mail + senha
     B->>A: POST /login
     A->>M: User.query.filter_by(email)
     M->>DB: SELECT
     DB-->>M: usuário
-    A->>M: check_password(senha)
-    alt credenciais inválidas
-        A-->>B: flash "Credenciais inválidas"
-    else inativo (is_active = false)
-        A-->>B: flash "Usuário desativado"
-    else ok
+    A->>M: can_authenticate? (can_login · is_active · senha)
+    alt credenciais inválidas / inativo / sem login
+        A-->>B: flash "não foi possível entrar"
+    else 2FA habilitado
+        A->>A: guarda id na sessão (pendente)
+        A-->>B: redirect /login/2fa
+        U->>B: código TOTP de 6 dígitos
+        B->>A: POST /login/2fa
+        A->>T: verify(secret, code)
+        alt código ok
+            A->>A: login_user(user)
+            A-->>B: redirect /
+        else código inválido
+            A-->>B: flash "código inválido"
+        end
+    else sem 2FA
         A->>A: login_user(user)
-        A-->>B: redirect /dashboard
+        A-->>B: redirect /
     end
 ```
 
-### 6.2 Cadastro de Produto com SKU automático
+### 5.2 Modelo de acesso (RBAC)
+
+O `before_request` `_gate_non_admins` é o portão central. Usuários **não-admin** só alcançam os
+prefixos liberados; qualquer outra rota os redireciona para Chamados.
+
+```mermaid
+flowchart TD
+    A["Requisição autenticada"] --> B{"current_user.is_admin?"}
+    B -->|Sim| OK["✅ Acesso total"]
+    B -->|Não| C{"endpoint em<br/>tickets. · profile. · auth. · kb.<br/>ou static / health?"}
+    C -->|Sim| OK2["✅ Permitido"]
+    C -->|Não| R["↪️ redirect → tickets.list_view"]
+```
+
+> Além do portão global, rotas sensíveis (cofre, auditoria, chips, monitoramento, domínios, licenças,
+> ativos, etiquetas, colaboradores, departamentos) reforçam com `if not current_user.is_admin: abort(403)`.
+
+---
+
+## 6. Modelo de Dados (ER) e Dicionário de Dados
+
+```mermaid
+erDiagram
+    USER ||--o{ STOCK_MOVEMENT : "registra"
+    USER ||--o{ AUDIT_LOG : "gera"
+    USER ||--o{ KB_ARTICLE : "cria"
+    USER ||--o{ TICKET : "abre/atende"
+    USER ||--o{ TICKET_COMMENT : "comenta"
+    USER ||--o{ TICKET_ATTACHMENT : "anexa"
+    CATEGORY ||--o{ PRODUCT : "classifica"
+    SUPPLIER ||--o{ PRODUCT : "fornece"
+    PRODUCT ||--o{ STOCK_MOVEMENT : "movimenta"
+    MACHINE ||--o{ MACHINE_CLEANING : "limpa"
+    MACHINE ||--o{ MACHINE_MAINTENANCE : "mantém"
+    MACHINE ||--o{ TICKET : "associa"
+    MOBILE_DEVICE ||--o{ SIM_CHIP : "usa"
+    TICKET ||--o{ TICKET_COMMENT : "tem"
+    TICKET ||--o{ TICKET_ATTACHMENT : "tem"
+
+    USER {
+        int id PK
+        string name
+        string email UK
+        string password_hash
+        bool is_admin
+        bool can_login
+        bool is_active
+        string sector
+        string photo
+        string whatsapp
+        string totp_secret
+        bool is_2fa_enabled
+    }
+    CATEGORY {
+        int id PK
+        string name UK
+        text description
+    }
+    SUPPLIER {
+        int id PK
+        string name UK
+        string email
+        string phone
+        text notes
+    }
+    PRODUCT {
+        int id PK
+        string sku UK
+        string name
+        string segment
+        string item_type
+        string unit
+        int category_id FK
+        int supplier_id FK
+        int min_stock
+        decimal price
+        string brand
+        string patrimony
+        string serial_number
+        string responsible_user
+    }
+    STOCK_MOVEMENT {
+        int id PK
+        int product_id FK
+        string movement_type "IN/OUT"
+        int quantity
+        decimal unit_cost
+        string nf_filename
+        string responsible_user
+        int user_id FK
+        datetime created_at
+    }
+    MACHINE {
+        int id PK
+        string kind
+        string name
+        string brand
+        string assigned_user
+        string ip_address
+        string sector
+        string patrimony
+        string serial_number
+        bool is_active
+    }
+    MACHINE_CLEANING {
+        int id PK
+        int machine_id FK
+        datetime started_at
+        date next_date
+    }
+    MACHINE_MAINTENANCE {
+        int id PK
+        int machine_id FK
+        date date
+        string kind
+        decimal cost
+    }
+    MOBILE_DEVICE {
+        int id PK
+        string model
+        string imei
+        string phone_number
+        string assigned_employee
+        string assigned_employee_2
+        string assigned_employee_3
+        string status
+    }
+    SIM_CHIP {
+        int id PK
+        string phone_number
+        string usage
+        int mobile_id FK
+    }
+    ROUTER {
+        int id PK
+        string model
+        string ip_address
+        string ssid
+        string status
+    }
+    TICKET {
+        int id PK
+        string code UK
+        string title
+        string status
+        string priority
+        int opened_by_id FK
+        int assigned_to_id FK
+        int machine_id FK
+        datetime created_at
+    }
+    TICKET_COMMENT {
+        int id PK
+        int ticket_id FK
+        int author_id FK
+        text body
+    }
+    TICKET_ATTACHMENT {
+        int id PK
+        int ticket_id FK
+        string filename
+    }
+    KB_ARTICLE {
+        int id PK
+        string title
+        string category
+        int created_by_id FK
+        int views
+    }
+    CREDENTIAL {
+        int id PK
+        string name
+        string category
+        string username
+        string password
+    }
+    LICENSE {
+        int id PK
+        string name
+        string kind
+        date expiry_date
+        decimal cost
+    }
+    DOMAIN {
+        int id PK
+        string name
+        string registrar
+        date expiry_date
+        bool auto_renew
+    }
+    DEPARTMENT {
+        int id PK
+        string name UK
+        bool is_active
+    }
+    COLABORADOR {
+        int id PK
+        string name UK
+        string department
+    }
+    MONITORED_HOST {
+        int id PK
+        string host
+        string check_type
+        string last_status
+    }
+    AUDIT_LOG {
+        int id PK
+        int user_id FK
+        string action
+        string entity
+        datetime created_at
+    }
+```
+
+> **Saldo de estoque** = Σ(`quantity` onde `movement_type='IN'`) − Σ(`quantity` onde `movement_type='OUT'`).
+> A tabela `colaborador` é **legada** — migrada uma única vez para `user` (pessoas sem login) no boot.
+
+### 6.1 Dicionário de Dados (principais tabelas)
+
+#### `user` — pessoas (com ou sem login)
+| Campo | Tipo | Nulo | Notas |
+|---|---|---|---|
+| id | integer PK | não | |
+| name | varchar(150) | não | indexado |
+| email | varchar(255) UK | sim | login; único; opcional p/ pessoa sem login |
+| password_hash | varchar(255) | sim | scrypt; nulo p/ pessoa sem login |
+| is_admin | boolean | não | perfil administrador |
+| can_login | boolean | não | habilita acesso ao sistema |
+| is_active | boolean | não | inativo não loga |
+| sector | varchar(120) | sim | departamento |
+| photo | varchar(255) | sim | avatar |
+| whatsapp | varchar(30) | sim | destino de notificações |
+| totp_secret | varchar(64) | sim | segredo 2FA |
+| is_2fa_enabled | boolean | não | 2FA ativo |
+
+#### `product` — materiais/itens de estoque
+| Campo | Tipo | Nulo | Notas |
+|---|---|---|---|
+| id | integer PK | não | |
+| sku | varchar(120) UK | não | gerado `PREFIXO-0001` |
+| name | varchar(200) | não | |
+| segment | varchar(20) | não | default `equipamento` |
+| item_type | varchar(20) | não | product/raw_material/kit/service |
+| unit | varchar(10) | não | UN, CX, KG… |
+| category_id | integer FK→category | sim | |
+| supplier_id | integer FK→supplier | sim | |
+| min_stock | integer | não | alerta de mínimo |
+| price | numeric(12,2) | não | |
+| brand / model | varchar(120) | sim | **TI** |
+| patrimony / serial_number | varchar(60/120) | sim | **TI**, indexados |
+| location / compatibility | varchar/text | sim | **TI** |
+| expiry_date | date | sim | **TI** (toner/cilindro) |
+| responsible_user / responsible_sector | varchar(150/120) | sim | responsável |
+| created_at | timestamp | não | |
+
+#### `stock_movement` — movimentações
+| Campo | Tipo | Nulo | Notas |
+|---|---|---|---|
+| id | integer PK | não | |
+| product_id | integer FK→product | não | indexado |
+| movement_type | varchar(3) | não | `IN` / `OUT` |
+| quantity | integer | não | |
+| unit_cost | numeric(12,2) | sim | custo (entradas) |
+| nf_filename / nf_original_name | varchar(255) | sim | anexo de nota fiscal |
+| responsible_user / responsible_sector | varchar | sim | quem recebeu/retirou |
+| user_id | integer FK→user | sim | quem registrou |
+| created_at | timestamp | não | indexado |
+
+#### `ticket` — chamados de suporte
+| Campo | Tipo | Nulo | Notas |
+|---|---|---|---|
+| id | integer PK | não | |
+| code | varchar(20) UK | não | sequencial (ex.: `CH-0001`) |
+| title / description | varchar(200)/text | não/sim | |
+| requester / sector | varchar | sim | solicitante |
+| category | varchar(30) | não | default `outro` |
+| priority | varchar(10) | não | default `media` |
+| status | varchar(15) | não | aberto/andamento/resolvido… (indexado) |
+| opened_by_id / assigned_to_id | integer FK→user | sim | |
+| machine_id | integer FK→machine | sim | ativo relacionado |
+| created_at / updated_at / resolved_at | timestamp | — | SLA |
+| resolution | text | sim | solução aplicada |
+
+> As demais tabelas (`machine`, `machine_cleaning`, `machine_maintenance`, `mobile_device`,
+> `sim_chip`, `router`, `monitored_host`, `kb_article`, `credential`, `license`, `domain`,
+> `department`, `colaborador`, `ticket_comment`, `ticket_attachment`, `audit_log`, `category`,
+> `supplier`) seguem o mesmo padrão; o detalhamento campo a campo está na página **viva** em
+> Admin → Documentação (introspecção do `metadata` do SQLAlchemy).
+
+---
+
+## 7. Diagrama de Classes (principais)
+
+```mermaid
+classDiagram
+    class User {
+        +int id
+        +str name
+        +str email
+        +bool is_admin
+        +bool can_login
+        +bool is_active
+        +str totp_secret
+        +set_password(pwd)
+        +check_password(pwd) bool
+        +initials
+        +can_authenticate
+    }
+    class Product {
+        +str sku
+        +str name
+        +str item_type
+        +int min_stock
+        +Decimal price
+        +str patrimony
+    }
+    class StockMovement {
+        +str movement_type
+        +int quantity
+        +Decimal unit_cost
+        +str nf_filename
+        +datetime created_at
+    }
+    class Machine {
+        +str kind
+        +str assigned_user
+        +str ip_address
+        +bool is_active
+    }
+    class MobileDevice {
+        +str model
+        +str assigned_employee
+        +employees
+        +is_shared
+    }
+    class Ticket {
+        +str code
+        +str status
+        +str priority
+        +datetime resolved_at
+    }
+    User "1" --> "0..*" StockMovement : registra
+    Product "1" --> "0..*" StockMovement : possui
+    Machine "1" --> "0..*" Ticket : associa
+    MobileDevice "1" --> "0..*" SimChip : usa
+    Ticket "1" --> "0..*" TicketComment : comentários
+```
+
+---
+
+## 8. Mapa Completo de Rotas
+
+Visão por blueprint. `L` = exige login · `A` = exige admin.
+
+| Métodos | Rota | Endpoint | Descrição | Acesso |
+|---|---|---|---|---|
+| GET/POST | `/login` | auth.login | Login (e-mail + senha) | — |
+| GET/POST | `/login/2fa` | auth.login_2fa | Verificação 2FA (TOTP) | — |
+| GET | `/login/cancel` | auth.login_cancel | Cancela 2FA pendente | — |
+| GET | `/logout` | auth.logout | Encerra sessão | L |
+| GET | `/` | dashboard.index | Painel com KPIs e gráficos | A |
+| GET | `/products` | products.list_view | Lista de materiais + saldo | A |
+| GET/POST | `/products/new` | products.new | Cadastrar (SKU automático) | A |
+| GET/POST | `/products/<id>/edit` | products.edit | Editar material | A |
+| POST | `/products/<id>/delete` | products.delete | Excluir (se sem movimentos) | A |
+| GET | `/products/suggest-sku` | products.suggest_sku | Sugerir próximo SKU (JSON) | A |
+| GET … | `/categories` … | categories.* | CRUD de categorias | A |
+| GET … | `/suppliers` … | suppliers.* | CRUD de fornecedores | A |
+| GET/POST | `/movements` | movements.list_and_new | Registrar/listar movimentações | A |
+| GET | `/movements/<id>/nf` | movements.nf | Baixar NF anexada | A |
+| GET | `/reports/stock` | reports.stock | Relatório de estoque | A |
+| GET | `/reports/saidas` | reports.saidas | Relatório de saídas | A |
+| GET | `/reports/export/saidas.csv` | reports.export_saidas | Exportar saídas (CSV) | A |
+| GET | `/reports/export/products.csv` | reports.export_products | Exportar catálogo (CSV) | A |
+| GET | `/kanban` | kanban.board | Board de saúde de estoque | A |
+| GET … | `/machines` … | machines.* | CRUD de máquinas | A |
+| GET … | `/machines/mobile` … | mobile.* | Celulares (compartilháveis) | A |
+| GET … | `/machines/chips` … | chips.* | Chips/linhas SIM (+ termo) | A |
+| GET … | `/routers` … | routers.* | Roteadores (+ Wi-Fi) | A |
+| GET … | `/machines/cleanings` … | cleanings.* | Limpezas periódicas | A |
+| GET … | `/machines/maintenance` … | maintenance.* | Manutenções (+ Excel) | A |
+| GET … | `/machines/monitoring` … | monitoring.* | Uptime (+ importar/checar) | A |
+| GET | `/labels` · `/labels/qr/<kind>/<id>.png` | labels.* | Etiquetas QR | A |
+| GET … | `/colaboradores` … | colaboradores.* | Cadastro central de pessoas | A |
+| GET … | `/departments` … | departments.* | Departamentos/setores | A |
+| GET | `/assets` · `/assets/<name>` · `/assets/<name>/termo` | assets.* | Ativos por colaborador + termo | A |
+| GET … | `/tickets` … | tickets.* | Chamados (+ painel, anexos, API) | L |
+| GET … | `/kb` … | kb.* | Base de conhecimento | L (editar: A) |
+| GET … | `/credentials` … | credentials.* | Cofre de senhas (+ reveal) | A |
+| GET … | `/licenses` … | licenses.* | Licenças & garantias (+ alerta) | A |
+| GET … | `/domains` … | domains.* | Domínios (+ alerta) | A |
+| GET | `/audit` | audit.list_view | Trilha de auditoria | A |
+| GET/POST | `/backups` · `/backups/run` | backups.* | Backups do banco | A |
+| GET/POST | `/profile` · `/profile/2fa/*` | profile.* | Meu perfil + 2FA | L |
+| GET/POST | `/wpp` · `/wpp/test` | wpp.* | Teste de WhatsApp | A |
+| GET | `/docs` | docs.index | **Documentação viva** | A |
+| GET | `/health` | health.health | Status do serviço (JSON) | — |
+
+> A página **viva** (`/docs`) lista todas as rotas reais a partir de `app.url_map` — sempre atualizada.
+
+---
+
+## 9. Fluxos de Negócio
+
+### 9.1 Geração de SKU automático
+
+```mermaid
+flowchart TD
+    A["Início"] --> B{"Categoria<br/>selecionada?"}
+    B -->|Sim| C["prefixo = 3 letras da categoria<br/>(sem acento, maiúsculas)"]
+    B -->|Não| D["prefixo = código do tipo<br/>PRD/INS/KIT/SRV"]
+    C --> E["Busca maior sequência do prefixo"]
+    D --> E
+    E --> F["SKU = PREFIXO-(max+1), 4 dígitos"]
+    F --> G{"SKU já existe?"}
+    G -->|Sim| H["incrementa e tenta (até 6x)"]
+    H --> G
+    G -->|Não| I["✅ SKU final"]
+```
+
+### 9.2 Movimentação de estoque (com NF)
 
 ```mermaid
 sequenceDiagram
     actor U as Usuário
     participant B as Navegador
-    participant JS as JS do formulário
-    participant P as products (rota)
-    participant R as product_repo
-    participant DB as PostgreSQL
-
-    U->>B: digita nome / escolhe tipo e categoria
-    B->>JS: evento input/change (debounce 350ms)
-    JS->>P: GET /products/suggest-sku?item_type&category_id
-    P->>R: _sku_prefix() + _next_sku()
-    R->>DB: SELECT max sequência do prefixo
-    DB-->>R: maior número
-    P-->>JS: { sku: "TON-0001" }
-    JS-->>B: preenche o campo SKU
-
-    U->>B: Salvar
-    B->>P: POST /products/new
-    loop até 6 tentativas (corrida)
-        P->>R: create_product(...)
-        R->>DB: INSERT
-        alt SKU já existe (IntegrityError)
-            DB-->>R: erro de unicidade
-            P->>P: gera próximo SKU e tenta de novo
-        else sucesso
-            DB-->>R: ok
-            P-->>B: redirect + flash "Produto criado! SKU: TON-0001"
-        end
-    end
-```
-
-### 6.3 Registro de Movimentação de Estoque
-
-```mermaid
-sequenceDiagram
-    actor U as Usuário (logado)
-    participant B as Navegador
     participant M as movements (rota)
     participant R as movement_repo
+    participant FS as static/uploads/nf
     participant DB as PostgreSQL
 
-    U->>B: produto, tipo (IN/OUT), quantidade, custo
-    B->>M: POST /movements
-    M->>R: create_movement(product, type, qty, cost, note, user)
+    U->>B: produto, tipo (IN/OUT), qtd, custo, responsável, NF
+    B->>M: POST /movements (multipart)
+    opt anexo de NF
+        M->>FS: salva arquivo (xml/pdf)
+    end
+    M->>R: create_movement(...)
     R->>DB: INSERT stock_movement
-    DB-->>R: ok
     M->>DB: agrega totais do filtro (SUM CASE)
     M-->>B: lista atualizada (cards + histórico)
 ```
 
----
-
-## 7. Fluxogramas de Regras de Negócio
-
-### 7.1 Geração do SKU
+### 9.3 Classificação do Kanban de estoque
 
 ```mermaid
 flowchart TD
-    A["Início da geração"] --> B{"Categoria<br/>selecionada?"}
-    B -->|Sim| C["prefixo = 3 letras da categoria<br/>(sem acento, maiúsculas)"]
-    B -->|Não| D["prefixo = código do tipo<br/>PRD/INS/KIT/SRV"]
-    C --> E["Busca maior sequência<br/>existente do prefixo"]
-    D --> E
-    E --> F["SKU = PREFIXO-(max+1) com 4 dígitos"]
-    F --> G{"SKU já existe<br/>no banco?"}
-    G -->|Sim| H["Incrementa e tenta de novo<br/>(até 6x)"]
-    H --> G
-    G -->|Não| I["✅ SKU final"]
-```
-
-### 7.2 Classificação do Kanban de Estoque
-
-```mermaid
-flowchart TD
-    A["Saldo do produto<br/>(entradas − saídas)"] --> B{"saldo ≤ 0?"}
+    A["Saldo (entradas − saídas)"] --> B{"saldo ≤ 0?"}
     B -->|Sim| C["🔴 Sem estoque"]
     B -->|Não| D{"saldo ≤ mínimo?"}
     D -->|Sim| E["🟡 Abaixo do mínimo"]
     D -->|Não| F{"saldo ≤ mínimo × 1,5?"}
-    F -->|Sim| G["🔵 Atenção (margem curta)"]
+    F -->|Sim| G["🔵 Atenção"]
     F -->|Não| H["🟢 Saudável"]
+```
+
+### 9.4 Celular compartilhado e chips
+
+Um aparelho (`mobile_device`) pode ser atribuído a **até 3 funcionários** (`assigned_employee`,
+`assigned_employee_2/3`). Para inventário, **conta como 1 dispositivo** — não duplica por pessoa.
+Um chip (`sim_chip`) pode estar **vinculado a um aparelho** (`mobile_id`) ou ser avulso, com
+`usage` (corporativo/particular) e termo de responsabilidade imprimível.
+
+### 9.5 Licenças e domínios — alerta de vencimento
+
+```mermaid
+flowchart LR
+    A["Cadastro com expiry_date"] --> B["status = days_left:<br/>vencido / vencendo / vigente"]
+    B --> C{"Admin aciona alerta?"}
+    C -->|Sim| D["services.whatsapp.notify_ti(...)"]
+    D --> E["CallMeBot → grupo de TI"]
+```
+
+### 9.6 Cofre de credenciais (reveal auditado)
+
+```mermaid
+sequenceDiagram
+    actor A as Admin
+    participant C as credentials (rota)
+    participant AU as services.audit
+    participant DB as PostgreSQL
+    A->>C: GET /credentials/{id}/reveal
+    C->>AU: record("reveal", "credential", id)
+    AU->>DB: INSERT audit_log
+    C-->>A: senha em texto (com rastro na auditoria)
 ```
 
 ---
 
-## 8. Diagramas de Estado
+## 10. Chamados de Suporte (ciclo de vida)
 
-### 8.1 Servidor (visto pelo Launcher)
+```mermaid
+stateDiagram-v2
+    [*] --> Aberto : abrir chamado (code sequencial)
+    Aberto --> EmAndamento : atribuir / iniciar
+    EmAndamento --> Resolvido : registrar solução (resolved_at)
+    Aberto --> Resolvido : resolver direto
+    Resolvido --> Reaberto : voltar atrás
+    Reaberto --> EmAndamento
+    Resolvido --> Fechado : encerrar
+    Fechado --> [*]
+```
+
+- Cada chamado recebe um **code** sequencial, comentários (com troca de status registrada) e anexos.
+- O **painel** (`/tickets/painel`, admin) acompanha SLA, tendências e métricas.
+- A navbar do admin faz **polling** (`/tickets/api/recent`) a cada 20s: badge, toast e som ao chegar
+  chamado novo.
+- Usuário comum vê **apenas os próprios** chamados; admin vê todos.
+
+---
+
+## 11. Ativos por Colaborador e Termo de Responsabilidade
+
+`services.assets` consolida **máquinas + celulares** por pessoa. A tela `/assets` agrupa por setor;
+`/assets/<nome>` detalha os ativos de um colaborador e `/assets/<nome>/termo` gera o **termo de
+responsabilidade** imprimível (para assinatura na entrega de equipamentos).
+
+```mermaid
+flowchart LR
+    M["machine.assigned_user"] --> S["services.assets<br/>people_with_assets()"]
+    MO["mobile_device.assigned_employee*"] --> S
+    S --> V["/assets (por setor)"]
+    V --> D["/assets/{nome} (detalhe)"]
+    D --> T["/assets/{nome}/termo<br/>(impressão / assinatura)"]
+```
+
+---
+
+## 12. Monitoramento de Uptime
+
+Uma **thread em segundo plano** (`services.monitoring.start_scheduler`) checa periodicamente os
+hosts cadastrados (ICMP ping ou HTTP). Mudança de estado dispara alerta por WhatsApp.
+
+```mermaid
+sequenceDiagram
+    participant SCH as scheduler (thread)
+    participant H as monitored_host
+    participant NET as Host (rede)
+    participant DB as PostgreSQL
+    participant WPP as CallMeBot
+
+    loop a cada MONITORING_INTERVAL (120s)
+        SCH->>H: lista hosts habilitados
+        SCH->>NET: ping / http_check
+        NET-->>SCH: up / down + latência
+        alt mudou de estado
+            SCH->>DB: atualiza last_status / last_change
+            SCH->>WPP: notify_ti("host X caiu/voltou")
+        else estável
+            SCH->>DB: atualiza last_checked / latência
+        end
+    end
+```
+
+> A tela `/machines/monitoring` permite **adicionar/editar/pausar** hosts, **checar agora** e
+> **importar** automaticamente máquinas e roteadores que tenham IP.
+
+---
+
+## 13. Notificações WhatsApp (CallMeBot)
+
+`services.whatsapp` envia mensagens via **CallMeBot** (gratuito, sem QR/navegador). Os destinatários
+de TI são pares `numero:apikey` em `CALLMEBOT_RECIPIENTS` (`.env`); usuários recebem no próprio
+`whatsapp`. Usado por: monitoramento (host caiu/voltou), alertas de licenças/domínios a vencer e a
+página de teste (`/wpp`).
+
+```mermaid
+flowchart LR
+    EV["Evento (host down · vencimento · teste)"] --> W["services.whatsapp"]
+    W --> CFG{"WHATSAPP_ENABLED<br/>e recipients?"}
+    CFG -->|Não| NOOP["(no-op)"]
+    CFG -->|Sim| API["GET api.callmebot.com<br/>(por destinatário)"]
+```
+
+---
+
+## 14. Auditoria
+
+`services.audit.record(...)` grava em `audit_log`, **best-effort** (nunca quebra o fluxo do app),
+quem fez o quê, em qual entidade, com IP e horário. A tela `/audit` (admin) filtra por ação/entidade.
+Ações típicas: criação/edição/exclusão de cadastros, **reveal** de senha do cofre, reset de 2FA.
+
+```mermaid
+flowchart LR
+    R["rota sensível"] --> A["audit.record(action, entity, id, summary)"]
+    A --> DB[("audit_log<br/>user · ip · created_at")]
+    DB --> V["/audit (filtro por ação/entidade)"]
+```
+
+---
+
+## 15. Implantação (Deployment) e Launcher
+
+```mermaid
+flowchart TB
+    subgraph SERVER["🖥️ Windows Server 2019 — 192.168.0.54"]
+        subgraph LAUNCH["Launcher (PyQt5) — pythonw"]
+            UI["Janela + Bandeja<br/>Iniciar / Parar / Reiniciar<br/>Teste /health · logs"]
+        end
+        subgraph PROC["Processo do Servidor"]
+            WAIT["serve.py<br/>waitress (threads)<br/>0.0.0.0:5090"]
+            FLASK["Flask app (create_app)"]
+            MON["Thread de monitoramento"]
+        end
+        ENVF[".env<br/>SECRET_KEY · credenciais DB · CallMeBot"]
+        PG[("PostgreSQL 17<br/>:5432 · inventario_almox")]
+        BK["backups/ (dumps)"]
+    end
+    USERS["👥 Navegadores na rede<br/>(PC / celular / tablet)"]
+
+    UI -->|"subprocess (stdout→logs)"| WAIT
+    WAIT --> FLASK
+    FLASK --> MON
+    FLASK -->|"lê segredos"| ENVF
+    FLASK -->|"psycopg / SQL"| PG
+    FLASK -->|"pg_dump"| BK
+    USERS -->|"HTTP :5090"| WAIT
+    START["Atalho na Inicialização do Windows"] -.->|"auto-start no login"| LAUNCH
+```
+
+### Estados do servidor (visto pelo Launcher)
 
 ```mermaid
 stateDiagram-v2
     [*] --> Parado
     Parado --> Iniciando : Iniciar
-    Iniciando --> Rodando : processo no ar
+    Iniciando --> Rodando : processo no ar (/health ok)
     Iniciando --> Erro : falha ao subir
     Rodando --> Parando : Parar / Reiniciar
     Parando --> Parado : encerrado
@@ -438,106 +892,9 @@ stateDiagram-v2
     Parado --> [*]
 ```
 
-### 8.2 Acesso do Usuário
-
-```mermaid
-stateDiagram-v2
-    [*] --> Ativo
-    Ativo --> Inativo : desativar (switch)
-    Inativo --> Ativo : ativar (switch)
-    Ativo --> Logado : login válido
-    Logado --> Ativo : logout
-    Inativo --> Inativo : login bloqueado
-```
-
 ---
 
-## 9. Casos de Uso
-
-```mermaid
-flowchart LR
-    ADMIN(["👤 Administrador"])
-    OPER(["👤 Operador de TI"])
-
-    subgraph SISTEMA["InvenSync"]
-        UC1["Gerenciar produtos"]
-        UC2["Registrar movimentações"]
-        UC3["Consultar Kanban / Dashboard"]
-        UC4["Emitir relatórios / exportar CSV"]
-        UC5["Gerenciar categorias e fornecedores"]
-        UC6["Gerenciar usuários e acessos"]
-        UC7["Ativar / desativar usuário"]
-    end
-
-    OPER --> UC1
-    OPER --> UC2
-    OPER --> UC3
-    OPER --> UC4
-    OPER --> UC5
-    ADMIN --> UC1
-    ADMIN --> UC6
-    ADMIN --> UC7
-    ADMIN --> UC4
-```
-
----
-
-## 10. Mapa de Rotas (Endpoints)
-
-| Método | Rota | Blueprint | Descrição | Login |
-|---|---|---|---|---|
-| GET/POST | `/login` | auth | Autenticação | — |
-| GET | `/logout` | auth | Encerrar sessão | — |
-| GET | `/` | dashboard | Painel com indicadores e gráficos | ✅ |
-| GET | `/products` | products | Lista de produtos | ✅ |
-| GET/POST | `/products/new` | products | Cadastrar (SKU automático) | ✅ |
-| GET/POST | `/products/<id>/edit` | products | Editar produto | ✅ |
-| POST | `/products/<id>/delete` | products | Excluir produto | ✅ |
-| GET | `/products/suggest-sku` | products | Sugerir próximo SKU (JSON) | ✅ |
-| GET/POST | `/categories` … | categories | CRUD de categorias | ✅ |
-| GET/POST | `/suppliers` … | suppliers | CRUD de fornecedores | ✅ |
-| GET/POST | `/movements` | movements | Registrar e listar movimentações | ✅ |
-| GET | `/reports/stock` | reports | Relatório de estoque | ✅ |
-| GET | `/reports/export/products.csv` | reports | Exportar CSV | ✅ |
-| GET | `/kanban` | kanban | Board de saúde de estoque | ✅ |
-| GET/POST | `/users` … | users | Gestão de usuários (admin) | ✅ |
-| POST | `/users/<id>/toggle-active` | users | Ativar/desativar usuário | ✅ |
-| GET | `/health` | health | Status do serviço (JSON) | — |
-
----
-
-## 11. Estrutura de Pastas
-
-```text
-InventarioAlmox/
-├── inventory/                 # pacote da aplicação
-│   ├── __init__.py            # create_app() — fábrica do app
-│   ├── config.py              # configuração (lê .env)
-│   ├── extensions.py          # db, login_manager
-│   ├── models/                # ORM: user, category, supplier, product, movement
-│   ├── repositories/          # acesso a dados por entidade
-│   ├── services/              # regras de domínio (inventory_service)
-│   ├── forms/                 # formulários Flask-WTF
-│   ├── routes/                # blueprints (auth, products, ... , health)
-│   ├── templates/             # Jinja2 (base + telas)
-│   └── static/                # style.css, logo, favicon
-├── docs/
-│   └── DOCUMENTACAO.md        # este documento
-├── setup/
-│   ├── install.bat            # instala deps + atalhos (Desktop/Startup)
-│   └── start_invensync.bat    # inicia o launcher (pythonw)
-├── launcher.py                # painel desktop PyQt5
-├── serve.py                   # servidor de produção (waitress)
-├── run.py                     # servidor de desenvolvimento (Flask)
-├── migrate_sqlite_to_pg.py    # migração única SQLite → PostgreSQL
-├── requirements.txt
-├── .env / .env.example        # segredos (não versionado / modelo)
-└── README.md
-```
-
----
-
-## 12. Segurança e Configuração
+## 16. Segurança
 
 ```mermaid
 flowchart LR
@@ -545,22 +902,78 @@ flowchart LR
     CFG --> APP["create_app()"]
     subgraph SEC["Práticas"]
         S1["Senhas com hash scrypt"]
-        S2["Segredos só no .env"]
-        S3["Login obrigatório nas rotas"]
-        S4["is_active bloqueia acesso"]
-        S5["Admin não se autodesativa/exclui"]
+        S2["2FA TOTP opcional"]
+        S3["CSRF global (Flask-WTF)"]
+        S4["RBAC: gate non-admin + abort(403)"]
+        S5["is_active bloqueia login"]
+        S6["Trilha de auditoria"]
+        S7["Segredos só no .env"]
     end
     APP --> SEC
 ```
 
-- **Variáveis sensíveis** (`SECRET_KEY`, `DB_PASSWORD`, …) ficam no `.env`, fora do versionamento.
-- **Senhas** armazenadas como hash (`werkzeug` / scrypt) — nunca em texto puro.
-- **Acesso**: todas as telas exigem login; usuários **inativos** não logam.
-- **Proteções de admin**: não é possível desativar nem excluir a própria conta.
+- **Senhas** com hash (werkzeug/scrypt) — nunca em texto puro.
+- **2FA TOTP** (compatível Google/Microsoft/Authy); admin pode resetar o 2FA de um colaborador.
+- **CSRF** global via Flask-WTF; uploads limitados a 16 MB.
+- **RBAC**: portão `_gate_non_admins` + `abort(403)` em rotas sensíveis.
+- **Auditoria** registra ações críticas (inclusive *reveal* de senha do cofre).
+- **Segredos** (`SECRET_KEY`, `DB_PASSWORD`, `CALLMEBOT_RECIPIENTS`) só no `.env`.
 
 ---
 
-## 13. Como Executar
+## 17. Estrutura de Pastas
+
+```text
+InventarioAlmox/
+├── inventory/                  # pacote da aplicação
+│   ├── __init__.py             # create_app() — fábrica, migrações leves, seeds, blueprints
+│   ├── config.py               # configuração (lê .env)
+│   ├── extensions.py           # db, login_manager
+│   ├── models/                 # 22 entidades ORM (user, product, machine, ticket, …)
+│   ├── repositories/           # acesso a dados por entidade
+│   ├── services/               # transversais: assets, audit, exports, monitoring,
+│   │                           #   people, twofa, whatsapp, inventory_service, docs
+│   ├── forms/                  # formulários Flask-WTF
+│   ├── routes/                 # 30 blueprints (auth … docs, health)
+│   ├── templates/              # Jinja2 (base.html + telas por módulo)
+│   └── static/                 # style.css, logo, favicons, uploads/
+├── docs/
+│   ├── DOCUMENTACAO.md         # ESTE documento (fonte única)
+│   ├── DOCUMENTACAO.html       # versão navegável (gerada por gerar_html.py)
+│   ├── CAPA.html               # capa/portada separada
+│   └── gerar_html.py           # MD → HTML (marked.js + Mermaid no navegador)
+├── setup/                      # instaladores/atalhos (.bat)
+├── launcher.py                 # painel desktop PyQt5
+├── serve.py                    # produção (waitress)
+├── run.py                      # desenvolvimento (Flask)
+├── backup_db.py                # rotina de backup do banco
+├── migrate_sqlite_to_pg.py     # migração única SQLite → PostgreSQL
+├── requirements.txt
+├── .env / .env.example         # segredos (não versionado / modelo)
+└── README.md
+```
+
+---
+
+## 18. Configuração (`.env`)
+
+| Variável | Default | Descrição |
+|---|---|---|
+| `SECRET_KEY` | `dev-secret-key` | Chave de sessão/CSRF (troque em produção) |
+| `DB_HOST` / `DB_PORT` | `127.0.0.1` / `5432` | PostgreSQL |
+| `DB_NAME` | `inventario_almox` | Banco dedicado |
+| `DB_USER` / `DB_PASSWORD` | `postgres` / — | Credenciais |
+| `DATABASE_URL` | (montada) | Sobrescreve a URL inteira (opcional) |
+| `WHATSAPP_ENABLED` | `0` | Liga notificações CallMeBot |
+| `CALLMEBOT_RECIPIENTS` | — | `numero:apikey,numero:apikey` (TI) |
+| `MONITORING_ENABLED` | `1` | Liga a thread de uptime |
+| `MONITORING_INTERVAL` | `120` | Intervalo de checagem (segundos) |
+
+> `MAX_CONTENT_LENGTH` = 16 MB · `pool_pre_ping` + `pool_recycle=1800s` · `TEMPLATES_AUTO_RELOAD=True`.
+
+---
+
+## 19. Como Executar
 
 ### Produção (recomendado)
 ```bat
@@ -570,19 +983,65 @@ setup\install.bat
 :: 2. Inicia o painel (auto-sobe o servidor waitress)
 setup\start_invensync.bat
 ```
-Acesse: **http://192.168.0.54:5090**
+Acesse: **http://192.168.0.54:5090** · login inicial: `admin@local` / `admin` (troque depois).
 
 ### Desenvolvimento
 ```bat
 .venv\Scripts\python run.py
 ```
 
-### Migração inicial (uma vez)
+### Gerar a documentação navegável
 ```bat
-.venv\Scripts\python migrate_sqlite_to_pg.py
+.venv\Scripts\python docs\gerar_html.py
 ```
 
 ---
 
-> _Documentação gerada para o projeto InvenSync. Os diagramas usam **Mermaid** e são renderizados
-> automaticamente no GitHub, VS Code (extensão Markdown Preview Mermaid) e demais visualizadores compatíveis._
+## 20. Mindmap Funcional
+
+```mermaid
+mindmap
+  root((InvenSync))
+    Estoque
+      Materiais - SKU auto
+      Categorias
+      Fornecedores
+      Movimentações com NF
+      Kanban
+      Relatórios e CSV
+    Máquinas e Rede
+      Máquinas
+      Celulares compartilháveis
+      Chips e Linhas
+      Roteadores Wi-Fi
+      Limpezas
+      Manutenções
+      Monitoramento
+      Etiquetas QR
+    Pessoas
+      Colaboradores
+      Departamentos
+      Ativos e Termo
+    Suporte
+      Chamados com SLA
+      Base de Conhecimento
+    Admin
+      Cofre de senhas
+      Licenças & Garantias
+      Domínios
+      Auditoria
+      Backups
+      WhatsApp
+      Documentação viva
+    Segurança
+      Login + 2FA
+      RBAC
+      CSRF
+      Auditoria
+```
+
+---
+
+> _Documentação do projeto **InvenSync** — Refrigerantes Jaboti. Diagramas em **Mermaid**, renderizados
+> automaticamente no GitHub, VS Code e no módulo **Admin → Documentação** (`/docs`) da própria aplicação.
+> A versão dentro do app é **viva**: lista rotas, blueprints, módulos e tabelas reais por introspecção do código._

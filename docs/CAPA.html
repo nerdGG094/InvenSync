@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>InvenSync — Capa da Documentação</title>
+<style>
+  :root{
+    --brand:#00a344; --brand-2:#00c853; --brand-dk:#0b6b34;
+    --ink:#13241b; --muted:#5f7a6a; --line:#d7e6dd; --soft:#f1f8f3; --paper:#ffffff;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{
+    font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink); background:#e7edea; padding:24px;
+    display:flex; flex-direction:column; align-items:center;
+  }
+
+  /* Barra de ações (não sai na impressão) */
+  .toolbar{ width:210mm; max-width:100%; display:flex; gap:10px; justify-content:flex-end; margin-bottom:14px; }
+  .toolbar button, .toolbar a{
+    border:1px solid var(--line); background:#fff; color:var(--ink);
+    border-radius:8px; padding:8px 14px; cursor:pointer; font-size:14px; text-decoration:none;
+    display:inline-flex; align-items:center; gap:.4rem;
+  }
+  .toolbar button:hover, .toolbar a:hover{ background:var(--soft); }
+
+  /* Página A4 */
+  .page{
+    width:210mm; min-height:297mm; padding:26mm 24mm;
+    background:
+      radial-gradient(820px 420px at 90% -10%, rgba(0,200,83,.12), transparent 60%),
+      radial-gradient(680px 380px at -10% 112%, rgba(0,163,68,.10), transparent 55%),
+      var(--paper);
+    border:1px solid var(--line); border-radius:6px;
+    box-shadow:0 18px 50px rgba(20,60,40,.16);
+    display:flex; flex-direction:column;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+  .page::before{
+    content:""; display:block; height:6px; width:96px; border-radius:999px;
+    background:linear-gradient(90deg,var(--brand-2),var(--brand)); margin-bottom:30px;
+  }
+
+  .brand-row{ display:flex; align-items:center; gap:16px; }
+  .brand-mark{
+    width:64px; height:64px; border-radius:16px; flex:0 0 64px;
+    background:linear-gradient(145deg,#00c853,#00873a); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-weight:800; font-size:2rem;
+    box-shadow:0 8px 20px rgba(0,163,68,.30);
+  }
+  .brand-logo{ height:64px; width:auto; border-radius:14px; }
+  .logo{ display:flex; align-items:baseline; gap:.05rem; }
+  .logo .a{ font-size:2.8rem; font-weight:800; letter-spacing:-1px; color:var(--ink); }
+  .logo .b{ font-size:2.8rem; font-weight:800; letter-spacing:-1px; color:var(--brand); }
+  .tag{ font-size:.74rem; letter-spacing:.32em; text-transform:uppercase; color:var(--muted); margin-top:4px; }
+
+  .badge-live{
+    display:inline-flex; align-items:center; gap:.5rem; font-size:.7rem; font-weight:700;
+    letter-spacing:.14em; text-transform:uppercase; color:var(--brand-dk);
+    border:1px solid var(--line); background:var(--soft); border-radius:999px; padding:.4rem .9rem;
+    margin-top:42px; align-self:flex-start;
+  }
+  .dot{ width:8px; height:8px; border-radius:50%; background:var(--brand-2); }
+
+  .title{ font-size:2.1rem; font-weight:800; color:var(--brand-dk); margin:18px 0 12px; line-height:1.15; }
+  .subtitle{ font-size:1.02rem; color:#3c5347; line-height:1.65; max-width:620px; }
+
+  .chips{ display:flex; flex-wrap:wrap; gap:9px; margin:30px 0 0; }
+  .chip{ font-size:.76rem; color:var(--brand-dk); background:var(--soft); border:1px solid var(--line);
+    border-radius:8px; padding:.42rem .78rem; }
+
+  .grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:30px 0; }
+  .stat{ background:var(--soft); border:1px solid var(--line); border-left:4px solid var(--brand);
+    border-radius:12px; padding:14px 16px; }
+  .stat b{ display:block; font-size:1.7rem; color:var(--brand); line-height:1; }
+  .stat span{ display:block; font-size:.68rem; text-transform:uppercase; letter-spacing:.07em;
+    color:var(--muted); margin-top:.4rem; }
+
+  .spacer{ flex:1 1 auto; }
+
+  .credits{ border-top:1px solid var(--line); padding-top:22px; }
+  .credits-grid{ display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:18px; }
+  .maker{ display:flex; align-items:center; gap:12px; }
+  .maker svg{ width:30px; height:30px; fill:var(--ink); flex:0 0 30px; }
+  .maker .who{ font-size:.95rem; }
+  .maker .who b{ color:var(--ink); }
+  .maker .who a{ color:var(--brand); text-decoration:none; font-size:.85rem; }
+  .maker .who small{ display:block; color:var(--muted); font-size:.78rem; margin-top:2px; }
+  .meta{ text-align:right; color:var(--muted); font-size:.82rem; line-height:1.7; }
+  .meta .org{ color:var(--ink); font-weight:600; }
+  .meta a{ color:var(--brand); text-decoration:none; }
+
+  /* Impressão: uma página A4 limpa, sem barra de ações */
+  @media print{
+    @page{ size:A4; margin:0; }
+    body{ background:#fff; padding:0; }
+    .toolbar{ display:none; }
+    .page{ width:210mm; min-height:297mm; border:0; border-radius:0; box-shadow:none; }
+  }
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <button onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+    <a href="DOCUMENTACAO.html">📄 Documentação completa</a>
+  </div>
+
+  <div class="page">
+    <div class="brand-row">
+      <img class="brand-logo" src="../inventory/static/Logo.png" alt="InvenSync"
+           onerror="this.outerHTML='&lt;div class=\'brand-mark\'&gt;IS&lt;/div&gt;'">
+      <div>
+        <div class="logo"><span class="a">Inven</span><span class="b">Sync</span></div>
+        <div class="tag">&gt;&gt; Tech-Almox · Refrigerantes Jaboti</div>
+      </div>
+    </div>
+
+    <span class="badge-live"><span class="dot"></span> Documentação Técnica</span>
+
+    <h1 class="title">Gestão de Almoxarifado<br>&amp; Ativos de TI</h1>
+    <p class="subtitle">
+      Plataforma web em Flask que unifica estoque, parque de máquinas, celulares, chips, roteadores,
+      colaboradores, chamados de suporte, base de conhecimento, cofre de senhas, licenças, domínios,
+      monitoramento de uptime e auditoria — sobre PostgreSQL, com diagramas Mermaid e documentação viva.
+    </p>
+
+    <div class="chips">
+      <span class="chip">Python 3.12</span>
+      <span class="chip">Flask 3</span>
+      <span class="chip">SQLAlchemy 2</span>
+      <span class="chip">PostgreSQL 17</span>
+      <span class="chip">Bootstrap 5.3</span>
+      <span class="chip">waitress</span>
+      <span class="chip">Launcher PyQt5</span>
+      <span class="chip">2FA TOTP · CSRF · RBAC</span>
+    </div>
+
+    <div class="grid">
+      <div class="stat"><b>30</b><span>Blueprints</span></div>
+      <div class="stat"><b>22</b><span>Modelos ORM</span></div>
+      <div class="stat"><b>9</b><span>Serviços</span></div>
+      <div class="stat"><b>15</b><span>Repositórios</span></div>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="credits">
+      <div class="credits-grid">
+        <div class="maker">
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
+              0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01
+              1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95
+              0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27
+              2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82
+              1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01
+              2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+          </svg>
+          <div class="who">
+            Desenvolvido por <b>nerdGG094</b>
+            <a href="https://github.com/nerdGG094/InvenSync">github.com/nerdGG094/InvenSync</a>
+            <small>Setor de TI · ti2@refrigerantesjaboti.com.br</small>
+          </div>
+        </div>
+        <div class="meta">
+          <div class="org">Refrigerantes Jaboti</div>
+          <div>Documentação técnica · diagramas em Mermaid</div>
+          <div>Versão do documento — <b style="color:var(--ink)">2026</b></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

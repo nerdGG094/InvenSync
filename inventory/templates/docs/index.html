@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+{% block title %}Documentação{% endblock %}
+
+{% block extra_head %}
+<style>
+  .docs-intro { background:#12211a; border:1px solid #1f513c; border-radius:12px;
+    padding:14px 18px; color:#cfe9d8; margin-bottom:18px; }
+  .docs-live { display:inline-block; font-weight:700; color:#00e676; margin-right:.5rem;
+    letter-spacing:.05em; font-size:.85rem; animation:docsPulse 2s infinite; }
+  @keyframes docsPulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .docs-nav { display:flex; flex-wrap:wrap; gap:.4rem; margin:0 0 18px; }
+  .docs-nav a { font-size:.82rem; padding:.3rem .7rem; border:1px solid #2e4b3b;
+    border-radius:999px; color:#b9f6ca; text-decoration:none; background:#14271c; }
+  .docs-nav a:hover { background:#1a3427; color:#e7ffe9; }
+  .docs-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:12px; }
+  .docs-card { background:#1e1e1e; border:1px solid #233; border-left:4px solid #00c853;
+    border-radius:10px; padding:14px 16px; text-align:center; }
+  .docs-num { display:block; font-size:1.9rem; font-weight:700; color:#00e676; line-height:1; }
+  .docs-lbl { display:block; font-size:.72rem; text-transform:uppercase; letter-spacing:.08em;
+    color:#8fb89c; margin-top:.35rem; }
+  .docs-panel { background:#161616; border:1px solid #233; border-radius:12px; padding:18px 20px;
+    margin-top:18px; }
+  .docs-panel > h2 { font-size:1.05rem; color:#a5d6a7; text-transform:uppercase; letter-spacing:.06em;
+    border-bottom:1px solid #233; padding-bottom:.5rem; margin:0 0 14px; }
+  .docs-bp { font-size:.95rem; color:#b9f6ca; margin:1.2em 0 .4em; }
+  .docs-bp-count { background:#1f513c; color:#c9ffe0; border-radius:999px; padding:.05rem .5rem;
+    font-size:.7rem; margin-left:.4rem; }
+  .docs-table { width:100%; border-collapse:collapse; font-size:.85rem; }
+  .docs-table th, .docs-table td { border:1px solid #233; padding:6px 10px; text-align:left;
+    vertical-align:top; }
+  .docs-table th { background:#17261c; color:#a5d6a7; }
+  .docs-muted { color:#8fb89c; }
+  .docs-method { display:inline-block; font-size:.66rem; font-weight:700; border-radius:5px;
+    padding:.05rem .4rem; margin:0 .15rem .15rem 0; color:#0b1a12; }
+  .docs-m-get { background:#4fc3f7; } .docs-m-post { background:#00e676; }
+  .docs-m-put { background:#ffd54f; } .docs-m-delete { background:#ff8a80; }
+  .docs-m-patch { background:#ce93d8; }
+  .docs-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:18px; }
+  /* Markdown renderizado */
+  .md-doc { color:#d6eade; line-height:1.65; }
+  .md-doc h1,.md-doc h2,.md-doc h3,.md-doc h4 { color:#b9f6ca; margin:1.4em 0 .5em; }
+  .md-doc h1 { font-size:1.5rem; border-bottom:1px solid #233; padding-bottom:.3em; }
+  .md-doc h2 { font-size:1.25rem; border-bottom:1px solid #233; padding-bottom:.3em; }
+  .md-doc h3 { font-size:1.08rem; }
+  .md-doc table { border-collapse:collapse; width:100%; margin:1em 0; font-size:.85rem; }
+  .md-doc th, .md-doc td { border:1px solid #233; padding:6px 10px; text-align:left; }
+  .md-doc th { background:#17261c; color:#a5d6a7; }
+  .md-doc code { background:#0f1f17; color:#9bffc6; padding:.1em .4em; border-radius:5px;
+    font-size:.85em; }
+  .md-doc pre.md-code { background:#0f1f17; border:1px solid #233; border-radius:8px;
+    padding:12px 14px; overflow:auto; }
+  .md-doc blockquote { border-left:4px solid #1f513c; background:#12211a; margin:1em 0;
+    padding:.5em 1em; color:#a8cdb6; border-radius:0 8px 8px 0; }
+  .md-doc hr { border:0; border-top:1px solid #233; margin:1.8em 0; }
+  .md-doc .mermaid { background:#f7faf8; border-radius:10px; padding:14px; margin:1.2em 0;
+    text-align:center; overflow:auto; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 class="h4 mb-3"><i class="bi bi-journal-code me-2"></i>Documentação do Sistema</h1>
+
+<div class="docs-intro">
+  <span class="docs-live">● AO VIVO</span>
+  Esta página é montada por <strong>introspecção do código</strong> a cada acesso — rotas,
+  blueprints, modelos, serviços, repositórios e tabelas refletem o estado atual do sistema.
+  A seção <em>Arquitetura &amp; Diagramas</em> vem de <code>docs/DOCUMENTACAO.md</code>
+  (editar o arquivo atualiza tanto esta página quanto <code>docs/DOCUMENTACAO.html</code>).
+</div>
+
+<div class="docs-nav">
+  <a href="#resumo">Resumo</a>
+  <a href="#rotas">Blueprints &amp; Rotas</a>
+  <a href="#modelos">Modelos</a>
+  <a href="#tabelas">Tabelas</a>
+  <a href="#camadas">Serviços &amp; Repositórios</a>
+  <a href="#acesso">Acesso (RBAC)</a>
+  {% if doc_html %}<a href="#arquitetura">Arquitetura &amp; Diagramas</a>{% endif %}
+</div>
+
+<!-- ===================== RESUMO ===================== -->
+<section class="docs-panel" id="resumo">
+  <h2>Resumo</h2>
+  <div class="docs-cards">
+    <div class="docs-card"><span class="docs-num">{{ d.resumo.blueprints }}</span><span class="docs-lbl">Blueprints</span></div>
+    <div class="docs-card"><span class="docs-num">{{ d.resumo.rotas }}</span><span class="docs-lbl">Rotas</span></div>
+    <div class="docs-card"><span class="docs-num">{{ d.resumo.modelos }}</span><span class="docs-lbl">Modelos</span></div>
+    <div class="docs-card"><span class="docs-num">{{ d.resumo.tabelas }}</span><span class="docs-lbl">Tabelas</span></div>
+    <div class="docs-card"><span class="docs-num">{{ d.resumo.servicos }}</span><span class="docs-lbl">Serviços</span></div>
+    <div class="docs-card"><span class="docs-num">{{ d.resumo.repositorios }}</span><span class="docs-lbl">Repositórios</span></div>
+  </div>
+</section>
+
+<!-- ===================== ROTAS ===================== -->
+<section class="docs-panel" id="rotas">
+  <h2>Blueprints &amp; Rotas</h2>
+  {% for bp, lista in d.rotas.items() %}
+  <h3 class="docs-bp">{{ bp }} <span class="docs-bp-count">{{ lista|length }}</span></h3>
+  <table class="docs-table">
+    <thead><tr><th style="width:130px">Métodos</th><th>Rota</th><th>Endpoint</th></tr></thead>
+    <tbody>
+      {% for r in lista %}
+      <tr>
+        <td>{% for m in r.metodos %}<span class="docs-method docs-m-{{ m|lower }}">{{ m }}</span>{% endfor %}</td>
+        <td><code>{{ r.rule }}</code></td>
+        <td class="docs-muted">{{ r.endpoint }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endfor %}
+</section>
+
+<!-- ===================== MODELOS ===================== -->
+<section class="docs-panel" id="modelos">
+  <h2>Modelos (ORM — models/)</h2>
+  <table class="docs-table">
+    <thead><tr><th style="width:240px">Arquivo</th><th>Descrição</th></tr></thead>
+    <tbody>
+      {% for m in d.modelos %}
+      <tr><td><code>{{ m.nome }}</code></td><td class="docs-muted">{{ m.descricao or '—' }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<!-- ===================== TABELAS ===================== -->
+<section class="docs-panel" id="tabelas">
+  <h2>Tabelas (PostgreSQL — metadata SQLAlchemy)</h2>
+  <table class="docs-table">
+    <thead><tr><th style="width:320px">Tabela</th><th>Colunas</th></tr></thead>
+    <tbody>
+      {% for t in d.tabelas %}
+      <tr><td><code>{{ t.tabela }}</code></td><td class="docs-muted">{{ t.colunas }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<!-- ===================== SERVIÇOS & REPOSITÓRIOS ===================== -->
+<section class="docs-panel" id="camadas">
+  <h2>Serviços &amp; Repositórios</h2>
+  <div class="docs-grid">
+    <div>
+      <h3 class="docs-bp">Serviços (services/)</h3>
+      <table class="docs-table">
+        <thead><tr><th style="width:170px">Arquivo</th><th>Descrição</th></tr></thead>
+        <tbody>
+          {% for s in d.servicos %}
+          <tr><td><code>{{ s.nome }}</code></td><td class="docs-muted">{{ s.descricao or '—' }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <h3 class="docs-bp">Repositórios (repositories/)</h3>
+      <table class="docs-table">
+        <thead><tr><th style="width:170px">Arquivo</th><th>Descrição</th></tr></thead>
+        <tbody>
+          {% for r in d.repositorios %}
+          <tr><td><code>{{ r.nome }}</code></td><td class="docs-muted">{{ r.descricao or '—' }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== ACESSO ===================== -->
+<section class="docs-panel" id="acesso">
+  <h2>Acesso (RBAC)</h2>
+  <p class="docs-muted">Admin acessa tudo. Usuário comum só alcança os prefixos/endpoints abaixo —
+    qualquer outra rota o redireciona para Chamados.</p>
+  <div class="docs-grid">
+    <div>
+      <h3 class="docs-bp">Prefixos liberados a não-admin</h3>
+      <ul>{% for p in d.acesso.prefixos_comuns %}<li><code>{{ p }}</code></li>{% endfor %}</ul>
+    </div>
+    <div>
+      <h3 class="docs-bp">Endpoints liberados a não-admin</h3>
+      <ul>{% for e in d.acesso.endpoints_comuns %}<li><code>{{ e }}</code></li>{% endfor %}</ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== ARQUITETURA ===================== -->
+{% if doc_html %}
+<section class="docs-panel" id="arquitetura">
+  <h2>Arquitetura &amp; Diagramas</h2>
+  <p class="docs-muted">Fonte: <code>docs/DOCUMENTACAO.md</code> — editar o arquivo atualiza esta seção.</p>
+  <div class="md-doc">{{ doc_html|safe }}</div>
+</section>
+{% else %}
+<section class="docs-panel">
+  <p class="docs-muted">Documento não encontrado em <code>docs/DOCUMENTACAO.md</code>.</p>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if doc_html %}
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' });
+  try { await mermaid.run({ querySelector: '.md-doc .mermaid' }); }
+  catch (e) { console.error('Mermaid:', e); }
+</script>
+{% endif %}
+{% endblock %}

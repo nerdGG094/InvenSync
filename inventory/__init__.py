@@ -213,6 +213,7 @@ def create_app():
     from .routes.monitoring import bp as monitoring_bp  # ⬅️ NOVO: monitoramento de uptime
     from .routes.departments import bp as departments_bp  # ⬅️ NOVO: cadastro de departamentos
     from .routes.chips import bp as chips_bp  # ⬅️ NOVO: controle de chips (linhas/SIM)
+    from .routes.docs import bp as docs_bp  # ⬅️ NOVO: documentação viva (admin)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -243,6 +244,7 @@ def create_app():
     app.register_blueprint(monitoring_bp, url_prefix="/machines/monitoring")  # ⬅️ monitoramento (submódulo de Máquinas)
     app.register_blueprint(departments_bp, url_prefix="/departments")  # ⬅️ NOVO: departamentos
     app.register_blueprint(chips_bp, url_prefix="/machines/chips")  # ⬅️ chips (submódulo de Máquinas)
+    app.register_blueprint(docs_bp, url_prefix="/docs")  # ⬅️ NOVO: documentação viva (submódulo de Admin)
 
     # ===== Controle de acesso por módulo =====
     # Usuários comuns (não-admin) só acessam Chamados e o próprio Perfil.
