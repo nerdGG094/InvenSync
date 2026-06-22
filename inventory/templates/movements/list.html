@@ -289,13 +289,33 @@
 <script>
   (function(){
     const UINFO = {{ (users_info or {})|tojson }};   // usuário -> setor
+    const PINFO = {{ (products_info or {})|tojson }}; // produto -> {price, responsible_user, responsible_sector}
+    const prod = document.getElementById('product_id');
+    const cost = document.getElementById('unit_cost');
     const usr = document.getElementById('responsible_user');
     const sec = document.getElementById('responsible_sector');
     if (!usr || !sec) return;
+
     usr.addEventListener('change', function(){
       const setor = UINFO[this.value];
       if (setor) sec.value = setor;
     });
+
+    // Ao selecionar o material, traz custo unitário e responsável/setor do cadastro.
+    if (prod){
+      prod.addEventListener('change', function(){
+        const info = PINFO[this.value];
+        if (!info) return;
+        if (cost && info.price != null) cost.value = Number(info.price).toFixed(2);
+        if (info.responsible_user){
+          usr.value = info.responsible_user;
+          // setor: usa o do item se houver; senão, deixa o mapa usuário->setor preencher
+          sec.value = info.responsible_sector || UINFO[info.responsible_user] || '';
+        } else if (info.responsible_sector){
+          sec.value = info.responsible_sector;
+        }
+      });
+    }
   })();
 
   // ===== Nota fiscal: só aparece em entradas; o switch revela o anexo =====

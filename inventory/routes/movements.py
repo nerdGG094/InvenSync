@@ -56,10 +56,20 @@ def _save_nf(file_storage):
 def list_and_new():
     # ===== Formulário de criação =====
     form = MovementForm()
-    form.product_id.choices = [
-        (p.id, f"{p.sku} - {p.name}") for p in Product.query.order_by(Product.name).all()
-    ]
+    products = Product.query.order_by(Product.name).all()
+    form.product_id.choices = [(p.id, f"{p.sku} - {p.name}") for p in products]
     form.responsible_user.choices = people.user_choices("— Nenhum —")
+
+    # Mapa para autopreencher o formulário ao escolher o material: custo unitário
+    # (preço do cadastro) e responsável/setor já apontados no item.
+    products_info = {
+        p.id: {
+            "price": float(p.price) if p.price is not None else None,
+            "responsible_user": (p.responsible_user or "").strip(),
+            "responsible_sector": (p.responsible_sector or "").strip(),
+        }
+        for p in products
+    }
 
     if form.validate_on_submit():
         # Nota fiscal: só faz sentido em entradas e quando o switch está ligado
@@ -175,6 +185,7 @@ def list_and_new():
         pagination=pagination,
         totals=totals,
         users_info=people.users_sector_map(),
+        products_info=products_info,
     )
 
 
