@@ -24,8 +24,12 @@
         <div class="row g-3">
           <div class="col-12 col-md-6">
             {{ form.department.label(class="form-label fw-semibold") }}
-            {{ form.department(class="form-control" + (" is-invalid" if form.department.errors else ""), placeholder="Ex.: Compras") }}
+            {{ form.department(class="form-select" + (" is-invalid" if form.department.errors else "")) }}
             {{ field_error(form.department) }}
+            <div class="form-text">
+              Não está na lista?
+              <a href="{{ url_for('departments.new') }}" target="_blank">Cadastrar departamento</a>.
+            </div>
           </div>
           <div class="col-12 col-md-6">
             {{ form.email.label(class="form-label fw-semibold") }}

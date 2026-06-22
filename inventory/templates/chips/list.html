@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% block title %}Chips / Linhas{% endblock %}
+
+{% block extra_head %}
+<style>
+  .phone-grid{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); }
+  .phone-card{
+    position:relative; background:#1e1e1e; border:1px solid #243024; border-radius:16px;
+    padding:1.1rem 1.1rem 0.9rem; display:flex; flex-direction:column; gap:.85rem;
+    border-left:4px solid #5c6b5c;
+    transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+  }
+  .phone-card:hover{ transform:translateY(-3px); box-shadow:0 10px 24px rgba(0,0,0,.4); border-color:#2e4b3b; }
+  .phone-card.dim{ opacity:.65; }
+  .phone-top{ display:flex; align-items:flex-start; gap:.8rem; }
+  .phone-avatar{
+    width:50px; height:50px; flex:0 0 50px; border-radius:14px;
+    display:inline-flex; align-items:center; justify-content:center; font-size:1.35rem;
+    background:linear-gradient(135deg,#0f5132,#1e1e1e); color:#46e08a; border:1px solid #2e4b3b;
+  }
+  .phone-name{ font-weight:600; color:#e6ffe9; line-height:1.2; word-break:break-word; }
+  .phone-line{ font-size:.85rem; color:#9bb6a6; }
+  .phone-line.muted{ color:#6b7d70; font-style:italic; }
+  .phone-chips{ display:flex; flex-wrap:wrap; gap:.4rem; }
+  .pchip{
+    display:inline-flex; align-items:center; gap:.3rem; font-size:.74rem; font-weight:600;
+    padding:.2rem .55rem; border-radius:999px; background:#15211a; border:1px solid #243024; color:#9bb6a6;
+  }
+  .pchip i{ font-size:.85rem; }
+  .pchip.green{ background:rgba(0,200,83,.12); border-color:rgba(0,200,83,.35); color:#46e08a; }
+  .pchip.blue{ background:rgba(13,202,240,.12); border-color:rgba(13,202,240,.35); color:#5ad6ee; }
+  .pchip.amber{ background:rgba(255,193,7,.12); border-color:rgba(255,193,7,.35); color:#ffce6a; }
+  .pchip.purple{ background:rgba(170,120,255,.12); border-color:rgba(170,120,255,.35); color:#c9a6ff; }
+  .pchip.mono{ font-family:var(--bs-font-monospace, monospace); font-weight:500; }
+  .phone-foot{
+    display:flex; align-items:center; justify-content:space-between; gap:.5rem;
+    margin-top:auto; padding-top:.75rem; border-top:1px solid #243024;
+  }
+  .phone-actions{ display:flex; gap:.35rem; }
+  .group-section{ margin-bottom:1rem; border:1px solid #243024; border-radius:14px; background:#161616; overflow:hidden; }
+  .group-head{
+    display:flex; align-items:center; gap:.55rem; cursor:pointer; user-select:none; list-style:none;
+    font-weight:700; color:#cfe9d8; font-size:1.02rem; padding:.85rem 1rem;
+  }
+  .group-head::-webkit-details-marker{ display:none; }
+  .group-head:hover{ background:#1b2a1f; }
+  .group-head > i{ color:#46e08a; }
+  .group-head .chev{ color:#6b7d70; transition:transform .15s ease; }
+  .group-section[open] > .group-head .chev{ transform:rotate(90deg); }
+  .group-section[open] > .group-head{ border-bottom:1px solid #243024; }
+  .group-head.no-sector, .group-head.no-sector > i{ color:#9bb6a6; }
+  .group-head .count{
+    font-size:.78rem; font-weight:600; color:#9bb6a6;
+    background:#15211a; border:1px solid #243024; border-radius:999px; padding:.1rem .55rem;
+  }
+  .group-section .phone-grid{ padding:1rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set u_meta = {
+  'particular': ('Particular','warning'), 'aparelho_empresa': ('Aparelho empresa','success'),
+  'disponivel': ('Disponível','info'), 'cancelado': ('Cancelado','secondary') } %}
+{% set u_color = {'particular':'#ffc107','aparelho_empresa':'#00c853','disponivel':'#0dcaf0','cancelado':'#5c6b5c'} %}
+
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-sim"></i></span>
+    Chips / Linhas
+    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ totals.total }}</span>
+  </h1>
+  <a href="{{ url_for('chips.new') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Novo Chip</a>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <a href="{{ url_for('chips.list_view', usage='particular') }}" class="text-decoration-none">
+      <div class="card stat-card h-100 {{ 'border-warning' if usage=='particular' }}" style="border-left-color:#ffc107"><div class="card-body d-flex align-items-center justify-content-between">
+        <div><div class="text-muted small">Em celular particular</div><div class="h3 mb-0 number text-warning">{{ totals.particular }}</div></div>
+        <i class="bi bi-person-vcard fs-2 text-warning"></i>
+      </div></div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{{ url_for('chips.list_view', usage='aparelho_empresa') }}" class="text-decoration-none">
+      <div class="card stat-card h-100 {{ 'border-success' if usage=='aparelho_empresa' }}"><div class="card-body d-flex align-items-center justify-content-between">
+        <div><div class="text-muted small">Em aparelho da empresa</div><div class="h3 mb-0 number text-success">{{ totals.aparelho_empresa }}</div></div>
+        <i class="bi bi-phone-fill fs-2 text-success"></i>
+      </div></div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{{ url_for('chips.list_view', usage='disponivel') }}" class="text-decoration-none">
+      <div class="card stat-card h-100 {{ 'border-info' if usage=='disponivel' }}" style="border-left-color:#0dcaf0"><div class="card-body d-flex align-items-center justify-content-between">
+        <div><div class="text-muted small">Disponíveis</div><div class="h3 mb-0 number text-info">{{ totals.disponivel }}</div></div>
+        <i class="bi bi-box-seam fs-2 text-info"></i>
+      </div></div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{{ url_for('chips.list_view') }}" class="text-decoration-none">
+      <div class="card stat-card h-100 {{ 'border-light' if not usage }}"><div class="card-body d-flex align-items-center justify-content-between">
+        <div><div class="text-muted small">Total</div><div class="h3 mb-0 number">{{ totals.total }}</div></div>
+        <i class="bi bi-sim fs-2 text-success"></i>
+      </div></div>
+    </a>
+  </div>
+</div>
+
+<div class="table-card mb-3">
+  <div class="table-card-tools d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <form class="d-flex gap-2 mov-filters" method="get" role="search">
+      <div class="input-group search-box">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input class="form-control" type="search" placeholder="Responsável, número, operadora, ICCID..." name="q" value="{{ q }}">
+      </div>
+      <select class="form-select" name="usage" style="max-width:200px" onchange="this.form.submit()">
+        <option value="">Uso: todos</option>
+        {% for k, m in u_meta.items() %}<option value="{{ k }}" {{ 'selected' if usage==k }}>{{ m[0] }}</option>{% endfor %}
+      </select>
+      <button class="btn btn-primary btn-icon" type="submit"><i class="bi bi-search"></i></button>
+      {% if q or usage %}<a href="{{ url_for('chips.list_view') }}" class="btn btn-outline-light btn-icon" title="Limpar"><i class="bi bi-x-lg"></i></a>{% endif %}
+    </form>
+  </div>
+</div>
+
+{% if items %}
+{% for g in grupos %}
+<details class="group-section">
+  <summary class="group-head {{ 'no-sector' if not g.name }}">
+    <i class="bi bi-chevron-right chev"></i>
+    <i class="bi {{ 'bi-diagram-3' if g.name else 'bi-dash-circle' }}"></i>
+    {{ g.name or 'Sem setor' }}
+    <span class="count">{{ g['items']|length }}</span>
+  </summary>
+  <div class="phone-grid">
+  {% for c in g['items'] %}
+  {% set um = u_meta.get(c.usage, ('—','secondary')) %}
+  <article class="phone-card {{ 'dim' if c.usage == 'cancelado' }}" style="border-left-color:{{ u_color.get(c.usage,'#5c6b5c') }}">
+    <div class="phone-top">
+      <span class="phone-avatar"><i class="bi bi-sim"></i></span>
+      <div class="flex-grow-1 min-w-0">
+        <div class="phone-name"><i class="bi bi-telephone"></i> {{ c.phone_number }}</div>
+        {% if c.carrier or c.plan %}
+          <div class="phone-line">{{ c.carrier or '' }}{% if c.carrier and c.plan %} · {% endif %}{{ c.plan or '' }}</div>
+        {% endif %}
+      </div>
+      <span class="badge bg-{{ um[1] }}-subtle text-{{ um[1] }}-emphasis">{{ um[0] }}</span>
+    </div>
+
+    <div class="phone-chips">
+      {% if c.assigned_employee %}
+        <span class="pchip green"><i class="bi bi-person-fill"></i> {{ c.assigned_employee }}</span>
+      {% else %}
+        <span class="pchip"><i class="bi bi-person-dash"></i> sem responsável</span>
+      {% endif %}
+      {% if c.usage == 'particular' %}<span class="pchip purple" title="Chip no celular particular"><i class="bi bi-person-vcard"></i> particular</span>{% endif %}
+      {% if c.mobile %}<span class="pchip blue" title="Aparelho da empresa"><i class="bi bi-phone"></i> {{ c.mobile.brand or '' }} {{ c.mobile.model }}</span>{% endif %}
+      {% if c.sector %}<span class="pchip"><i class="bi bi-diagram-3"></i> {{ c.sector }}</span>{% endif %}
+      {% if c.iccid %}<span class="pchip mono" title="ICCID"><i class="bi bi-upc"></i> {{ c.iccid }}</span>{% endif %}
+    </div>
+
+    <div class="phone-foot">
+      <span class="text-muted small">
+        {% if c.handed_at %}<i class="bi bi-calendar-check"></i> {{ c.handed_at.strftime('%d/%m/%Y') }}{% else %}<span class="contact-muted">—</span>{% endif %}
+      </span>
+      <div class="phone-actions">
+        <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('chips.termo', cid=c.id) }}" target="_blank" title="Termo de responsabilidade"><i class="bi bi-file-earmark-text"></i></a>
+        <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('chips.edit', cid=c.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
+        <form action="{{ url_for('chips.delete', cid=c.id) }}" method="post" class="d-inline" onsubmit="return confirm('Excluir o chip “{{ c.phone_number }}”?');">
+          <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
+        </form>
+      </div>
+    </div>
+  </article>
+  {% endfor %}
+  </div>
+</details>
+{% endfor %}
+{% else %}
+<div class="table-card">
+  <div class="empty-state"><i class="bi bi-sim"></i>
+    {% if q or usage %}Nenhum chip para o filtro.{% else %}Nenhum chip cadastrado ainda.{% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

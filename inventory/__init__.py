@@ -82,6 +82,31 @@ def _seed_people_into_users():
     except Exception:  # noqa: BLE001
         db.session.rollback()
 
+def _seed_departments_from_sectors():
+    """Popula a tabela `department` com os setores já existentes nos colaboradores.
+
+    Roda de forma idempotente: cria um Department para cada `User.sector` distinto
+    que ainda não exista (casando por nome, case-insensitive). Assim, ao ligar o
+    novo seletor de departamentos, todas as pessoas já cadastradas continuam com
+    o setor disponível na lista — nada se perde."""
+    from .models.user import User
+    from .models.department import Department
+    try:
+        existentes = {(d.name or "").strip().lower() for d in Department.query.all()}
+        novos = {}  # chave -> nome original
+        for u in User.query.all():
+            nome = (u.sector or "").strip()
+            chave = nome.lower()
+            if nome and chave not in existentes and chave not in novos:
+                novos[chave] = nome
+        for nome in novos.values():
+            db.session.add(Department(name=nome, is_active=True))
+        if novos:
+            db.session.commit()
+    except Exception:  # noqa: BLE001
+        db.session.rollback()
+
+
 # Endpoints liberados para usuários NÃO administradores (perfil "comum").
 # Eles só acessam Chamados, o próprio Perfil, autenticação e estáticos.
 NON_ADMIN_PREFIXES = ("tickets.", "profile.", "auth.", "kb.")
@@ -124,6 +149,8 @@ def create_app():
     from .models.domain import Domain
     from .models.colaborador import Colaborador
     from .models.monitor import MonitoredHost
+    from .models.department import Department
+    from .models.chip import SimChip
 
     # Cria tabelas e semente inicial
     with app.app_context():
@@ -144,6 +171,8 @@ def create_app():
             db.session.commit()
         # Unifica colaboradores/ativos no cadastro central de pessoas (user).
         _seed_people_into_users()
+        # Popula os departamentos a partir dos setores já usados nos colaboradores.
+        _seed_departments_from_sectors()
         db.session.commit()
 
     # Loader do usuário
@@ -182,6 +211,8 @@ def create_app():
     from .routes.backups import bp as backups_bp  # ⬅️ NOVO: backups do banco (admin)
     from .routes.colaboradores import bp as colaboradores_bp  # ⬅️ NOVO: cadastro central de colaboradores
     from .routes.monitoring import bp as monitoring_bp  # ⬅️ NOVO: monitoramento de uptime
+    from .routes.departments import bp as departments_bp  # ⬅️ NOVO: cadastro de departamentos
+    from .routes.chips import bp as chips_bp  # ⬅️ NOVO: controle de chips (linhas/SIM)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -210,6 +241,8 @@ def create_app():
     app.register_blueprint(backups_bp, url_prefix="/backups")  # ⬅️ NOVO: backups do banco
     app.register_blueprint(colaboradores_bp, url_prefix="/colaboradores")  # ⬅️ NOVO: colaboradores
     app.register_blueprint(monitoring_bp, url_prefix="/machines/monitoring")  # ⬅️ monitoramento (submódulo de Máquinas)
+    app.register_blueprint(departments_bp, url_prefix="/departments")  # ⬅️ NOVO: departamentos
+    app.register_blueprint(chips_bp, url_prefix="/machines/chips")  # ⬅️ chips (submódulo de Máquinas)
 
     # ===== Controle de acesso por módulo =====
     # Usuários comuns (não-admin) só acessam Chamados e o próprio Perfil.

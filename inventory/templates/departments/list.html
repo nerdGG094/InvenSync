@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Departamentos{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-diagram-3"></i></span>
+    Departamentos
+    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ items|length }}</span>
+  </h1>
+  <a href="{{ url_for('departments.new') }}" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> Novo Departamento
+  </a>
+</div>
+
+<div class="table-card">
+  <div class="table-card-tools">
+    <form class="d-flex search-box" method="get" role="search">
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input class="form-control" type="search" placeholder="Buscar departamento..." name="q" value="{{ q }}">
+      </div>
+      {% if q %}
+      <a href="{{ url_for('departments.list_view') }}" class="btn btn-outline-light ms-2" title="Limpar"><i class="bi bi-x-lg"></i></a>
+      {% endif %}
+    </form>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead>
+        <tr>
+          <th style="min-width:220px">Nome</th>
+          <th style="width:140px">Colaboradores</th>
+          <th style="width:120px">Situação</th>
+          <th class="text-end" style="width:170px">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in items %}
+        <tr>
+          <td class="fw-semibold">
+            <i class="bi bi-diagram-3-fill text-success me-1 small"></i> {{ d.name }}
+          </td>
+          <td>
+            <span class="badge bg-secondary-subtle text-secondary-emphasis">
+              {{ counts.get(d.name|lower, 0) }}
+            </span>
+          </td>
+          <td>
+            {% if d.is_active %}
+              <span class="badge bg-success-subtle text-success-emphasis">Ativo</span>
+            {% else %}
+              <span class="badge bg-secondary-subtle text-secondary-emphasis">Inativo</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('departments.edit', did=d.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
+            <form action="{{ url_for('departments.toggle_active', did=d.id) }}" method="post" class="d-inline">
+              <button class="btn btn-sm btn-outline-light btn-icon" title="{{ 'Inativar' if d.is_active else 'Ativar' }}">
+                <i class="bi {{ 'bi-toggle-on text-success' if d.is_active else 'bi-toggle-off' }}"></i>
+              </button>
+            </form>
+            <form action="{{ url_for('departments.delete', did=d.id) }}" method="post" class="d-inline" onsubmit="return confirm('Excluir o departamento “{{ d.name }}”?');">
+              <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="4">
+            <div class="empty-state">
+              <i class="bi bi-diagram-3"></i>
+              {% if q %}Nenhum departamento encontrado para “{{ q }}”.{% else %}Nenhum departamento cadastrado ainda.{% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,11 +1,15 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField
+from wtforms import StringField, PasswordField, BooleanField, SubmitField, SelectField
 from wtforms.validators import DataRequired, Length, Optional, Email
 
 
 class ColaboradorForm(FlaskForm):
     name = StringField("Nome", validators=[DataRequired(), Length(min=2, max=150)])
-    department = StringField("Departamento / Setor", validators=[Optional(), Length(max=120)])
+    # Departamento escolhido a partir do cadastro de Departamentos (não mais
+    # digitado). As opções (`choices`) são preenchidas na rota. O valor é o
+    # próprio nome do setor, gravado em `User.sector`.
+    department = SelectField("Departamento / Setor", validators=[Optional(), Length(max=120)],
+                             choices=[], validate_choice=False)
     email = StringField("E-mail", validators=[Optional(), Email(check_deliverability=False), Length(max=255)])
     is_active = BooleanField("Ativo (pode ser selecionado como responsável)", default=True)
 

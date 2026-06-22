@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<title>Termo de Responsabilidade — Chip {{ c.phone_number }}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; color:#111; background:#f3f3f3; margin:0; padding:24px; }
+  .sheet { background:#fff; max-width:820px; margin:0 auto; padding:48px 56px; box-shadow:0 2px 12px rgba(0,0,0,.15); }
+  .toolbar { max-width:820px; margin:0 auto 14px; display:flex; gap:8px; justify-content:flex-end; }
+  .btn { border:1px solid #ccc; background:#fff; border-radius:6px; padding:8px 14px; cursor:pointer; font-size:14px; text-decoration:none; color:#222; }
+  .btn.primary { background:#2e8b57; color:#fff; border-color:#2e8b57; }
+  h1 { font-size:20px; text-align:center; margin:0 0 4px; text-transform:uppercase; letter-spacing:.5px; }
+  .head { text-align:center; border-bottom:2px solid #2e8b57; padding-bottom:14px; margin-bottom:22px; }
+  .company { font-size:18px; font-weight:700; color:#2e8b57; }
+  .sub { font-size:12px; color:#555; }
+  .who { margin:18px 0; font-size:14px; line-height:1.7; }
+  .who b { display:inline-block; min-width:130px; color:#333; }
+  p.intro { font-size:13.5px; line-height:1.6; text-align:justify; }
+  table { width:100%; border-collapse:collapse; margin:16px 0; font-size:12.5px; }
+  th, td { border:1px solid #999; padding:6px 8px; text-align:left; }
+  th { background:#e8f3ec; }
+  .terms { font-size:12px; line-height:1.6; text-align:justify; margin-top:14px; }
+  .sign { margin-top:60px; display:flex; gap:50px; }
+  .sign div { flex:1; text-align:center; border-top:1px solid #333; padding-top:6px; font-size:12.5px; }
+  .city { margin-top:36px; font-size:13px; text-align:right; }
+  @media print {
+    body { background:#fff; padding:0; }
+    .sheet { box-shadow:none; max-width:none; padding:24px 28px; }
+    .toolbar { display:none; }
+  }
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <a href="javascript:history.back()" class="btn">← Voltar</a>
+    <button class="btn primary" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+  </div>
+
+  <div class="sheet">
+    <div class="head">
+      <div class="company">Refrigerantes Jaboti</div>
+      <div class="sub">Departamento de Tecnologia da Informação</div>
+    </div>
+
+    <h1>Termo de Responsabilidade de Chip / Linha Telefônica</h1>
+
+    <div class="who">
+      <div><b>Colaborador(a):</b> {{ c.assigned_employee or '___________________________' }}</div>
+      <div><b>Setor:</b> {{ c.sector or '___________________________' }}</div>
+    </div>
+
+    <p class="intro">
+      Declaro ter recebido da empresa <b>Refrigerantes Jaboti</b> o chip (linha
+      telefônica) abaixo relacionado, de propriedade da empresa, para uso no
+      desempenho das minhas atividades profissionais — inclusive quando instalado
+      em aparelho de minha propriedade (celular particular) —, comprometendo-me a
+      zelar pela sua guarda e correta utilização.
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:150px">Número / Linha</th>
+          <th style="width:110px">Operadora</th>
+          <th>Plano / Pacote</th>
+          <th style="width:170px">ICCID (nº do chip)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>{{ c.phone_number }}</td>
+          <td>{{ c.carrier or '—' }}</td>
+          <td>{{ c.plan or '—' }}</td>
+          <td>{{ c.iccid or '—' }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    {% if c.usage == 'particular' %}
+    <p class="intro">
+      O chip será utilizado em <b>aparelho particular do(a) colaborador(a)</b>.
+      A empresa não se responsabiliza pelo aparelho; o presente termo refere-se
+      exclusivamente à linha/chip fornecido.
+    </p>
+    {% elif c.mobile %}
+    <p class="intro">
+      O chip está instalado no aparelho da empresa
+      <b>{{ c.mobile.brand or '' }} {{ c.mobile.model }}</b>{% if c.mobile.imei %} (IMEI {{ c.mobile.imei }}){% endif %}.
+    </p>
+    {% endif %}
+
+    <div class="terms">
+      <p><b>Estou ciente de que:</b></p>
+      1. O chip / linha é de propriedade da empresa e destina-se ao uso profissional;<br>
+      2. Comprometo-me a comunicar imediatamente ao setor de TI qualquer perda, furto ou extravio, para bloqueio da linha;<br>
+      3. Responsabilizo-me pelo uso indevido da linha e por custos decorrentes de uso particular não autorizado (ligações, dados, serviços e assinaturas);<br>
+      4. Não utilizarei a linha para fins ilícitos, ofensivos ou que exponham a empresa;<br>
+      5. Devolverei o chip quando solicitado ou no momento do meu desligamento, autorizando o cancelamento/portabilidade da linha pela empresa.
+    </div>
+
+    <div class="city">Jaboticabal, {{ data_extenso }}.</div>
+
+    <div class="sign">
+      <div>{{ c.assigned_employee or '' }}<br><span class="sub">Colaborador(a)</span></div>
+      <div>_______________________<br><span class="sub">Responsável de TI</span></div>
+    </div>
+  </div>
+
+  <script>
+    window.addEventListener('load', function(){ setTimeout(function(){ window.print(); }, 400); });
+  </script>
+</body>
+</html>

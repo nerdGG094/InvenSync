@@ -27,6 +27,23 @@ def _clean(v):
     return v or None
 
 
+def _dept_choices(current=None):
+    """Opções do seletor de departamento: ('' em branco) + departamentos ativos.
+
+    Inclui o setor atual da pessoa mesmo que ele esteja inativo ou ainda não
+    cadastrado, para não perder o vínculo ao editar registros antigos.
+    """
+    from ..models.department import Department
+    nomes = [d.name for d in Department.query
+             .filter(Department.is_active.is_(True))
+             .order_by(Department.name).all()]
+    atual = (current or "").strip()
+    if atual and atual not in nomes:
+        nomes.append(atual)
+        nomes.sort(key=str.lower)
+    return [("", "— Selecione —")] + [(n, n) for n in nomes]
+
+
 def _asset_counts() -> dict:
     """{ nome_em_minúsculas: nº de equipamentos vinculados (máquinas + celulares) }."""
     from ..models.machine import Machine
@@ -116,6 +133,7 @@ def list_view():
 @bp.route("/new", methods=["GET", "POST"])
 def new():
     form = ColaboradorForm()
+    form.department.choices = _dept_choices(form.department.data)
     if form.validate_on_submit():
         nome = form.name.data.strip()
         if _name_taken(nome):
@@ -146,9 +164,10 @@ def new():
 def edit(cid):
     person = User.query.get_or_404(cid)
     form = ColaboradorForm(obj=person)
+    form.department.choices = _dept_choices(person.sector)
     if request.method == "GET":
         # `department` no form mapeia para `sector` no modelo.
-        form.department.data = person.sector
+        form.department.data = person.sector or ""
     if form.validate_on_submit():
         nome = form.name.data.strip()
         if _name_taken(nome, ignore_id=person.id):
