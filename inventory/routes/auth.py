@@ -10,8 +10,8 @@ bp = Blueprint("auth", __name__)
 PENDING_KEY = "pending_2fa_uid"
 
 def _home_for(user):
-    """Tela inicial conforme o perfil: admin -> painel, comum -> chamados."""
-    return url_for("dashboard.index") if user.is_admin else url_for("tickets.list_view")
+    """Tela inicial conforme o perfil: admin -> painel, comum -> central de avisos."""
+    return url_for("dashboard.index") if user.is_admin else url_for("announcements.list_view")
 
 
 @bp.route("/login", methods=["GET","POST"])

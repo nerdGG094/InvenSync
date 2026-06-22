@@ -141,7 +141,7 @@ def _seed_departments_from_sectors():
 
 # Endpoints liberados para usuários NÃO administradores (perfil "comum").
 # Eles só acessam Chamados, o próprio Perfil, autenticação e estáticos.
-NON_ADMIN_PREFIXES = ("tickets.", "profile.", "auth.", "kb.")
+NON_ADMIN_PREFIXES = ("tickets.", "profile.", "auth.", "kb.", "announcements.")
 NON_ADMIN_ENDPOINTS = ("static", "health.health")
 
 def create_app():
@@ -192,6 +192,7 @@ def create_app():
     from .models.monitor import MonitoredHost
     from .models.department import Department
     from .models.chip import SimChip
+    from .models.announcement import Announcement
 
     # Cria tabelas e semente inicial
     with app.app_context():
@@ -257,6 +258,7 @@ def create_app():
     from .routes.departments import bp as departments_bp  # ⬅️ NOVO: cadastro de departamentos
     from .routes.chips import bp as chips_bp  # ⬅️ NOVO: controle de chips (linhas/SIM)
     from .routes.docs import bp as docs_bp  # ⬅️ NOVO: documentação viva (admin)
+    from .routes.announcements import bp as announcements_bp  # ⬅️ NOVO: central de avisos (mural)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -288,6 +290,7 @@ def create_app():
     app.register_blueprint(departments_bp, url_prefix="/departments")  # ⬅️ NOVO: departamentos
     app.register_blueprint(chips_bp, url_prefix="/machines/chips")  # ⬅️ chips (submódulo de Máquinas)
     app.register_blueprint(docs_bp, url_prefix="/docs")  # ⬅️ NOVO: documentação viva (submódulo de Admin)
+    app.register_blueprint(announcements_bp, url_prefix="/avisos")  # ⬅️ NOVO: central de avisos (mural)
 
     # ===== Controle de acesso por módulo =====
     # Usuários comuns (não-admin) só acessam Chamados e o próprio Perfil.
@@ -298,8 +301,8 @@ def create_app():
         ep = request.endpoint or ""
         if ep in NON_ADMIN_ENDPOINTS or ep.startswith(NON_ADMIN_PREFIXES):
             return
-        # Bloqueia o resto: manda para a área de chamados
-        return redirect(url_for("tickets.list_view"))
+        # Bloqueia o resto: manda para a tela inicial do perfil comum (avisos)
+        return redirect(url_for("announcements.list_view"))
 
     # Disponibiliza helper de avatar nos templates
     @app.context_processor

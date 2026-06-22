@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Central de Avisos{% endblock %}
+
+{% block extra_head %}
+<style>
+  .av-card { background:#15211a; border:1px solid #243024; border-radius:14px;
+             padding:1.1rem 1.2rem; position:relative; overflow:hidden; }
+  .av-card .av-stripe { position:absolute; left:0; top:0; bottom:0; width:5px; }
+  .av-card.pinned { border-color:#3a5a45; box-shadow:0 0 0 1px #2e6b4533; }
+  .av-title { color:#e6ffe9; font-weight:600; font-size:1.1rem; line-height:1.3; }
+  .av-body { color:#cfe9d8; white-space:pre-wrap; margin-top:.5rem; }
+  .av-meta { color:#8fb0a0; font-size:.78rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set lvl_meta = {
+  'info':    ('Informativo','info','bi-info-circle'),
+  'aviso':   ('Atenção','warning','bi-exclamation-triangle'),
+  'urgente': ('Urgente','danger','bi-exclamation-octagon') } %}
+
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-megaphone"></i></span>
+    Central de Avisos
+    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ items|length }}</span>
+  </h1>
+  {% if is_admin %}
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('announcements.new') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Novo Aviso</a>
+  </div>
+  {% endif %}
+</div>
+
+{% if not is_admin %}
+<div class="card mb-3" style="border-left:4px solid var(--brand);">
+  <div class="card-body">
+    <h2 class="h5 mb-1"><i class="bi bi-megaphone text-success"></i> Olá, {{ current_user.name.split(' ')[0] }}!</h2>
+    <p class="text-muted mb-0">Aqui ficam os recados e comunicados da equipe. Confira sempre que entrar.</p>
+  </div>
+</div>
+{% endif %}
+
+<div class="row g-3">
+  {% for a in items %}
+  {% set lm = lvl_meta.get(a.level, ('Informativo','info','bi-info-circle')) %}
+  <div class="col-12">
+    <div class="av-card {% if a.is_pinned %}pinned{% endif %} {% if not a.is_active %}opacity-50{% endif %}">
+      <span class="av-stripe bg-{{ lm[1] }}"></span>
+      <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          {% if a.is_pinned %}<i class="bi bi-pin-angle-fill text-warning" title="Fixado"></i>{% endif %}
+          <span class="av-title">{{ a.title }}</span>
+          <span class="badge bg-{{ lm[1] }}-subtle text-{{ lm[1] }}-emphasis"><i class="bi {{ lm[2] }} me-1"></i>{{ lm[0] }}</span>
+          {% if is_admin and not a.is_active %}<span class="badge bg-secondary-subtle text-secondary-emphasis">Despublicado</span>{% endif %}
+        </div>
+        {% if is_admin %}
+        <div class="d-flex gap-1 flex-shrink-0">
+          <form method="post" action="{{ url_for('announcements.toggle_pin', aid=a.id) }}">
+            <button class="btn btn-sm btn-outline-light btn-icon" title="{{ 'Desafixar' if a.is_pinned else 'Fixar no topo' }}">
+              <i class="bi {{ 'bi-pin-angle-fill' if a.is_pinned else 'bi-pin-angle' }}"></i>
+            </button>
+          </form>
+          <form method="post" action="{{ url_for('announcements.toggle_active', aid=a.id) }}">
+            <button class="btn btn-sm btn-outline-light btn-icon" title="{{ 'Despublicar' if a.is_active else 'Publicar' }}">
+              <i class="bi {{ 'bi-eye-slash' if a.is_active else 'bi-eye' }}"></i>
+            </button>
+          </form>
+          <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('announcements.edit', aid=a.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
+          <form method="post" action="{{ url_for('announcements.delete', aid=a.id) }}" onsubmit="return confirm('Excluir este aviso?');">
+            <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+      <div class="av-body">{{ a.body }}</div>
+      <div class="av-meta mt-2">
+        <i class="bi bi-person"></i> {{ a.author.name if a.author else 'Equipe' }}
+        · <i class="bi bi-clock"></i> {{ a.created_at.strftime('%d/%m/%Y %H:%M') if a.created_at else '' }}
+        {% if a.updated_at and a.created_at and (a.updated_at - a.created_at).total_seconds() > 60 %}
+          · <span class="fst-italic">editado</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12">
+    <div class="table-card"><div class="empty-state"><i class="bi bi-megaphone"></i>
+      Nenhum aviso publicado{% if is_admin %} ainda. Clique em <strong>Novo Aviso</strong> para criar o primeiro.{% else %} no momento.{% endif %}
+    </div></div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
