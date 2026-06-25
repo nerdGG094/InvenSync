@@ -71,6 +71,27 @@ Estoque (products/movements/kanban/reports/categories/suppliers), Máquinas & su
 
 The **kiox** module (`routes/kiox.py`) serves a self-contained fleet-tracking map (`inventory/kiox/RASTREIO-mapa.html`, Leaflet + Firebase) raw via `send_file` (bypassing Jinja); it's a copied snapshot — if the original under the external `KioX/` folder changes, the copy must be re-synced.
 
+### Module map (blueprint → URL prefix)
+Quick navigation aid; for fields/endpoints read the module itself. Several "Máquinas" submodules live under `/machines/...`.
+
+| Prefix | Module | | Prefix | Module |
+|---|---|---|---|---|
+| `/` | dashboard (admin home) | | `/machines/maintenance` | maintenance |
+| `/avisos` | announcements (common home) | | `/machines/monitoring` | monitoring |
+| `/tickets` | tickets (helpdesk) | | `/machines/chips` | chips (SIM/lines) |
+| `/kb` | knowledge base | | `/routers` | routers |
+| `/profile` | profile (+ 2FA) | | `/labels` | QR labels |
+| `/products` | products/materials | | `/colaboradores` | people registry |
+| `/movements` | stock movements | | `/departments` | departments |
+| `/kanban` | stock kanban | | `/assets` | assets-by-person |
+| `/reports` | reports | | `/credentials` | secrets vault (admin) |
+| `/categories` `/suppliers` | stock cadastros | | `/audit` | audit trail (admin) |
+| `/licenses` `/domains` | licenses/domains | | `/docs` | living docs (admin) |
+| `/machines` | machines | | `/kiox` | fleet map (admin) |
+| `/machines/mobile` | mobile devices | | `/backups` | DB backups (admin) |
+| `/machines/cleanings` | cleanings | | `/wpp` | WhatsApp test |
+| (no prefix) | `auth` (login/2FA), `health` (/health) | | | |
+
 ## UI conventions
 - Single `base.html`; child templates `{% extends "base.html" %}` and use `{% block content %}`, `{% block extra_head %}`, `{% block extra_js %}`.
 - Dark theme. On desktop (≥992px) the navbar becomes a fixed **icon-only left rail** (labels become tooltips); keep an `<i class="bi ...">` icon on every nav item. Icons are Bootstrap Icons; CSS is Bootstrap 5 via CDN plus `static/style.css` and `:root` brand vars (`--brand: #00c853`).
