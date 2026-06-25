@@ -30,4 +30,5 @@ class MobileForm(FlaskForm):
     handed_at = DateField("Data de entrega", validators=[Optional()])
     notes = TextAreaField("Observações", validators=[Optional()])
     label_applied = BooleanField("Etiqueta QR colada no aparelho", default=False)
+    kiox_installed = BooleanField("KioX instalado neste aparelho", default=False)
     submit = SubmitField("Salvar")

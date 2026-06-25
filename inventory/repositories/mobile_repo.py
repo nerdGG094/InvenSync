@@ -9,6 +9,7 @@ _ALLOWED = {
     "brand", "model", "imei", "serial_number", "phone_number", "carrier",
     "plan", "assigned_employee", "assigned_employee_2", "assigned_employee_3",
     "sector", "patrimony", "status", "handed_at", "notes", "label_applied",
+    "kiox_installed",
 }
 
 

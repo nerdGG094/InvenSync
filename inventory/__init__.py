@@ -30,6 +30,8 @@ def _run_light_migrations():
         'ALTER TABLE machine ADD COLUMN IF NOT EXISTS label_applied BOOLEAN NOT NULL DEFAULT false',
         'ALTER TABLE router ADD COLUMN IF NOT EXISTS label_applied BOOLEAN NOT NULL DEFAULT false',
         'ALTER TABLE mobile_device ADD COLUMN IF NOT EXISTS label_applied BOOLEAN NOT NULL DEFAULT false',
+        # KioX (app de rastreio) instalado no celular.
+        'ALTER TABLE mobile_device ADD COLUMN IF NOT EXISTS kiox_installed BOOLEAN NOT NULL DEFAULT false',
     ]
     for sql in stmts:
         try:

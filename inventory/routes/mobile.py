@@ -59,6 +59,7 @@ def _to_kwargs(form: MobileForm) -> dict:
         handed_at=form.handed_at.data,
         notes=s(form.notes.data),
         label_applied=bool(form.label_applied.data),
+        kiox_installed=bool(form.kiox_installed.data),
     )
 
 

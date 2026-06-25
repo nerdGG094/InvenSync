@@ -28,6 +28,9 @@ class MobileDevice(db.Model):
     # Etiqueta QR já colada no aparelho (marcada pelo analista na tela de Etiquetas).
     label_applied = db.Column(db.Boolean, nullable=False, default=False,
                               server_default=db.text("false"))
+    # App KioX (rastreio da frota) instalado neste aparelho.
+    kiox_installed = db.Column(db.Boolean, nullable=False, default=False,
+                               server_default=db.text("false"))
     handed_at = db.Column(db.Date, nullable=True)              # data de entrega
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
