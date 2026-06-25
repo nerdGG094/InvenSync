@@ -259,6 +259,7 @@ def create_app():
     from .routes.chips import bp as chips_bp  # ⬅️ NOVO: controle de chips (linhas/SIM)
     from .routes.docs import bp as docs_bp  # ⬅️ NOVO: documentação viva (admin)
     from .routes.announcements import bp as announcements_bp  # ⬅️ NOVO: central de avisos (mural)
+    from .routes.kiox import bp as kiox_bp  # ⬅️ NOVO: Kiox — mapa de rastreio (admin)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -291,6 +292,7 @@ def create_app():
     app.register_blueprint(chips_bp, url_prefix="/machines/chips")  # ⬅️ chips (submódulo de Máquinas)
     app.register_blueprint(docs_bp, url_prefix="/docs")  # ⬅️ NOVO: documentação viva (submódulo de Admin)
     app.register_blueprint(announcements_bp, url_prefix="/avisos")  # ⬅️ NOVO: central de avisos (mural)
+    app.register_blueprint(kiox_bp, url_prefix="/kiox")  # ⬅️ NOVO: Kiox — mapa de rastreio (submódulo de Admin)
 
     # ===== Controle de acesso por módulo =====
     # Usuários comuns (não-admin) só acessam Chamados e o próprio Perfil.

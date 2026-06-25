@@ -271,13 +271,14 @@
         {# ====== Admin: Cofre & Auditoria (somente Admin) ====== #}
         {% if current_user.is_authenticated and current_user.is_admin %}
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle {% if request.endpoint and (request.endpoint.startswith('credentials.') or request.endpoint.startswith('audit.') or request.endpoint.startswith('docs.')) %}active{% endif %}"
+          <a class="nav-link dropdown-toggle {% if request.endpoint and (request.endpoint.startswith('credentials.') or request.endpoint.startswith('audit.') or request.endpoint.startswith('docs.') or request.endpoint.startswith('kiox.')) %}active{% endif %}"
              href="#" id="ddAdmin" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             <i class="bi bi-gear"></i> Admin
           </a>
           <ul class="dropdown-menu" aria-labelledby="ddAdmin">
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('credentials.') %}active{% endif %}" href="{{ url_for('credentials.list_view') }}"><i class="bi bi-key me-2"></i> Cofre</a></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('audit.') %}active{% endif %}" href="{{ url_for('audit.list_view') }}"><i class="bi bi-shield-lock me-2"></i> Auditoria</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('kiox.index') }}" target="_blank" rel="noopener"><i class="bi bi-geo-alt me-2"></i> Kiox <span class="text-muted small">(mapa)</span></a></li>
             <li><hr class="dropdown-divider"></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('docs.') %}active{% endif %}" href="{{ url_for('docs.index') }}"><i class="bi bi-journal-code me-2"></i> Documentação</a></li>
           </ul>

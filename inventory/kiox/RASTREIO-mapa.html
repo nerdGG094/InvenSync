@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KioX - Frota (mapa)</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body { margin: 0; height: 100%; font-family: sans-serif; }
+    #topo { background:#0F1216; color:#fff; padding:10px 14px; font-size:15px; display:flex; align-items:center; gap:10px; }
+    #topo b { color:#4aa3ff; }
+    #sair { margin-left:auto; background:#1c2530; color:#cfe3ff; border:1px solid #2e3d4d; border-radius:6px; padding:5px 10px; cursor:pointer; font-size:13px; }
+    #mapa { width: 100%; height: calc(100% - 44px); }
+    .info { font-size: 13px; line-height: 1.5; }
+    /* Tela de login */
+    #login { position:fixed; inset:0; background:#0F1216; color:#fff; display:flex; align-items:center; justify-content:center; z-index:1000; }
+    #login .box { background:#161b22; padding:28px 26px; border-radius:12px; width:300px; box-shadow:0 8px 30px rgba(0,0,0,.5); }
+    #login h1 { margin:0 0 4px; font-size:20px; } #login h1 b { color:#4aa3ff; }
+    #login p { margin:0 0 18px; font-size:13px; color:#9fb0c0; }
+    #login input { width:100%; box-sizing:border-box; margin-bottom:10px; padding:10px 12px; border-radius:7px; border:1px solid #2e3d4d; background:#0d1117; color:#fff; font-size:14px; }
+    #login button { width:100%; padding:11px; border:0; border-radius:7px; background:#1f6feb; color:#fff; font-size:15px; font-weight:600; cursor:pointer; }
+    #login button:disabled { opacity:.6; cursor:default; }
+    #erro { color:#ff6b6b; font-size:13px; min-height:18px; margin-top:8px; }
+  </style>
+</head>
+<body>
+  <!-- Tela de login (e-mail/senha do admin) -->
+  <div id="login">
+    <form class="box" id="formLogin">
+      <h1>KioX — <b>Frota</b></h1>
+      <p>Acesso restrito ao TI. Entre com o e-mail e a senha do administrador.</p>
+      <input id="email" type="email" placeholder="e-mail do admin" autocomplete="username" required />
+      <input id="senha" type="password" placeholder="senha" autocomplete="current-password" required />
+      <button id="btnEntrar" type="submit">Entrar</button>
+      <div id="erro"></div>
+    </form>
+  </div>
+
+  <div id="topo">KioX — Frota &nbsp; <span id="status">conectando...</span> &nbsp;•&nbsp; <b id="qtd">0</b> aparelho(s)
+    <button id="sair" type="button">Sair</button>
+  </div>
+  <div id="mapa"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script>
+    // Configuração do projeto KioX-Frota (valores públicos do Firebase).
+    const firebaseConfig = {
+      apiKey: "AIzaSyBUpnlMlhIlcoz0DfBPadcgIMKXFXksqbo",
+      authDomain: "kiox-frota.firebaseapp.com",
+      databaseURL: "https://kiox-frota-default-rtdb.firebaseio.com",
+      projectId: "kiox-frota"
+    };
+    firebase.initializeApp(firebaseConfig);
+
+    const elLogin = document.getElementById('login');
+    const elErro = document.getElementById('erro');
+    const status = document.getElementById('status');
+    const qtdEl = document.getElementById('qtd');
+    const btnEntrar = document.getElementById('btnEntrar');
+
+    let mapa = null;
+    const marcadores = {};
+    const ultimos = {};            // id -> último registro recebido
+    let escutando = false;
+
+    // Minutos sem atualizar para considerar o aparelho COM PROBLEMA (pino vermelho).
+    // O app envia a cada 30 min; 90 min = ~3 ciclos perdidos, evita falso alarme.
+    const LIMITE_MIN = 90;
+
+    function fmtHora(ms) {
+      if (!ms) return '—';
+      try { return new Date(ms).toLocaleString('pt-BR'); } catch (e) { return String(ms); }
+    }
+
+    function fmtHaQuanto(ms) {
+      if (!ms) return 'nunca';
+      const min = Math.floor((Date.now() - ms) / 60000);
+      if (min < 1) return 'agora';
+      if (min < 60) return 'há ' + min + ' min';
+      const h = Math.floor(min / 60);
+      if (h < 24) return 'há ' + h + ' h';
+      return 'há ' + Math.floor(h / 24) + ' d';
+    }
+
+    // Login e-mail/senha — só o admin (criado no console) consegue ler a frota.
+    document.getElementById('formLogin').addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      elErro.textContent = '';
+      btnEntrar.disabled = true;
+      const email = document.getElementById('email').value.trim();
+      const senha = document.getElementById('senha').value;
+      firebase.auth().signInWithEmailAndPassword(email, senha)
+        .catch((e) => { elErro.textContent = 'Falha no login: ' + e.message; })
+        .finally(() => { btnEntrar.disabled = false; });
+    });
+
+    document.getElementById('sair').addEventListener('click', () => firebase.auth().signOut());
+
+    firebase.auth().onAuthStateChanged((user) => {
+      // So aceita login real (e-mail/senha do admin). Uma sessao ANONIMA antiga
+      // (de versoes anteriores do mapa) fica salva no navegador e nao tem mais
+      // permissao de leitura — descarta para nao "pular" o login mostrando 0.
+      if (user && user.isAnonymous) { firebase.auth().signOut(); return; }
+      if (user) {
+        elLogin.style.display = 'none';
+        iniciarMapa();
+      } else {
+        elLogin.style.display = 'flex';
+        status.textContent = 'desconectado';
+      }
+    });
+
+    function iniciarMapa() {
+      if (!mapa) {
+        mapa = L.map('mapa').setView([-21.255, -48.322], 12); // Jaboticabal-SP
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19, attribution: '© OpenStreetMap'
+        }).addTo(mapa);
+      }
+      if (!mapa._pintarTimer) {
+        mapa._pintarTimer = setInterval(pintar, 30000); // reavalia cores com o tempo
+      }
+      if (escutando) return;
+      escutando = true;
+      status.textContent = 'conectado';
+      firebase.database().ref('devices').on('value', (snap) => {
+        const dados = snap.val() || {};
+        const vistos = new Set();
+        let bounds = [];
+        Object.keys(dados).forEach((id) => {
+          const d = dados[id];
+          if (typeof d.lat !== 'number' || typeof d.lon !== 'number') return;
+          vistos.add(id);
+          ultimos[id] = d;
+          const nome = (d.nome && d.nome.trim()) ? d.nome.trim() : (d.modelo || id);
+          if (marcadores[id]) {
+            marcadores[id].setLatLng([d.lat, d.lon]).setTooltipContent(nome);
+          } else {
+            marcadores[id] = L.circleMarker([d.lat, d.lon], {
+              radius: 9, weight: 3, color: '#fff', fillOpacity: 1
+            }).addTo(mapa)
+              .bindPopup('', { maxWidth: 280 })
+              .bindTooltip(nome, { permanent: true, direction: 'top', offset: [0, -10] });
+          }
+          bounds.push([d.lat, d.lon]);
+        });
+        // remove marcadores de aparelhos que sumiram do banco
+        Object.keys(marcadores).forEach((id) => {
+          if (!vistos.has(id)) {
+            mapa.removeLayer(marcadores[id]); delete marcadores[id]; delete ultimos[id];
+          }
+        });
+        pintar();
+        if (bounds.length) mapa.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
+      }, (err) => { status.textContent = 'sem permissão de leitura: ' + err.message; });
+    }
+
+    // Recolore os pinos pelo tempo desde a última atualização (azul = ok,
+    // vermelho = sem sinal) e reescreve os popups. Roda no evento e a cada 30s.
+    function pintar() {
+      const limiteMs = LIMITE_MIN * 60000;
+      let problemas = 0, total = 0;
+      Object.keys(marcadores).forEach((id) => {
+        const d = ultimos[id]; if (!d) return;
+        total++;
+        const offline = !d.hora || (Date.now() - d.hora) > limiteMs;
+        if (offline) problemas++;
+        marcadores[id].setStyle({ fillColor: offline ? '#e53935' : '#1f6feb' });
+        const nome = (d.nome && d.nome.trim()) ? d.nome.trim() : (d.modelo || id);
+        const aviso = offline
+          ? '<br><b style="color:#e53935">⚠ SEM SINAL ' + fmtHaQuanto(d.hora) + '</b>'
+          : '';
+        marcadores[id].setPopupContent(
+          '<div class="info"><b>' + nome + '</b>' + aviso + '<br>' +
+          'Modelo: ' + (d.modelo || '?') + '<br>' +
+          'Bateria: ' + (d.bateria ?? '?') + '%<br>' +
+          'Precisão: ' + (d.precisao_m ? Math.round(d.precisao_m) + ' m' : '?') + '<br>' +
+          'Versão: ' + (d.versao || '?') + '<br>' +
+          'Atualizado: ' + fmtHora(d.hora) + ' (' + fmtHaQuanto(d.hora) + ')</div>'
+        );
+      });
+      qtdEl.textContent = total;
+      if (total > 0) {
+        status.innerHTML = problemas > 0
+          ? '<span style="color:#ff6b6b">⚠ ' + problemas + ' com problema</span>'
+          : '<span style="color:#7CFC98">todos ok</span>';
+      }
+    }
+  </script>
+</body>
+</html>
