@@ -95,13 +95,16 @@
     .brand-logo{ height: 28px; width: auto; display: inline-block; object-fit: contain; }
 
     /* Filtro por departamento (pills) — usado nas listas agrupadas por setor */
-    .dept-tabs{ display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1rem; }
-    .dept-pill{ background:#15211a; border:1px solid #243024; color:#9bb6a6; border-radius:999px;
-      padding:.35rem .85rem; font-size:.82rem; font-weight:600; cursor:pointer;
-      display:inline-flex; align-items:center; gap:.4rem; transition:border-color .12s,color .12s,background .12s; }
+    .dept-tabs{ display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:.5rem; margin-bottom:1rem; }
+    .dept-pill{ background:#15211a; border:1px solid #243024; color:#9bb6a6; border-radius:10px;
+      padding:.45rem .8rem; font-size:.82rem; font-weight:600; cursor:pointer; width:100%;
+      display:flex; align-items:center; gap:.45rem; white-space:nowrap; overflow:hidden;
+      transition:border-color .12s,color .12s,background .12s; }
+    .dept-pill > .bi{ flex:0 0 auto; }
+    .dept-pill .nm{ overflow:hidden; text-overflow:ellipsis; }
     .dept-pill:hover{ border-color:#2f6b46; color:#cfe9d8; }
     .dept-pill.active{ background:var(--brand); border-color:var(--brand); color:#06210f; }
-    .dept-pill .c{ background:rgba(0,0,0,.18); border-radius:999px; padding:0 .42rem; font-size:.72rem; }
+    .dept-pill .c{ margin-left:auto; flex:0 0 auto; background:rgba(0,0,0,.18); border-radius:999px; padding:0 .45rem; font-size:.72rem; }
     .dept-pill.active .c{ background:rgba(255,255,255,.25); }
 
     /* ===================================================================
