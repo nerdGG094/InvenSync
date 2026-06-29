@@ -3,7 +3,7 @@ from datetime import date, timedelta
 
 from flask import Blueprint, render_template
 from flask_login import login_required
-from sqlalchemy import func
+from sqlalchemy import func, case
 
 from ..repositories.product_repo import list_products, current_stock
 from ..services.inventory_service import low_stock_products
@@ -288,8 +288,50 @@ def index():
     except Exception:
         db.session.rollback()
 
+    # ----- Movimentações: tendência dos últimos 30 dias (entradas x saídas) -----
+    movements_trend = {"labels": [], "in": [], "out": []}
+    try:
+        days = 30
+        start = today - timedelta(days=days - 1)
+        rows = (
+            db.session.query(
+                func.date(StockMovement.created_at).label("d"),
+                func.sum(case((StockMovement.movement_type == "IN", StockMovement.quantity), else_=0)),
+                func.sum(case((StockMovement.movement_type != "IN", StockMovement.quantity), else_=0)),
+            )
+            .filter(StockMovement.created_at >= start)
+            .group_by(func.date(StockMovement.created_at))
+            .all()
+        )
+        by_day = {str(d): (int(i or 0), int(o or 0)) for d, i, o in rows}
+        for k in range(days):
+            dd = start + timedelta(days=k)
+            iv, ov = by_day.get(str(dd), (0, 0))
+            movements_trend["labels"].append(dd.strftime("%d/%m"))
+            movements_trend["in"].append(iv)
+            movements_trend["out"].append(ov)
+    except Exception:
+        db.session.rollback()
+
+    # ----- Saúde do estoque (saudável x abaixo do mínimo x sem estoque) -----
+    healthy_count = max(len(products) - len(low), 0)
+    stock_health = {
+        "labels": ["Saudável", "Abaixo do mínimo", "Sem estoque"],
+        "data": [healthy_count, below_count, zero_count],
+        "pct_ok": round((healthy_count / len(products) * 100.0), 0) if products else 100.0,
+    }
+
+    # ----- Mix de ativos físicos (polar) -----
+    assets_mix = {
+        "labels": ["Máquinas", "Celulares", "Roteadores"],
+        "data": [counts["machines"], counts["mobiles"], counts["routers"]],
+    }
+
     it_overview = {
         "counts": counts,
+        "movements_trend": movements_trend,
+        "stock_health": stock_health,
+        "assets_mix": assets_mix,
         "tickets_status": tickets_status,
         "tickets_priority": tickets_priority,
         "machines_kind": machines_kind,

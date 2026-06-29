@@ -58,6 +58,12 @@ class Config:
     # Monitoramento de uptime (ping/HTTP em segundo plano).
     MONITORING_ENABLED = os.environ.get("MONITORING_ENABLED", "1") in ("1", "true", "True")
     MONITORING_INTERVAL = int(os.environ.get("MONITORING_INTERVAL", "120"))  # segundos
+
+    # Alertas proativos (estoque mínimo, licenças/garantias vencendo, chamados parados).
+    ALERTS_ENABLED = os.environ.get("ALERTS_ENABLED", "1") in ("1", "true", "True")
+    ALERTS_INTERVAL_HOURS = int(os.environ.get("ALERTS_INTERVAL_HOURS", "6"))
+    ALERTS_TICKET_STUCK_HOURS = int(os.environ.get("ALERTS_TICKET_STUCK_HOURS", "48"))
+    ALERTS_LICENSE_DAYS = int(os.environ.get("ALERTS_LICENSE_DAYS", "30"))
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_pre_ping": True,   # evita conexões mortas após ociosidade
         "pool_recycle": 1800,    # recicla conexões a cada 30 min

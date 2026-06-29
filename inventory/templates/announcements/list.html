@@ -27,6 +27,9 @@
   </h1>
   {% if is_admin %}
   <div class="d-flex gap-2">
+    <form method="post" action="{{ url_for('announcements.run_alerts') }}">
+      <button class="btn btn-outline-light" title="Verificar estoque, licenças e chamados parados agora"><i class="bi bi-bell"></i> Gerar alertas</button>
+    </form>
     <a href="{{ url_for('announcements.new') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Novo Aviso</a>
   </div>
   {% endif %}

@@ -2,7 +2,7 @@
 #
 # Mural de recados da empresa. Apenas administradores publicam/editam; os demais
 # usuários só visualizam. Para o perfil comum, esta é a tela inicial pós-login.
-from flask import Blueprint, render_template, redirect, url_for, flash, abort
+from flask import Blueprint, render_template, redirect, url_for, flash, abort, current_app
 from flask_login import login_required, current_user
 
 from ..extensions import db
@@ -97,6 +97,21 @@ def toggle_pin(aid):
     a.is_pinned = not bool(a.is_pinned)
     db.session.commit()
     flash(f"Aviso {'fixado' if a.is_pinned else 'desafixado'}.", "success")
+    return redirect(url_for("announcements.list_view"))
+
+
+@bp.route("/alertas/executar", methods=["POST"])
+def run_alerts():
+    """Gera/atualiza os alertas automáticos agora (estoque, licenças, chamados)."""
+    _admin_only()
+    from ..services import alerts
+    total = alerts.publish(current_app._get_current_object())
+    if total < 0:
+        flash("Não foi possível gerar os alertas.", "danger")
+    elif total == 0:
+        flash("Nenhuma pendência encontrada. ✅", "success")
+    else:
+        flash(f"{total} pendência(s) atualizadas na Central de Avisos.", "success")
     return redirect(url_for("announcements.list_view"))
 
 

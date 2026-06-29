@@ -6,11 +6,50 @@
 {% set kind_icon = {'servidor':'bi-hdd-rack','impressora':'bi-printer','roteador':'bi-router','switch':'bi-diagram-3','site':'bi-globe2','outro':'bi-pc'} %}
 
 <style>
-  .status-dot { display:inline-block; width:10px; height:10px; border-radius:50%; }
-  .status-up { background:#00c853; box-shadow:0 0 8px rgba(0,200,83,.7); }
-  .status-down { background:#f44336; box-shadow:0 0 8px rgba(244,67,54,.7); }
-  .status-unknown { background:#9e9e9e; }
-  .ping-card .num { font-size:1.6rem; font-weight:600; line-height:1; }
+  /* ===== Monitoramento moderno (cards de status) ===== */
+  .mon-summary { display:grid; grid-template-columns:repeat(4,1fr); gap:.8rem; margin-bottom:1rem; }
+  @media (max-width:767px){ .mon-summary{ grid-template-columns:repeat(2,1fr); } }
+  .mon-stat { background:#15211a; border:1px solid #243024; border-radius:14px; padding:.85rem 1rem;
+    display:flex; align-items:center; justify-content:space-between; }
+  .mon-stat .n { font-size:1.7rem; font-weight:700; line-height:1; }
+  .mon-stat .l { color:#8fb0a0; font-size:.74rem; text-transform:uppercase; letter-spacing:.04em; }
+  .mon-stat .bi { font-size:1.6rem; }
+
+  .mon-bar { height:8px; border-radius:999px; background:#0f1a13; overflow:hidden; display:flex; margin:.2rem 0 1.1rem; }
+  .mon-bar i { display:block; height:100%; }
+
+  .mon-grid { display:grid; gap:1rem; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); }
+  .mon-card { position:relative; background:#15211a; border:1px solid #243024; border-radius:16px;
+    padding:1rem 1.05rem .9rem; overflow:hidden; transition:transform .14s, border-color .14s; }
+  .mon-card:hover { transform:translateY(-3px); border-color:#2f6b46; }
+  .mon-card .accent { position:absolute; left:0; top:0; bottom:0; width:4px; }
+  .mon-card.up    .accent { background:#00c853; }
+  .mon-card.down  .accent { background:#f44336; }
+  .mon-card.unknown .accent, .mon-card.paused .accent { background:#5c6b5c; }
+  .mon-card.paused { opacity:.6; }
+
+  .mon-status { display:inline-flex; align-items:center; gap:.4rem; font-size:.78rem; font-weight:600; }
+  .mon-status.up { color:#46e08a; } .mon-status.down { color:#ff6b6b; } .mon-status.unknown,.mon-status.paused { color:#9bb6a6; }
+  .dot { width:9px; height:9px; border-radius:50%; display:inline-block; }
+  .dot.up { background:#00c853; box-shadow:0 0 0 0 rgba(0,200,83,.6); animation:pulseG 1.8s infinite; }
+  .dot.down { background:#f44336; box-shadow:0 0 0 0 rgba(244,67,54,.6); animation:pulseR 1.8s infinite; }
+  .dot.unknown,.dot.paused { background:#9e9e9e; }
+  @keyframes pulseG { 0%{box-shadow:0 0 0 0 rgba(0,200,83,.55)} 70%{box-shadow:0 0 0 7px rgba(0,200,83,0)} 100%{box-shadow:0 0 0 0 rgba(0,200,83,0)} }
+  @keyframes pulseR { 0%{box-shadow:0 0 0 0 rgba(244,67,54,.55)} 70%{box-shadow:0 0 0 7px rgba(244,67,54,0)} 100%{box-shadow:0 0 0 0 rgba(244,67,54,0)} }
+
+  .mon-name { font-weight:600; color:#eafff0; margin-top:.45rem; display:flex; align-items:center; gap:.4rem; }
+  .mon-name .bi { color:#46e08a; }
+  .mon-host { color:#8fb0a0; font-size:.8rem; }
+  .mon-meta { display:flex; flex-wrap:wrap; gap:.35rem; margin-top:.6rem; }
+  .pill { font-size:.7rem; font-weight:600; padding:.12rem .5rem; border-radius:999px;
+    background:#0f1a13; border:1px solid #243024; color:#9bb6a6; }
+  .pill.lat-ok { color:#46e08a; border-color:rgba(0,200,83,.35); }
+  .pill.lat-mid { color:#ffce6a; border-color:rgba(255,193,7,.35); }
+  .pill.lat-hi { color:#ff8a80; border-color:rgba(244,67,54,.35); }
+  .mon-foot { display:flex; align-items:center; justify-content:space-between; gap:.5rem;
+    margin-top:.8rem; padding-top:.6rem; border-top:1px solid #1f2c24; }
+  .mon-when { color:#6f8a7b; font-size:.72rem; }
+  .mon-actions { display:flex; gap:.3rem; }
 </style>
 
 <div class="page-header">
@@ -31,110 +70,105 @@
   </div>
 </div>
 
-<div class="row g-3 mb-3">
-  <div class="col-4">
-    <div class="card stat-card ping-card h-100" style="border-left-color:#00c853">
-      <div class="card-body d-flex align-items-center justify-content-between">
-        <div><div class="text-muted small">No ar</div><div class="num text-success">{{ up }}</div></div>
-        <i class="bi bi-check-circle fs-2 text-success"></i>
-      </div>
-    </div>
+{# ===== Resumo ===== #}
+<div class="mon-summary">
+  <div class="mon-stat" style="border-left:4px solid #00c853">
+    <div><div class="l">No ar</div><div class="n text-success">{{ up }}</div></div>
+    <i class="bi bi-check-circle text-success"></i>
   </div>
-  <div class="col-4">
-    <div class="card stat-card ping-card h-100" style="border-left-color:#f44336">
-      <div class="card-body d-flex align-items-center justify-content-between">
-        <div><div class="text-muted small">Fora do ar</div><div class="num text-danger">{{ down }}</div></div>
-        <i class="bi bi-x-octagon fs-2 text-danger"></i>
-      </div>
-    </div>
+  <div class="mon-stat" style="border-left:4px solid #f44336">
+    <div><div class="l">Fora do ar</div><div class="n text-danger">{{ down }}</div></div>
+    <i class="bi bi-x-octagon text-danger"></i>
   </div>
-  <div class="col-4">
-    <div class="card stat-card ping-card h-100" style="border-left-color:#9e9e9e">
-      <div class="card-body d-flex align-items-center justify-content-between">
-        <div><div class="text-muted small">Não verificado</div><div class="num text-secondary">{{ unknown }}</div></div>
-        <i class="bi bi-question-circle fs-2 text-secondary"></i>
-      </div>
-    </div>
+  <div class="mon-stat" style="border-left:4px solid #9e9e9e">
+    <div><div class="l">Não verificado</div><div class="n text-secondary">{{ unknown }}</div></div>
+    <i class="bi bi-question-circle text-secondary"></i>
+  </div>
+  {% set tot = up + down + unknown %}
+  <div class="mon-stat" style="border-left:4px solid #0dcaf0">
+    <div><div class="l">Disponibilidade</div><div class="n text-info">{{ ((up / tot * 100) | round(0) | int) if tot else 100 }}%</div></div>
+    <i class="bi bi-reception-4 text-info"></i>
   </div>
 </div>
 
-<div class="table-card">
-  <div class="table-card-tools">
-    <form class="d-flex search-box" method="get" role="search">
-      <div class="input-group">
-        <span class="input-group-text"><i class="bi bi-search"></i></span>
-        <input class="form-control" type="search" placeholder="Nome ou host/IP..." name="q" value="{{ q }}">
-      </div>
-      {% if q %}<a href="{{ url_for('monitoring.list_view') }}" class="btn btn-outline-light ms-2" title="Limpar"><i class="bi bi-x-lg"></i></a>{% endif %}
-    </form>
-  </div>
-
-  <div class="table-responsive">
-    <table class="table table-hover align-middle">
-      <thead>
-        <tr>
-          <th style="width:90px">Status</th>
-          <th>Host</th>
-          <th>Tipo</th>
-          <th>Checagem</th>
-          <th class="text-end">Latência</th>
-          <th>Última verificação</th>
-          <th class="text-end" style="width:150px">Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for h in items %}
-        <tr {% if not h.enabled %}class="opacity-50"{% endif %}>
-          <td>
-            {% if not h.enabled %}
-              <span class="badge bg-secondary-subtle text-secondary-emphasis">pausado</span>
-            {% elif h.last_status == 'up' %}
-              <span class="status-dot status-up"></span> <span class="text-success">No ar</span>
-            {% elif h.last_status == 'down' %}
-              <span class="status-dot status-down"></span> <span class="text-danger">Fora</span>
-            {% else %}
-              <span class="status-dot status-unknown"></span> <span class="text-muted">—</span>
-            {% endif %}
-          </td>
-          <td>
-            <div class="fw-semibold">
-              <i class="bi {{ kind_icon.get(h.kind, 'bi-pc') }} text-success me-1"></i>{{ h.label }}
-            </div>
-            <small class="text-muted font-monospace">{{ h.host }}</small>
-          </td>
-          <td class="text-muted">{{ kind_labels.get(h.kind, h.kind) }}</td>
-          <td><span class="badge bg-secondary-subtle text-secondary-emphasis">{{ 'HTTP' if h.check_type == 'http' else 'Ping' }}</span></td>
-          <td class="text-end number">
-            {% if h.is_up and h.last_latency_ms is not none %}{{ h.last_latency_ms }} ms{% else %}<span class="text-muted">—</span>{% endif %}
-          </td>
-          <td class="text-nowrap"><small class="text-muted">
-            {{ h.last_checked.strftime('%d/%m %H:%M:%S') if h.last_checked else 'nunca' }}
-            {% if h.last_status == 'down' and h.last_change %}<br>desde {{ h.last_change.strftime('%d/%m %H:%M') }}{% endif %}
-          </small></td>
-          <td class="text-end text-nowrap">
-            <form action="{{ url_for('monitoring.toggle', hid=h.id) }}" method="post" class="d-inline">
-              <button class="btn btn-sm btn-outline-light btn-icon" title="{{ 'Pausar' if h.enabled else 'Ativar' }}">
-                <i class="bi {{ 'bi-pause' if h.enabled else 'bi-play' }}"></i>
-              </button>
-            </form>
-            <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('monitoring.edit', hid=h.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
-            <form action="{{ url_for('monitoring.delete', hid=h.id) }}" method="post" class="d-inline" onsubmit="return confirm('Remover {{ h.label }} do monitoramento?');">
-              <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
-            </form>
-          </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="7"><div class="empty-state"><i class="bi bi-activity"></i>
-          {% if q %}Nenhum host para o filtro.{% else %}Nenhum host monitorado. Adicione um host ou clique em "Importar ativos".{% endif %}
-        </div></td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {{ pager(pag) }}
+{# Barra de proporção up/down/unknown #}
+{% if tot %}
+<div class="mon-bar" title="{{ up }} no ar · {{ down }} fora · {{ unknown }} não verificado">
+  {% if up %}<i style="width:{{ (up/tot*100) }}%;background:#00c853"></i>{% endif %}
+  {% if down %}<i style="width:{{ (down/tot*100) }}%;background:#f44336"></i>{% endif %}
+  {% if unknown %}<i style="width:{{ (unknown/tot*100) }}%;background:#5c6b5c"></i>{% endif %}
 </div>
+{% endif %}
 
-<p class="text-muted small mt-2">
+{# ===== Busca ===== #}
+<div class="table-card mb-3"><div class="table-card-tools">
+  <form class="d-flex search-box" method="get" role="search">
+    <input type="hidden" name="page" value="1">
+    <div class="input-group">
+      <span class="input-group-text"><i class="bi bi-search"></i></span>
+      <input class="form-control" type="search" placeholder="Nome ou host/IP..." name="q" value="{{ q }}">
+    </div>
+    {% if q %}<a href="{{ url_for('monitoring.list_view') }}" class="btn btn-outline-light ms-2" title="Limpar"><i class="bi bi-x-lg"></i></a>{% endif %}
+  </form>
+</div></div>
+
+{# ===== Grade de hosts ===== #}
+{% if items %}
+<div class="mon-grid">
+  {% for h in items %}
+  {% set st = 'paused' if not h.enabled else (h.last_status if h.last_status in ['up','down'] else 'unknown') %}
+  {% set st_txt = {'up':'No ar','down':'Fora do ar','unknown':'Aguardando','paused':'Pausado'} %}
+  <article class="mon-card {{ st }}">
+    <span class="accent"></span>
+    <div class="d-flex align-items-start justify-content-between">
+      <span class="mon-status {{ st }}"><span class="dot {{ st }}"></span> {{ st_txt[st] }}</span>
+      <div class="mon-actions">
+        <form action="{{ url_for('monitoring.toggle', hid=h.id) }}" method="post" class="d-inline">
+          <button class="btn btn-sm btn-outline-light btn-icon" title="{{ 'Pausar' if h.enabled else 'Ativar' }}">
+            <i class="bi {{ 'bi-pause' if h.enabled else 'bi-play' }}"></i>
+          </button>
+        </form>
+        <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('monitoring.edit', hid=h.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
+        <form action="{{ url_for('monitoring.delete', hid=h.id) }}" method="post" class="d-inline" onsubmit="return confirm('Remover {{ h.label }} do monitoramento?');">
+          <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
+        </form>
+      </div>
+    </div>
+
+    <div class="mon-name"><i class="bi {{ kind_icon.get(h.kind, 'bi-pc') }}"></i> {{ h.label }}</div>
+    <div class="mon-host font-monospace">{{ h.host }}</div>
+
+    <div class="mon-meta">
+      <span class="pill">{{ kind_labels.get(h.kind, h.kind) }}</span>
+      <span class="pill">{{ 'HTTP' if h.check_type == 'http' else 'Ping' }}</span>
+      {% if h.is_up and h.last_latency_ms is not none %}
+        {% set ms = h.last_latency_ms %}
+        <span class="pill {{ 'lat-ok' if ms < 150 else ('lat-mid' if ms < 400 else 'lat-hi') }}">
+          <i class="bi bi-lightning-charge"></i> {{ ms }} ms
+        </span>
+      {% endif %}
+    </div>
+
+    <div class="mon-foot">
+      <span class="mon-when">
+        <i class="bi bi-clock-history"></i>
+        {{ h.last_checked.strftime('%d/%m %H:%M:%S') if h.last_checked else 'nunca verificado' }}
+      </span>
+      {% if h.last_status == 'down' and h.last_change %}
+        <span class="pill lat-hi" title="Fora do ar desde">desde {{ h.last_change.strftime('%d/%m %H:%M') }}</span>
+      {% endif %}
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{{ pager(pag) }}
+{% else %}
+<div class="table-card"><div class="empty-state"><i class="bi bi-activity"></i>
+  {% if q %}Nenhum host para o filtro.{% else %}Nenhum host monitorado. Adicione um host ou clique em "Importar ativos".{% endif %}
+</div></div>
+{% endif %}
+
+<p class="text-muted small mt-3">
   <i class="bi bi-info-circle"></i> Verificação automática a cada {{ interval }}s em segundo plano.
   Quedas e retornos são avisados à TI por WhatsApp. Esta página atualiza sozinha.
 </p>

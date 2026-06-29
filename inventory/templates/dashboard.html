@@ -1,347 +1,220 @@
 {% extends "base.html" %}
 {% block title %}Painel{% endblock %}
 
-{% block content %}
+{% block extra_head %}
 <style>
-  .stat-card .display-6 { line-height: 1.1; }
-  .chart-card { min-height: 360px; }
-  .chart-wrap { position: relative; height: 260px; }
-  .mini-card .mini-num { font-size: 1.6rem; line-height: 1; font-weight: 600; }
-  .mini-card { transition: transform .12s ease, border-color .12s ease; }
-  .mini-card:hover { transform: translateY(-2px); border-color: var(--brand, #00c853); }
-  .mini-card a.stretched-link { color: inherit; }
-  .section-title { letter-spacing:.02em; }
+  /* ===== Dashboard profissional ===== */
+  .dash-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.75rem; margin-bottom:1rem; }
+  .dash-head h1 { font-size:1.35rem; font-weight:700; color:#eafff0; margin:0; letter-spacing:.2px; }
+  .dash-head .sub { color:#8fb0a0; font-size:.82rem; }
+
+  .sec-label { display:flex; align-items:center; gap:.55rem; margin:1.6rem 0 .8rem;
+    font-size:.74rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#7fae93; }
+  .sec-label::after { content:""; flex:1; height:1px; background:linear-gradient(90deg,#243024,transparent); }
+
+  /* KPI cards */
+  .kpi { position:relative; background:linear-gradient(160deg,#17231b,#131a16); border:1px solid #243024;
+    border-radius:16px; padding:1rem 1.1rem; height:100%; overflow:hidden; transition:transform .14s, border-color .14s; }
+  .kpi:hover { transform:translateY(-3px); border-color:#2f6b46; }
+  .kpi::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--accent,#00c853); }
+  .kpi .ico { width:42px; height:42px; border-radius:12px; display:inline-flex; align-items:center; justify-content:center;
+    font-size:1.25rem; background:color-mix(in srgb, var(--accent,#00c853) 16%, transparent); color:var(--accent,#00c853); }
+  .kpi .lbl { color:#8fb0a0; font-size:.76rem; text-transform:uppercase; letter-spacing:.04em; }
+  .kpi .val { font-size:1.9rem; font-weight:700; line-height:1.05; color:#eafff0; }
+  .kpi .hint { color:#6f8a7b; font-size:.72rem; }
+  .kpi a.stretched-link { color:inherit; }
+
+  /* Chart cards */
+  .ch-card { background:#15211a; border:1px solid #243024; border-radius:16px; height:100%; display:flex; flex-direction:column; }
+  .ch-card .ch-head { padding:.85rem 1.05rem; border-bottom:1px solid #1f2c24; font-weight:600; color:#dceede;
+    display:flex; align-items:center; gap:.5rem; }
+  .ch-card .ch-head .bi { color:#46e08a; }
+  .ch-card .ch-body { padding:1rem 1.05rem; flex:1; }
+  .ch-wrap { position:relative; height:280px; }
+  .ch-wrap.sm { height:230px; }
+  .ch-foot { color:#6f8a7b; font-size:.72rem; padding:0 1.05rem .85rem; }
+
+  .pill { font-size:.7rem; font-weight:600; padding:.15rem .55rem; border-radius:999px;
+    background:#15211a; border:1px solid #243024; color:#9bb6a6; }
 </style>
+{% endblock %}
 
+{% block content %}
+<div class="dash-head">
+  <div>
+    <h1><i class="bi bi-speedometer2 text-success"></i> Painel de Controle</h1>
+    <div class="sub">Visão geral de estoque, ativos e serviços de TI</div>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{{ url_for('movements.list_and_new') }}" class="btn btn-primary btn-sm"><i class="bi bi-arrow-left-right"></i> Movimentação</a>
+    <a href="{{ url_for('reports.stock') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-clipboard-data"></i> Relatório</a>
+    <a href="{{ url_for('kanban.board') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-kanban"></i> Kanban</a>
+  </div>
+</div>
+
+{# ===================== KPIs ===================== #}
 <div class="row g-3">
-  <!-- Card: Itens em estoque -->
-  <div class="col-12 col-md-4">
-    <div class="card stat-card h-100">
-      <div class="card-body d-flex align-items-center justify-content-between">
-        <div>
-          <h6 class="text-muted mb-1">Itens em estoque</h6>
-          <div class="display-6">{{ total_items }}</div>
-        </div>
-        <div class="ms-3">
-          <i class="bi bi-box-seam fs-1 text-success"></i>
-        </div>
+  <div class="col-6 col-lg-2">
+    <div class="kpi" style="--accent:#00c853">
+      <div class="d-flex justify-content-between align-items-start">
+        <span class="lbl">Itens em estoque</span><span class="ico"><i class="bi bi-box-seam"></i></span>
       </div>
+      <div class="val mt-2">{{ total_items }}</div>
+      <div class="hint">{{ total_products }} materiais</div>
     </div>
   </div>
-
-  <!-- Card: Materiais cadastrados -->
-  <div class="col-12 col-md-4">
-    <div class="card stat-card h-100">
-      <div class="card-body d-flex align-items-center justify-content-between">
-        <div>
-          <h6 class="text-muted mb-1">Materiais cadastrados</h6>
-          <div class="display-6">{{ total_products }}</div>
-        </div>
-        <div class="ms-3">
-          <i class="bi bi-grid fs-1 text-success"></i>
-        </div>
+  <div class="col-6 col-lg-2">
+    <div class="kpi" style="--accent:#ffb020">
+      <div class="d-flex justify-content-between align-items-start">
+        <span class="lbl">Baixo estoque</span><span class="ico"><i class="bi bi-exclamation-triangle"></i></span>
       </div>
+      <div class="val mt-2">{{ low_stock|length }}</div>
+      <div class="hint">abaixo / sem mínimo</div>
     </div>
   </div>
-
-  <!-- Card: Baixo estoque -->
-  <div class="col-12 col-md-4">
-    <div class="card stat-card h-100">
-      <div class="card-body d-flex align-items-center justify-content-between">
-        <div>
-          <h6 class="text-muted mb-1">Materiais com baixo estoque</h6>
-          <div class="display-6">{{ low_stock|length }}</div>
-        </div>
-        <div class="ms-3">
-          <i class="bi bi-exclamation-triangle fs-1 text-warning"></i>
-        </div>
+  <div class="col-6 col-lg-2">
+    <div class="kpi" style="--accent:#0dcaf0">
+      <a href="{{ url_for('tickets.list_view') }}" class="stretched-link text-decoration-none"></a>
+      <div class="d-flex justify-content-between align-items-start">
+        <span class="lbl">Chamados abertos</span><span class="ico"><i class="bi bi-life-preserver"></i></span>
       </div>
+      <div class="val mt-2">{{ it.counts.tickets_open if it else 0 }}</div>
+      <div class="hint">em atendimento</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-2">
+    <div class="kpi" style="--accent:#9c6bff">
+      <a href="{{ url_for('machines.list_view') }}" class="stretched-link text-decoration-none"></a>
+      <div class="d-flex justify-content-between align-items-start">
+        <span class="lbl">Máquinas</span><span class="ico"><i class="bi bi-pc-display"></i></span>
+      </div>
+      <div class="val mt-2">{{ it.counts.machines if it else 0 }}</div>
+      <div class="hint">{{ it.counts.machines_active if it else 0 }} ativas</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-2">
+    <div class="kpi" style="--accent:#ff7043">
+      <a href="{{ url_for('licenses.list_view') }}" class="stretched-link text-decoration-none"></a>
+      <div class="d-flex justify-content-between align-items-start">
+        <span class="lbl">A vencer (60d)</span><span class="ico"><i class="bi bi-calendar-event"></i></span>
+      </div>
+      <div class="val mt-2">{{ it.expiring_count if it else 0 }}</div>
+      <div class="hint">licenças + domínios</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-2">
+    <div class="kpi" style="--accent:#00b894">
+      <a href="{{ url_for('mobile.list_view') }}" class="stretched-link text-decoration-none"></a>
+      <div class="d-flex justify-content-between align-items-start">
+        <span class="lbl">Celulares</span><span class="ico"><i class="bi bi-phone"></i></span>
+      </div>
+      <div class="val mt-2">{{ it.counts.mobiles if it else 0 }}</div>
+      <div class="hint">corporativos</div>
     </div>
   </div>
 </div>
 
-{% if it %}
-{# ===================== SEÇÃO: VISÃO GERAL DE TI ===================== #}
-<h2 class="h6 text-uppercase text-muted section-title mt-4 mb-2 d-flex align-items-center gap-2">
-  <i class="bi bi-hdd-network"></i> Ativos &amp; serviços de TI
-</h2>
-<div class="row g-3">
-  <div class="col-6 col-md-4 col-lg-2">
-    <div class="card mini-card h-100">
-      <div class="card-body position-relative">
-        <a href="{{ url_for('machines.list_view') }}" class="stretched-link text-decoration-none"></a>
-        <div class="d-flex align-items-center justify-content-between">
-          <span class="text-muted small">Máquinas</span>
-          <i class="bi bi-pc-display text-success"></i>
-        </div>
-        <div class="mini-num mt-2">{{ it.counts.machines }}</div>
-        <small class="text-muted">{{ it.counts.machines_active }} ativas</small>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-6 col-md-4 col-lg-2">
-    <div class="card mini-card h-100">
-      <div class="card-body position-relative">
-        <a href="{{ url_for('tickets.list_view') }}" class="stretched-link text-decoration-none"></a>
-        <div class="d-flex align-items-center justify-content-between">
-          <span class="text-muted small">Chamados abertos</span>
-          <i class="bi bi-life-preserver {% if it.counts.tickets_open > 0 %}text-warning{% else %}text-success{% endif %}"></i>
-        </div>
-        <div class="mini-num mt-2">{{ it.counts.tickets_open }}</div>
-        <small class="text-muted">em atendimento</small>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-6 col-md-4 col-lg-2">
-    <div class="card mini-card h-100">
-      <div class="card-body position-relative">
-        <a href="{{ url_for('mobile.list_view') }}" class="stretched-link text-decoration-none"></a>
-        <div class="d-flex align-items-center justify-content-between">
-          <span class="text-muted small">Celulares</span>
-          <i class="bi bi-phone text-success"></i>
-        </div>
-        <div class="mini-num mt-2">{{ it.counts.mobiles }}</div>
-        <small class="text-muted">corporativos</small>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-6 col-md-4 col-lg-2">
-    <div class="card mini-card h-100">
-      <div class="card-body position-relative">
-        <a href="{{ url_for('routers.list_view') }}" class="stretched-link text-decoration-none"></a>
-        <div class="d-flex align-items-center justify-content-between">
-          <span class="text-muted small">Roteadores</span>
-          <i class="bi bi-router text-success"></i>
-        </div>
-        <div class="mini-num mt-2">{{ it.counts.routers }}</div>
-        <small class="text-muted">rede / APs</small>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-6 col-md-4 col-lg-2">
-    <div class="card mini-card h-100">
-      <div class="card-body position-relative">
-        <a href="{{ url_for('colaboradores.list_view') }}" class="stretched-link text-decoration-none"></a>
-        <div class="d-flex align-items-center justify-content-between">
-          <span class="text-muted small">Colaboradores</span>
-          <i class="bi bi-people text-success"></i>
-        </div>
-        <div class="mini-num mt-2">{{ it.counts.colaboradores }}</div>
-        <small class="text-muted">cadastrados</small>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-6 col-md-4 col-lg-2">
-    <div class="card mini-card h-100">
-      <div class="card-body position-relative">
-        <a href="{{ url_for('licenses.list_view') }}" class="stretched-link text-decoration-none"></a>
-        <div class="d-flex align-items-center justify-content-between">
-          <span class="text-muted small">A vencer (60d)</span>
-          <i class="bi bi-calendar-event {% if it.expiring_count > 0 %}text-warning{% else %}text-success{% endif %}"></i>
-        </div>
-        <div class="mini-num mt-2">{{ it.expiring_count }}</div>
-        <small class="text-muted">licenças + domínios</small>
-      </div>
-    </div>
-  </div>
-</div>
-
-{% if it.cleanings_due and it.cleanings_due > 0 %}
+{% if it and it.cleanings_due and it.cleanings_due > 0 %}
 <div class="alert alert-warning d-flex align-items-center mt-3 mb-0 py-2" role="alert">
   <i class="bi bi-droplet-half me-2"></i>
   <span>{{ it.cleanings_due }} limpeza(s) de máquina em atraso (próxima data já passou).</span>
 </div>
 {% endif %}
-{% endif %}
 
-<!-- Atalhos rápidos -->
-<div class="d-flex flex-wrap gap-2 mt-4">
-  <a href="{{ url_for('products.new') }}" class="btn btn-primary btn-sm">
-    <i class="bi bi-plus-circle"></i> Novo material
-  </a>
-  <a href="{{ url_for('movements.list_and_new') }}" class="btn btn-outline-light btn-sm">
-    <i class="bi bi-arrow-left-right"></i> Registrar movimentação
-  </a>
-  <a href="{{ url_for('kanban.board') }}" class="btn btn-outline-light btn-sm">
-    <i class="bi bi-kanban"></i> Kanban de estoque
-  </a>
-  <a href="{{ url_for('reports.stock') }}" class="btn btn-outline-light btn-sm">
-    <i class="bi bi-clipboard-data"></i> Relatório de estoque
-  </a>
-</div>
-
-{# ===================== SEÇÃO: GRÁFICOS ===================== #}
-<div class="row g-3 mt-1">
-  {% if low_stock and low_stock|length > 0 %}
-  <!-- Gráfico de barras: Estoque vs Mínimo (Top 10 críticos) -->
+{# ===================== ESTOQUE: tendência + saúde + mix ===================== #}
+<div class="sec-label"><i class="bi bi-graph-up-arrow"></i> Estoque &amp; movimentações</div>
+<div class="row g-3">
   <div class="col-12 col-lg-8">
-    <div class="card chart-card h-100">
-      <div class="card-header d-flex align-items-center justify-content-between">
-        <span class="fw-semibold d-flex align-items-center gap-2">
-          <i class="bi bi-bar-chart"></i> Top 10 itens críticos (Estoque x Mínimo)
-        </span>
-      </div>
-      <div class="card-body">
-        <div class="chart-wrap">
-          <canvas id="chartLowStockBar" aria-label="Estoque atual versus mínimo" role="img"></canvas>
-        </div>
-        <small class="text-muted d-block mt-2">
-          Mostrando até 10 materiais com menor cobertura percentual em relação ao mínimo.
-        </small>
-      </div>
+    <div class="ch-card">
+      <div class="ch-head"><i class="bi bi-activity"></i> Movimentações — últimos 30 dias</div>
+      <div class="ch-body"><div class="ch-wrap"><canvas id="chMovTrend"></canvas></div></div>
+      <div class="ch-foot">Entradas e saídas por dia (quantidade).</div>
     </div>
   </div>
+  <div class="col-12 col-md-6 col-lg-2">
+    <div class="ch-card">
+      <div class="ch-head"><i class="bi bi-heart-pulse"></i> Saúde do estoque</div>
+      <div class="ch-body"><div class="ch-wrap sm"><canvas id="chStockHealth"></canvas></div></div>
+    </div>
+  </div>
+  <div class="col-12 col-md-6 col-lg-2">
+    <div class="ch-card">
+      <div class="ch-head"><i class="bi bi-diagram-3"></i> Mix de ativos</div>
+      <div class="ch-body"><div class="ch-wrap sm"><canvas id="chAssetsMix"></canvas></div></div>
+    </div>
+  </div>
+</div>
 
-  <!-- Gráfico de rosca: Distribuição dos críticos -->
-  <div class="col-12 col-lg-4">
-    <div class="card chart-card h-100">
-      <div class="card-header d-flex align-items-center justify-content-between">
-        <span class="fw-semibold d-flex align-items-center gap-2">
-          <i class="bi bi-pie-chart"></i> Distribuição dos críticos
-        </span>
-      </div>
-      <div class="card-body">
-        <div class="chart-wrap">
-          <canvas id="chartLowStockPie" aria-label="Distribuição dos itens críticos" role="img"></canvas>
-        </div>
-        <small class="text-muted d-block mt-2">
-          Sem estoque vs. Abaixo do mínimo (com estoque positivo).
-        </small>
-      </div>
+<div class="row g-3 mt-1">
+  {% if low_stock and low_stock|length > 0 %}
+  <div class="col-12 col-lg-8">
+    <div class="ch-card">
+      <div class="ch-head"><i class="bi bi-bar-chart"></i> Top 10 itens críticos (estoque × mínimo)</div>
+      <div class="ch-body"><div class="ch-wrap"><canvas id="chLowStockBar"></canvas></div></div>
     </div>
   </div>
   {% endif %}
-
-  <!-- NOVO: Top 10 Itens mais movimentados (linha) -->
-  <div class="col-12 col-lg-8">
-    <div class="card chart-card h-100">
-      <div class="card-header d-flex align-items-center justify-content-between">
-        <span class="fw-semibold d-flex align-items-center gap-2">
-          <i class="bi bi-activity"></i> Top 10 itens mais movimentados
-        </span>
-      </div>
-      <div class="card-body">
-        <div class="chart-wrap">
-          <canvas id="chartTopItems" aria-label="Itens mais movimentados" role="img"></canvas>
-        </div>
-        <small class="text-muted d-block mt-2">
-          Soma de quantidades (entradas + saídas).
-        </small>
-      </div>
-    </div>
-  </div>
-
-  <!-- NOVO: Top 10 Usuários que mais movimentaram (linha) -->
-  <div class="col-12 col-lg-4">
-    <div class="card chart-card h-100">
-      <div class="card-header d-flex align-items-center justify-content-between">
-        <span class="fw-semibold d-flex align-items-center gap-2">
-          <i class="bi bi-people"></i> Top 10 usuários que mais movimentaram
-        </span>
-      </div>
-      <div class="card-body">
-        <div class="chart-wrap">
-          <canvas id="chartTopUsers" aria-label="Usuários que mais movimentaram" role="img"></canvas>
-        </div>
-        <small class="text-muted d-block mt-2">
-          Linhas: quantidade total movimentada e nº de movimentações.
-        </small>
-      </div>
+  <div class="col-12 {% if low_stock and low_stock|length > 0 %}col-lg-4{% endif %}">
+    <div class="ch-card">
+      <div class="ch-head"><i class="bi bi-graph-up"></i> Top 10 itens mais movimentados</div>
+      <div class="ch-body"><div class="ch-wrap"><canvas id="chTopItems"></canvas></div></div>
+      <div class="ch-foot">Soma de entradas + saídas.</div>
     </div>
   </div>
 </div>
 
 {% if it %}
-{# ===================== SEÇÃO: GRÁFICOS DE TI ===================== #}
-<div class="row g-3 mt-1">
-  <!-- Chamados por status (rosca) -->
+{# ===================== TI ===================== #}
+<div class="sec-label"><i class="bi bi-hdd-network"></i> Chamados &amp; ativos de TI</div>
+<div class="row g-3">
   <div class="col-12 col-md-6 col-lg-3">
-    <div class="card chart-card h-100">
-      <div class="card-header fw-semibold d-flex align-items-center gap-2">
-        <i class="bi bi-life-preserver"></i> Chamados por status
-      </div>
-      <div class="card-body">
-        <div class="chart-wrap"><canvas id="chartTicketsStatus" role="img" aria-label="Chamados por status"></canvas></div>
-      </div>
+    <div class="ch-card">
+      <div class="ch-head"><i class="bi bi-life-preserver"></i> Chamados por status</div>
+      <div class="ch-body"><div class="ch-wrap sm"><canvas id="chTicketsStatus"></canvas></div></div>
     </div>
   </div>
-
-  <!-- Chamados abertos por prioridade (barras) -->
   <div class="col-12 col-md-6 col-lg-3">
-    <div class="card chart-card h-100">
-      <div class="card-header fw-semibold d-flex align-items-center gap-2">
-        <i class="bi bi-flag"></i> Chamados abertos por prioridade
-      </div>
-      <div class="card-body">
-        <div class="chart-wrap"><canvas id="chartTicketsPriority" role="img" aria-label="Chamados por prioridade"></canvas></div>
-      </div>
+    <div class="ch-card">
+      <div class="ch-head"><i class="bi bi-flag"></i> Chamados por prioridade</div>
+      <div class="ch-body"><div class="ch-wrap sm"><canvas id="chTicketsPriority"></canvas></div></div>
     </div>
   </div>
-
-  <!-- Máquinas por tipo (rosca) -->
   <div class="col-12 col-md-6 col-lg-3">
-    <div class="card chart-card h-100">
-      <div class="card-header fw-semibold d-flex align-items-center gap-2">
-        <i class="bi bi-pc-display"></i> Máquinas por tipo
-      </div>
-      <div class="card-body">
-        <div class="chart-wrap"><canvas id="chartMachinesKind" role="img" aria-label="Máquinas por tipo"></canvas></div>
-      </div>
+    <div class="ch-card">
+      <div class="ch-head"><i class="bi bi-pc-display"></i> Máquinas por tipo</div>
+      <div class="ch-body"><div class="ch-wrap sm"><canvas id="chMachinesKind"></canvas></div></div>
     </div>
   </div>
-
-  <!-- Celulares por status (barras) -->
   <div class="col-12 col-md-6 col-lg-3">
-    <div class="card chart-card h-100">
-      <div class="card-header fw-semibold d-flex align-items-center gap-2">
-        <i class="bi bi-phone"></i> Celulares por status
-      </div>
-      <div class="card-body">
-        <div class="chart-wrap"><canvas id="chartMobilesStatus" role="img" aria-label="Celulares por status"></canvas></div>
-      </div>
+    <div class="ch-card">
+      <div class="ch-head"><i class="bi bi-phone"></i> Celulares por status</div>
+      <div class="ch-body"><div class="ch-wrap sm"><canvas id="chMobilesStatus"></canvas></div></div>
     </div>
   </div>
 </div>
 
-{# ===================== SEÇÃO: VENCIMENTOS + ATIVIDADE ===================== #}
 <div class="row g-3 mt-1">
-  <!-- Vencimentos próximos -->
   <div class="col-12 col-lg-7">
-    <div class="card h-100">
-      <div class="card-header fw-semibold d-flex align-items-center gap-2">
-        <i class="bi bi-calendar-event text-warning"></i> Vencimentos próximos (60 dias)
-        {% if it.expiring_count > 0 %}<span class="badge bg-warning-subtle text-warning-emphasis ms-auto">{{ it.expiring_count }}</span>{% endif %}
+    <div class="ch-card">
+      <div class="ch-head"><i class="bi bi-calendar-event text-warning"></i> Vencimentos próximos (60 dias)
+        {% if it.expiring_count > 0 %}<span class="pill ms-auto">{{ it.expiring_count }}</span>{% endif %}
       </div>
-      <div class="card-body">
+      <div class="ch-body">
         {% if it.expiring and it.expiring|length > 0 %}
         <div class="table-responsive">
           <table class="table table-sm table-hover align-middle mb-0">
-            <thead>
-              <tr>
-                <th>Tipo</th><th>Item</th><th>Detalhe</th>
-                <th class="text-end">Vencimento</th><th class="text-end">Dias</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Tipo</th><th>Item</th><th>Detalhe</th><th class="text-end">Vencimento</th><th class="text-end">Dias</th></tr></thead>
             <tbody>
               {% for e in it.expiring %}
               <tr>
-                <td><span class="badge bg-secondary-subtle text-secondary-emphasis">{{ e.tipo }}</span></td>
+                <td><span class="pill">{{ e.tipo }}</span></td>
                 <td class="text-truncate" style="max-width:220px">{{ e.name }}</td>
                 <td class="text-muted small">{{ e.info or '—' }}</td>
                 <td class="text-end text-nowrap">{{ e.expiry.strftime('%d/%m/%Y') if e.expiry else '—' }}</td>
                 <td class="text-end">
-                  {% if e.status == 'vencido' %}
-                    <span class="badge bg-danger-subtle text-danger">vencido</span>
-                  {% elif e.status == 'vencendo' %}
-                    <span class="badge bg-warning-subtle text-warning-emphasis">{{ e.days }}d</span>
-                  {% else %}
-                    <span class="badge bg-success-subtle text-success">{{ e.days }}d</span>
-                  {% endif %}
+                  {% if e.status == 'vencido' %}<span class="badge bg-danger-subtle text-danger">vencido</span>
+                  {% elif e.status == 'vencendo' %}<span class="badge bg-warning-subtle text-warning-emphasis">{{ e.days }}d</span>
+                  {% else %}<span class="badge bg-success-subtle text-success">{{ e.days }}d</span>{% endif %}
                 </td>
               </tr>
               {% endfor %}
@@ -349,21 +222,16 @@
           </table>
         </div>
         {% else %}
-        <div class="alert alert-success d-flex align-items-center mb-0" role="alert">
-          <i class="bi bi-check-circle me-2"></i> Nenhuma licença ou domínio vencendo nos próximos 60 dias.
-        </div>
+        <div class="alert alert-success d-flex align-items-center mb-0"><i class="bi bi-check-circle me-2"></i> Nada vencendo nos próximos 60 dias.</div>
         {% endif %}
       </div>
     </div>
   </div>
 
-  <!-- Atividade recente -->
   <div class="col-12 col-lg-5">
-    <div class="card h-100">
-      <div class="card-header fw-semibold d-flex align-items-center gap-2">
-        <i class="bi bi-clock-history"></i> Atividade recente
-      </div>
-      <div class="card-body">
+    <div class="ch-card">
+      <div class="ch-head"><i class="bi bi-clock-history"></i> Atividade recente</div>
+      <div class="ch-body">
         {% if recent_audit and recent_audit|length > 0 %}
         <ul class="list-group list-group-flush">
           {% for a in recent_audit %}
@@ -376,385 +244,173 @@
               {%- else %} bi-dot{% endif %} mt-1"></i>
             <div class="flex-grow-1">
               <div class="small">{{ a.summary or (a.action ~ ' ' ~ (a.entity or '')) }}</div>
-              <div class="text-muted" style="font-size:.75rem">
-                {{ a.user_name or '—' }} · {{ a.created_at.strftime('%d/%m %H:%M') if a.created_at else '' }}
-              </div>
+              <div class="text-muted" style="font-size:.75rem">{{ a.user_name or '—' }} · {{ a.created_at.strftime('%d/%m %H:%M') if a.created_at else '' }}</div>
             </div>
           </li>
           {% endfor %}
         </ul>
-        {% else %}
-        <p class="text-muted mb-0">Sem registros de auditoria ainda.</p>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-</div>
-
-{# ===================== SEÇÃO: PRÓXIMAS LIMPEZAS ===================== #}
-<div class="row g-3 mt-1">
-  <div class="col-12">
-    <div class="card h-100">
-      <div class="card-header fw-semibold d-flex align-items-center gap-2">
-        <i class="bi bi-droplet-half text-info"></i> Máquinas mais próximas da limpeza
-        {% if it.cleanings_due and it.cleanings_due > 0 %}
-          <span class="badge bg-danger-subtle text-danger ms-auto">{{ it.cleanings_due }} em atraso</span>
-        {% endif %}
-      </div>
-      <div class="card-body">
-        {% if it.cleanings_next and it.cleanings_next|length > 0 %}
-        {% set kind_icon = {'computador':'bi-pc-display','notebook':'bi-laptop','impressora':'bi-printer'} %}
-        <div class="table-responsive">
-          <table class="table table-sm table-hover align-middle mb-0">
-            <thead>
-              <tr>
-                <th>Máquina</th>
-                <th class="text-end">Periodicidade</th>
-                <th class="text-end">Próxima limpeza</th>
-                <th class="text-end">Quando</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for c in it.cleanings_next %}
-              <tr>
-                <td>
-                  <div class="fw-semibold text-truncate" style="max-width:260px">
-                    <i class="bi {{ kind_icon.get(c.kind, 'bi-hdd') }} text-success me-1"></i>{{ c.machine }}
-                  </div>
-                  <small class="text-muted">
-                    {{ c.user or 's/ usuário' }}{% if c.sector %} · {{ c.sector }}{% endif %}
-                  </small>
-                </td>
-                <td class="text-end text-nowrap">
-                  {% if c.period_days %}{{ c.period_days }} dias{% else %}<span class="text-muted">—</span>{% endif %}
-                </td>
-                <td class="text-end text-nowrap">{{ c.next_date.strftime('%d/%m/%Y') if c.next_date else '—' }}</td>
-                <td class="text-end">
-                  {% if c.overdue %}
-                    <span class="badge bg-danger-subtle text-danger"><i class="bi bi-exclamation-triangle me-1"></i>vencida {{ -c.days }}d</span>
-                  {% elif c.days == 0 %}
-                    <span class="badge bg-warning-subtle text-warning-emphasis"><i class="bi bi-clock me-1"></i>hoje</span>
-                  {% elif c.days <= 7 %}
-                    <span class="badge bg-info-subtle text-info-emphasis"><i class="bi bi-clock-history me-1"></i>em {{ c.days }}d</span>
-                  {% else %}
-                    <span class="badge bg-success-subtle text-success">em {{ c.days }}d</span>
-                  {% endif %}
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        <div class="d-flex align-items-center justify-content-between mt-2">
-          <small class="text-muted">
-            Baseado na próxima data agendada no último registro de limpeza de cada máquina.
-          </small>
-          <a href="{{ url_for('cleanings.list_view') }}" class="btn btn-sm btn-outline-light">
-            <i class="bi bi-droplet-half"></i> Ver limpezas
-          </a>
-        </div>
-        {% else %}
-        <div class="alert alert-secondary d-flex align-items-center mb-0" role="alert">
-          <i class="bi bi-info-circle me-2"></i> Nenhuma limpeza agendada com data definida ainda.
-        </div>
-        {% endif %}
+        {% else %}<p class="text-muted mb-0">Sem registros de auditoria ainda.</p>{% endif %}
       </div>
     </div>
   </div>
 </div>
 {% endif %}
 
-<!-- SCRIPTS dos gráficos -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-  // Paleta (alinhada ao tema)
-  const COLORS = {
-    green: 'rgb(0,200,83)',          // #00c853
-    greenAlpha: 'rgba(0,200,83,.25)',
-    teal: 'rgb(0,184,148)',          // teal
-    tealAlpha: 'rgba(0,184,148,.25)',
-    amber: 'rgb(255,193,7)',
-    amberAlpha: 'rgba(255,193,7,.35)',
-    red: 'rgb(244,67,54)',
-    redAlpha: 'rgba(244,67,54,.30)',
-    tick: 'rgba(255,255,255,.80)',
-    grid: 'rgba(255,255,255,.10)'
-  };
-
-  // Dados prontos do backend
-  const CHART_DATA = {{ (chart_data or {})|tojson }};
-  const TOP_ITEMS   = {{ (top_items_data or {})|tojson }};
-  const TOP_USERS   = {{ (top_users_data or {})|tojson }};
-  const IT = {
-    tickets_status:   {{ (it.tickets_status if it else {})|tojson }},
-    tickets_priority: {{ (it.tickets_priority if it else {})|tojson }},
-    machines_kind:    {{ (it.machines_kind if it else {})|tojson }},
-    mobiles_status:   {{ (it.mobiles_status if it else {})|tojson }}
-  };
-
-  // Paleta categórica para gráficos de TI
-  const CATPAL = [
-    'rgba(0,200,83,.7)', 'rgba(255,193,7,.7)', 'rgba(0,184,148,.7)',
-    'rgba(244,67,54,.7)', 'rgba(33,150,243,.7)', 'rgba(156,39,176,.7)',
-    'rgba(255,112,67,.7)'
-  ];
-  const CATBORDER = [
-    'rgb(0,200,83)', 'rgb(255,193,7)', 'rgb(0,184,148)',
-    'rgb(244,67,54)', 'rgb(33,150,243)', 'rgb(156,39,176)', 'rgb(255,112,67)'
-  ];
-
-  // Se não vier chart_data, gerar fallback a partir de low_stock
-  {% if not chart_data and low_stock and low_stock|length > 0 %}
-    (function buildFallbackLow(){
-      const LOW = [
-        {% for p in low_stock %}
-          { sku: {{ p.sku|tojson }}, name: {{ p.name|tojson }}, estoque: {{ (current_stock(p) or 0)|int }}, minimo: {{ (p.min_stock or 0)|int }} },
-        {% endfor %}
-      ];
-      const sorted = LOW.map(m => ({...m, pct: (m.minimo>0 && m.estoque>0) ? (m.estoque/m.minimo*100) : 0}))
-                        .sort((a,b)=>a.pct-b.pct).slice(0,10);
-      CHART_DATA.labels = sorted.map(m => `${m.sku} - ${m.name}`);
-      CHART_DATA.estoque = sorted.map(m => m.estoque);
-      CHART_DATA.minimo = sorted.map(m => m.minimo);
-      CHART_DATA.zeroCount = LOW.filter(m => m.estoque <= 0).length;
-      CHART_DATA.belowCount = LOW.filter(m => m.estoque > 0 && m.estoque < m.minimo).length;
-    })();
-  {% endif %}
-
-  const hasBars = CHART_DATA.labels && CHART_DATA.labels.length > 0;
-  const hasPie  = ((CHART_DATA.zeroCount ?? 0) + (CHART_DATA.belowCount ?? 0)) > 0;
-  const hasTopItems = TOP_ITEMS.labels && TOP_ITEMS.labels.length > 0;
-  const hasTopUsers = TOP_USERS.labels && TOP_USERS.labels.length > 0;
-
-  // === Baixo estoque (Barras) ===
-  (function initBars(){
-    if (!hasBars) return;
-    const el = document.getElementById('chartLowStockBar');
-    if (!el) return;
-    new Chart(el, {
-      type: 'bar',
-      data: {
-        labels: CHART_DATA.labels,
-        datasets: [
-          { label: 'Estoque', data: CHART_DATA.estoque || [],
-            backgroundColor: COLORS.greenAlpha, borderColor: COLORS.green, borderWidth: 2 },
-          { label: 'Mínimo', data: CHART_DATA.minimo || [],
-            backgroundColor: COLORS.redAlpha, borderColor: COLORS.red, borderWidth: 2 }
-        ]
-      },
-      options: {
-        responsive:true, maintainAspectRatio:false,
-        scales:{
-          x:{ticks:{autoSkip:true,maxRotation:0,color:COLORS.tick},grid:{color:COLORS.grid}},
-          y:{beginAtZero:true,ticks:{precision:0,color:COLORS.tick},grid:{color:COLORS.grid}}
-        },
-        plugins:{legend:{position:'top',labels:{color:COLORS.tick}},tooltip:{mode:'index',intersect:false}}
-      }
-    });
-  })();
-
-  // === Baixo estoque (Rosca) ===
-  (function initPie(){
-    if (!hasPie) return;
-    const el = document.getElementById('chartLowStockPie');
-    if (!el) return;
-    new Chart(el, {
-      type: 'doughnut',
-      data: {
-        labels: ['Sem estoque', 'Abaixo do mínimo'],
-        datasets: [{
-          data: [CHART_DATA.zeroCount || 0, CHART_DATA.belowCount || 0],
-          backgroundColor: [COLORS.redAlpha, COLORS.amberAlpha],
-          borderColor: [COLORS.red, COLORS.amber],
-          borderWidth: 2
-        }]
-      },
-      options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
-        plugins:{legend:{position:'bottom',labels:{color:COLORS.tick}}}
-      }
-    });
-  })();
-
-  // === Top 10 Itens mais movimentados (Linha) ===
-  (function initTopItems(){
-    if (!hasTopItems) return;
-    const el = document.getElementById('chartTopItems');
-    if (!el) return;
-    new Chart(el, {
-      type: 'line',
-      data: {
-        labels: TOP_ITEMS.labels,
-        datasets: [{
-          label: 'Quantidade total movimentada',
-          data: TOP_ITEMS.data || [],
-          borderColor: COLORS.teal,
-          backgroundColor: COLORS.tealAlpha,
-          tension: 0.3,
-          pointRadius: 3,
-          pointHoverRadius: 5,
-          fill: true
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        scales: {
-          x: { ticks: { color: COLORS.tick, maxRotation: 0, autoSkip: true }, grid: { color: COLORS.grid } },
-          y: { beginAtZero: true, ticks: { color: COLORS.tick, precision: 0 }, grid: { color: COLORS.grid } }
-        },
-        plugins: { legend: { position: 'top', labels: { color: COLORS.tick } } }
-      }
-    });
-  })();
-
-  // === Top 10 Usuários que mais movimentaram (Linha, 2 séries) ===
-  (function initTopUsers(){
-    if (!hasTopUsers) return;
-    const el = document.getElementById('chartTopUsers');
-    if (!el) return;
-    new Chart(el, {
-      type: 'line',
-      data: {
-        labels: TOP_USERS.labels,
-        datasets: [
-          {
-            label: 'Qtd. movimentada',
-            data: TOP_USERS.qty || [],
-            borderColor: COLORS.green,
-            backgroundColor: COLORS.greenAlpha,
-            tension: 0.3, pointRadius: 3, pointHoverRadius: 5, fill: true
-          },
-          {
-            label: 'Nº de movimentações',
-            data: TOP_USERS.movs || [],
-            borderColor: COLORS.amber,
-            backgroundColor: COLORS.amberAlpha,
-            tension: 0.3, pointRadius: 3, pointHoverRadius: 5, fill: true
-          }
-        ]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        scales: {
-          x: { ticks: { color: COLORS.tick, maxRotation: 0, autoSkip: true }, grid: { color: COLORS.grid } },
-          y: { beginAtZero: true, ticks: { color: COLORS.tick, precision: 0 }, grid: { color: COLORS.grid } }
-        },
-        plugins: { legend: { position: 'top', labels: { color: COLORS.tick } } }
-      }
-    });
-  })();
-
-  // ===================== GRÁFICOS DE TI =====================
-  function hasData(d){ return d && d.labels && d.labels.length > 0 && (d.data||[]).some(v => v > 0); }
-
-  // Helper: rosca categórica
-  function drawDoughnut(id, d){
-    if (!hasData(d)) return;
-    const el = document.getElementById(id); if (!el) return;
-    new Chart(el, {
-      type: 'doughnut',
-      data: { labels: d.labels, datasets: [{
-        data: d.data,
-        backgroundColor: d.labels.map((_,i)=>CATPAL[i % CATPAL.length]),
-        borderColor: d.labels.map((_,i)=>CATBORDER[i % CATBORDER.length]),
-        borderWidth: 2
-      }]},
-      options: { responsive:true, maintainAspectRatio:false, cutout:'58%',
-        plugins:{ legend:{ position:'bottom', labels:{ color:COLORS.tick, boxWidth:12 } } } }
-    });
-  }
-
-  // Helper: barras categóricas
-  function drawBars(id, d){
-    if (!hasData(d)) return;
-    const el = document.getElementById(id); if (!el) return;
-    new Chart(el, {
-      type: 'bar',
-      data: { labels: d.labels, datasets: [{
-        label: 'Quantidade', data: d.data,
-        backgroundColor: d.labels.map((_,i)=>CATPAL[i % CATPAL.length]),
-        borderColor: d.labels.map((_,i)=>CATBORDER[i % CATBORDER.length]),
-        borderWidth: 2
-      }]},
-      options: { responsive:true, maintainAspectRatio:false,
-        scales:{ x:{ticks:{color:COLORS.tick},grid:{color:COLORS.grid}},
-                 y:{beginAtZero:true,ticks:{precision:0,color:COLORS.tick},grid:{color:COLORS.grid}} },
-        plugins:{ legend:{ display:false } } }
-    });
-  }
-
-  if (IT && Object.keys(IT).length) {
-    drawDoughnut('chartTicketsStatus', IT.tickets_status);
-    drawBars('chartTicketsPriority', IT.tickets_priority);
-    drawDoughnut('chartMachinesKind', IT.machines_kind);
-    drawBars('chartMobilesStatus', IT.mobiles_status);
-  }
-</script>
-{# =================== FIM SEÇÃO: GRÁFICOS =================== #}
-
-<h2 class="h5 mt-4 d-flex align-items-center gap-2">
-  <i class="bi bi-battery-half text-warning"></i>
-  Atenção: baixo estoque
-  {% if low_stock %}
-    <span class="badge bg-warning-subtle text-warning-soft">{{ low_stock|length }}</span>
-  {% endif %}
-</h2>
-
+{# ===================== BAIXO ESTOQUE (tabela) ===================== #}
+<div class="sec-label"><i class="bi bi-battery-half"></i> Atenção: baixo estoque
+  {% if low_stock %}<span class="pill">{{ low_stock|length }}</span>{% endif %}
+</div>
 {% if low_stock and low_stock|length > 0 %}
+<div class="ch-card"><div class="ch-body">
   <div class="table-responsive">
-    <table class="table table-sm table-hover align-middle">
-      <thead>
-        <tr>
-          <th style="min-width:100px">SKU</th>
-          <th>Material</th>
-          <th style="width:220px">Estoque vs. Mínimo</th>
-          <th class="text-end" style="width:120px">Estoque</th>
-          <th class="text-end" style="width:120px">Mínimo</th>
-        </tr>
-      </thead>
+    <table class="table table-sm table-hover align-middle mb-0">
+      <thead><tr><th style="min-width:100px">SKU</th><th>Material</th><th style="width:240px">Estoque vs. Mínimo</th>
+        <th class="text-end" style="width:110px">Estoque</th><th class="text-end" style="width:110px">Mínimo</th></tr></thead>
       <tbody>
         {% for p in low_stock %}
-          {% set estoque = current_stock(p) %}
-          {% set minimo = p.min_stock or 0 %}
-          {% set pct = 0 %}
-          {% if minimo > 0 %}
-            {% set pct = (estoque / minimo * 100) if estoque > 0 else 0 %}
-            {% if pct > 100 %}{% set pct = 100 %}{% endif %}
-          {% endif %}
+          {% set estoque = current_stock(p) %}{% set minimo = p.min_stock or 0 %}{% set pct = 0 %}
+          {% if minimo > 0 %}{% set pct = (estoque / minimo * 100) if estoque > 0 else 0 %}{% if pct > 100 %}{% set pct = 100 %}{% endif %}{% endif %}
           <tr>
-            <td class="text-nowrap">{{ p.sku }}</td>
+            <td class="text-nowrap font-monospace">{{ p.sku }}</td>
             <td>
-              <a href="{{ url_for('products.list_view') }}?q={{ p.sku }}" class="link-offset-1">
-                {{ p.name }}
-              </a>
-              {% if estoque <= 0 %}
-                <span class="badge bg-danger-subtle text-danger ms-2">Sem estoque</span>
-              {% elif estoque < minimo %}
-                <span class="badge bg-warning-subtle text-warning-emphasis ms-2">Abaixo do mínimo</span>
-              {% endif %}
+              <a href="{{ url_for('products.list_view') }}?q={{ p.sku }}" class="text-reset fw-semibold">{{ p.name }}</a>
+              {% if estoque <= 0 %}<span class="badge bg-danger-subtle text-danger ms-2">Sem estoque</span>
+              {% elif estoque < minimo %}<span class="badge bg-warning-subtle text-warning-emphasis ms-2">Abaixo</span>{% endif %}
             </td>
             <td>
-              <div class="progress" role="progressbar" aria-label="Nível de estoque" aria-valuenow="{{ pct|int }}" aria-valuemin="0" aria-valuemax="100" style="height: 10px;">
+              <div class="progress" style="height:8px;background:#0f1a13">
                 <div class="progress-bar {% if estoque <= 0 %}bg-danger{% elif estoque < minimo %}bg-warning{% else %}bg-success{% endif %}" style="width: {{ pct }}%"></div>
               </div>
-              <small class="text-muted d-block mt-1">
-                {% if minimo > 0 %}
-                  {{ estoque if estoque>0 else 0 }} / {{ minimo }} ({{ pct|round(0) }}%)
-                {% else %}
-                  mínimo não definido
-                {% endif %}
-              </small>
+              <small class="text-muted d-block mt-1">{% if minimo > 0 %}{{ estoque if estoque>0 else 0 }} / {{ minimo }} ({{ pct|round(0) }}%){% else %}mínimo não definido{% endif %}</small>
             </td>
-            <td class="text-end">{{ estoque }}</td>
-            <td class="text-end">{{ minimo }}</td>
+            <td class="text-end number">{{ estoque }}</td>
+            <td class="text-end number">{{ minimo }}</td>
           </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+</div></div>
 {% else %}
-  <div class="alert alert-success d-flex align-items-center mt-2" role="alert">
-    <i class="bi bi-check-circle me-2"></i>
-    Nenhum material abaixo do mínimo. Excelente!
-  </div>
+<div class="alert alert-success d-flex align-items-center mb-0"><i class="bi bi-check-circle me-2"></i> Nenhum material abaixo do mínimo. Excelente!</div>
 {% endif %}
+
+{# ===================== SCRIPTS ===================== #}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+(function(){
+  if (typeof Chart === 'undefined') return;
+
+  const TICK='rgba(255,255,255,.78)', GRID='rgba(255,255,255,.07)';
+  const PAL = ['#00c853','#ffb020','#0dcaf0','#ff7043','#9c6bff','#00b894','#f44336','#26c6da'];
+  const rgba=(hex,a)=>{const h=hex.replace('#','');const n=parseInt(h,16);
+    return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;};
+
+  Chart.defaults.color = TICK;
+  Chart.defaults.font.family = "system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
+  Chart.defaults.plugins.legend.labels.boxWidth = 12;
+  Chart.defaults.plugins.legend.labels.usePointStyle = true;
+  Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(8,16,11,.95)';
+  Chart.defaults.plugins.tooltip.borderColor = '#2e6b45';
+  Chart.defaults.plugins.tooltip.borderWidth = 1;
+  Chart.defaults.plugins.tooltip.padding = 10;
+
+  const DATA = {
+    movements: {{ (it.movements_trend if it else {})|tojson }},
+    health:    {{ (it.stock_health if it else {})|tojson }},
+    assets:    {{ (it.assets_mix if it else {})|tojson }},
+    low:       {{ (chart_data or {})|tojson }},
+    topItems:  {{ (top_items_data or {})|tojson }},
+    tStatus:   {{ (it.tickets_status if it else {})|tojson }},
+    tPrio:     {{ (it.tickets_priority if it else {})|tojson }},
+    mKind:     {{ (it.machines_kind if it else {})|tojson }},
+    mStatus:   {{ (it.mobiles_status if it else {})|tojson }}
+  };
+  const has = d => d && d.labels && d.labels.length;
+  const hasV = d => has(d) && (d.data||[]).some(v=>v>0);
+  const grad = (ctx, hex) => { const g = ctx.createLinearGradient(0,0,0,260);
+    g.addColorStop(0, rgba(hex,.38)); g.addColorStop(1, rgba(hex,0)); return g; };
+
+  const axes = (stacked=false) => ({
+    x:{ stacked, ticks:{color:TICK,maxRotation:0,autoSkip:true,maxTicksLimit:10}, grid:{color:GRID} },
+    y:{ stacked, beginAtZero:true, ticks:{color:TICK,precision:0}, grid:{color:GRID} }
+  });
+
+  // Plugin: texto central na rosca de saúde
+  const centerText = {
+    id:'centerText',
+    afterDraw(c){ const t=c.config.options.plugins.centerText; if(!t||!t.text) return;
+      const {ctx,chartArea:{left,right,top,bottom}}=c; const x=(left+right)/2, y=(top+bottom)/2;
+      ctx.save(); ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillStyle='#eafff0'; ctx.font='700 1.5rem system-ui'; ctx.fillText(t.text, x, y-4);
+      ctx.fillStyle='#8fb0a0'; ctx.font='600 .62rem system-ui'; ctx.fillText(t.sub||'', x, y+16); ctx.restore(); }
+  };
+
+  // 1) Movimentações (área, 2 séries)
+  (function(){ const el=document.getElementById('chMovTrend'); if(!el||!DATA.movements.labels) return;
+    const ctx=el.getContext('2d');
+    new Chart(el,{type:'line',data:{labels:DATA.movements.labels,datasets:[
+      {label:'Entradas',data:DATA.movements.in||[],borderColor:PAL[0],backgroundColor:grad(ctx,PAL[0]),
+        fill:true,tension:.35,borderWidth:2,pointRadius:0,pointHoverRadius:4},
+      {label:'Saídas',data:DATA.movements.out||[],borderColor:PAL[1],backgroundColor:grad(ctx,PAL[1]),
+        fill:true,tension:.35,borderWidth:2,pointRadius:0,pointHoverRadius:4}
+    ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      scales:axes(),plugins:{legend:{position:'top'}}}});
+  })();
+
+  // 2) Saúde do estoque (rosca + centro %)
+  (function(){ const el=document.getElementById('chStockHealth'); if(!el||!hasV(DATA.health)) return;
+    new Chart(el,{type:'doughnut',plugins:[centerText],data:{labels:DATA.health.labels,datasets:[{
+      data:DATA.health.data,backgroundColor:[rgba(PAL[0],.85),rgba(PAL[1],.85),rgba(PAL[6],.85)],
+      borderColor:'#0f1a13',borderWidth:2}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'72%',
+        plugins:{legend:{position:'bottom'},centerText:{text:(DATA.health.pct_ok||0)+'%',sub:'SAUDÁVEL'}}}});
+  })();
+
+  // 3) Mix de ativos (polar area)
+  (function(){ const el=document.getElementById('chAssetsMix'); if(!el||!hasV(DATA.assets)) return;
+    new Chart(el,{type:'polarArea',data:{labels:DATA.assets.labels,datasets:[{
+      data:DATA.assets.data,backgroundColor:DATA.assets.labels.map((_,i)=>rgba(PAL[i%PAL.length],.65)),
+      borderColor:DATA.assets.labels.map((_,i)=>PAL[i%PAL.length]),borderWidth:1.5}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        scales:{r:{ticks:{display:false,backdropColor:'transparent'},grid:{color:GRID},angleLines:{color:GRID}}},
+        plugins:{legend:{position:'bottom'}}}});
+  })();
+
+  // 4) Top itens críticos (barras arredondadas, estoque x mínimo)
+  (function(){ const el=document.getElementById('chLowStockBar'); if(!el||!has(DATA.low)) return;
+    new Chart(el,{type:'bar',data:{labels:DATA.low.labels,datasets:[
+      {label:'Estoque',data:DATA.low.estoque||[],backgroundColor:rgba(PAL[0],.65),borderColor:PAL[0],borderWidth:1.5,borderRadius:6},
+      {label:'Mínimo',data:DATA.low.minimo||[],backgroundColor:rgba(PAL[6],.55),borderColor:PAL[6],borderWidth:1.5,borderRadius:6}
+    ]},options:{responsive:true,maintainAspectRatio:false,scales:axes(),plugins:{legend:{position:'top'}}}});
+  })();
+
+  // 5) Top itens movimentados (barras horizontais)
+  (function(){ const el=document.getElementById('chTopItems'); if(!el||!has(DATA.topItems)) return;
+    new Chart(el,{type:'bar',data:{labels:DATA.topItems.labels,datasets:[{
+      label:'Qtd movimentada',data:DATA.topItems.data||[],
+      backgroundColor:DATA.topItems.labels.map((_,i)=>rgba(PAL[i%PAL.length],.7)),
+      borderColor:DATA.topItems.labels.map((_,i)=>PAL[i%PAL.length]),borderWidth:1.5,borderRadius:6}]},
+      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+        scales:{x:{beginAtZero:true,ticks:{color:TICK,precision:0},grid:{color:GRID}},
+                y:{ticks:{color:TICK},grid:{display:false}}},plugins:{legend:{display:false}}}});
+  })();
+
+  // Helpers categóricos (TI)
+  function doughnut(id,d){ const el=document.getElementById(id); if(!el||!hasV(d)) return;
+    new Chart(el,{type:'doughnut',data:{labels:d.labels,datasets:[{data:d.data,
+      backgroundColor:d.labels.map((_,i)=>rgba(PAL[i%PAL.length],.8)),borderColor:'#0f1a13',borderWidth:2}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom'}}}}); }
+  function bars(id,d){ const el=document.getElementById(id); if(!el||!hasV(d)) return;
+    new Chart(el,{type:'bar',data:{labels:d.labels,datasets:[{label:'Qtd',data:d.data,
+      backgroundColor:d.labels.map((_,i)=>rgba(PAL[i%PAL.length],.7)),
+      borderColor:d.labels.map((_,i)=>PAL[i%PAL.length]),borderWidth:1.5,borderRadius:6}]},
+      options:{responsive:true,maintainAspectRatio:false,scales:axes(),plugins:{legend:{display:false}}}}); }
+
+  doughnut('chTicketsStatus', DATA.tStatus);
+  bars('chTicketsPriority', DATA.tPrio);
+  doughnut('chMachinesKind', DATA.mKind);
+  bars('chMobilesStatus', DATA.mStatus);
+})();
+</script>
 {% endblock %}

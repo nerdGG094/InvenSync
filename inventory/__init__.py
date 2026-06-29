@@ -2,7 +2,7 @@ import os
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_login import current_user
 from sqlalchemy import text
-from .extensions import db, login_manager, csrf
+from .extensions import db, login_manager, csrf, limiter
 from .config import Config
 
 
@@ -163,6 +163,7 @@ def create_app():
     login_manager.login_message = None
     login_manager.needs_refresh_message = None
     csrf.init_app(app)
+    limiter.init_app(app)
 
     # Falha de CSRF (token ausente/expirado): mensagem amigável + volta à página.
     from flask_wtf.csrf import CSRFError
@@ -338,6 +339,12 @@ def create_app():
     def server_error(e):
         return render_template("error.html", title="Erro", message="Erro interno no servidor"), 500
 
+    # Excesso de tentativas (rate limit do login)
+    @app.errorhandler(429)
+    def too_many_requests(e):
+        flash("Muitas tentativas em pouco tempo. Aguarde um instante e tente novamente.", "warning")
+        return redirect(url_for("auth.login"))
+
     # Monitoramento de uptime em segundo plano (ping/HTTP + alerta WhatsApp)
     if app.config.get("MONITORING_ENABLED", True):
         try:
@@ -345,5 +352,13 @@ def create_app():
             monitoring.start_scheduler(app)
         except Exception:  # noqa: BLE001
             app.logger.exception("Falha ao iniciar o monitoramento de uptime")
+
+    # Alertas proativos (estoque/licenças/chamados) em segundo plano
+    if app.config.get("ALERTS_ENABLED", True):
+        try:
+            from .services import alerts
+            alerts.start_scheduler(app)
+        except Exception:  # noqa: BLE001
+            app.logger.exception("Falha ao iniciar os alertas proativos")
 
     return app

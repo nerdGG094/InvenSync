@@ -4,6 +4,7 @@ from flask_login import login_user, logout_user, current_user
 from ..forms.auth import LoginForm, TwoFactorForm
 from ..models.user import User
 from ..services import twofa
+from ..extensions import limiter
 
 bp = Blueprint("auth", __name__)
 
@@ -15,6 +16,7 @@ def _home_for(user):
 
 
 @bp.route("/login", methods=["GET","POST"])
+@limiter.limit("10 per minute; 40 per hour", methods=["POST"])
 def login():
     if current_user.is_authenticated:
         return redirect(_home_for(current_user))
@@ -30,13 +32,15 @@ def login():
             if user.is_2fa_enabled and user.totp_secret:
                 session[PENDING_KEY] = user.id
                 return redirect(url_for("auth.login_2fa"))
-            login_user(user)
+            session.permanent = True
+            login_user(user, remember=True)
             return redirect(_home_for(user))
         flash("Credenciais inválidas", "danger")
     return render_template("login.html", form=form)
 
 
 @bp.route("/login/2fa", methods=["GET", "POST"])
+@limiter.limit("10 per minute", methods=["POST"])
 def login_2fa():
     if current_user.is_authenticated:
         return redirect(_home_for(current_user))
@@ -52,7 +56,8 @@ def login_2fa():
     if form.validate_on_submit():
         if twofa.verify(user.totp_secret, form.code.data):
             session.pop(PENDING_KEY, None)
-            login_user(user)
+            session.permanent = True
+            login_user(user, remember=True)
             return redirect(_home_for(user))
         flash("Código inválido. Tente novamente.", "danger")
     return render_template("login_2fa.html", form=form)

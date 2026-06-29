@@ -8,19 +8,33 @@
   @media (min-width: 992px){
     .mov-form-sticky{ position: sticky; top: 1rem; }
   }
+  /* ===== KPIs modernos ===== */
+  .kpi { position:relative; background:linear-gradient(160deg,#17231b,#131a16); border:1px solid #243024;
+    border-radius:16px; padding:.95rem 1.05rem; height:100%; overflow:hidden; transition:transform .14s, border-color .14s; }
+  .kpi:hover { transform:translateY(-3px); border-color:#2f6b46; }
+  .kpi::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--accent,#00c853); }
+  .kpi .ico { width:40px; height:40px; border-radius:12px; display:inline-flex; align-items:center; justify-content:center;
+    font-size:1.2rem; background:color-mix(in srgb, var(--accent,#00c853) 16%, transparent); color:var(--accent,#00c853); }
+  .kpi .lbl { color:#8fb0a0; font-size:.74rem; text-transform:uppercase; letter-spacing:.04em; }
+  .kpi .val { font-size:1.65rem; font-weight:700; line-height:1.05; color:#eafff0; }
+  .kpi .hint { color:#6f8a7b; font-size:.7rem; }
+  /* Cabeçalho de card padronizado */
+  .card-title-row { padding:.85rem 1.05rem; border-bottom:1px solid #1f2c24; }
   /* Sinal de quantidade colorido */
   .qty-in{ color:#46d17e; font-weight:700; }
   .qty-out{ color:#ff6b6b; font-weight:700; }
-  /* Linha do histórico com leve faixa por tipo */
+  /* Histórico: faixa por tipo + ícone */
   .mov-row td:first-child{ border-left:3px solid transparent; }
-  .mov-row.is-in td:first-child{ border-left-color:#00c85366; }
-  .mov-row.is-out td:first-child{ border-left-color:#f4433666; }
+  .mov-row.is-in td:first-child{ border-left-color:#00c853; }
+  .mov-row.is-out td:first-child{ border-left-color:#f44336; }
+  .mov-row:hover td{ background:#17241c; }
   .mov-filters .form-control, .mov-filters .form-select{ height:34px; }
   .mov-meta{ font-size:.72rem; color:#8fb0a0; }
 </style>
 {% endblock %}
 
 {% block content %}
+{% from "_macros.html" import pager with context %}
 {% macro movement_badge(t) -%}
   {% if t == 'IN' -%}
     <span class="badge bg-success-subtle text-success px-2"><i class="bi bi-arrow-down-circle me-1"></i>Entrada</span>
@@ -60,42 +74,42 @@
 
 {# ===== Cartões-resumo (refletem o filtro atual) ===== #}
 <div class="row g-3 mb-3">
-  <div class="col-12 col-sm-6 col-xl-3">
-    <div class="card stat-card h-100"><div class="card-body d-flex align-items-center justify-content-between">
-      <div>
-        <div class="text-muted small">Entradas {% if has_filter %}(no filtro){% endif %}</div>
-        <div class="h3 mb-0 number text-success">{{ entrada_total }}</div>
+  <div class="col-6 col-xl-3">
+    <div class="kpi" style="--accent:#00c853">
+      <div class="d-flex justify-content-between align-items-start">
+        <span class="lbl">Entradas {% if has_filter %}(filtro){% endif %}</span>
+        <span class="ico"><i class="bi bi-box-arrow-in-down"></i></span>
       </div>
-      <i class="bi bi-box-arrow-in-down text-success fs-2"></i>
-    </div></div>
+      <div class="val mt-2 text-success">{{ entrada_total }}</div>
+    </div>
   </div>
-  <div class="col-12 col-sm-6 col-xl-3">
-    <div class="card stat-card h-100" style="border-left-color:#f44336"><div class="card-body d-flex align-items-center justify-content-between">
-      <div>
-        <div class="text-muted small">Saídas {% if has_filter %}(no filtro){% endif %}</div>
-        <div class="h3 mb-0 number text-danger">{{ saida_total }}</div>
+  <div class="col-6 col-xl-3">
+    <div class="kpi" style="--accent:#f44336">
+      <div class="d-flex justify-content-between align-items-start">
+        <span class="lbl">Saídas {% if has_filter %}(filtro){% endif %}</span>
+        <span class="ico"><i class="bi bi-box-arrow-up"></i></span>
       </div>
-      <i class="bi bi-box-arrow-up text-danger fs-2"></i>
-    </div></div>
+      <div class="val mt-2 text-danger">{{ saida_total }}</div>
+    </div>
   </div>
-  <div class="col-12 col-sm-6 col-xl-3">
-    <div class="card stat-card h-100" style="border-left-color:#ffb020"><div class="card-body d-flex align-items-center justify-content-between">
-      <div>
-        <div class="text-muted small">Valor das saídas {% if has_filter %}(no filtro){% endif %}</div>
-        <div class="h4 mb-0 number text-warning">R$ {{ '%.2f'|format(saida_valor)|replace('.', ',') }}</div>
-        <div class="mov-meta">Custo informado ou preço do material</div>
+  <div class="col-6 col-xl-3">
+    <div class="kpi" style="--accent:#ffb020">
+      <div class="d-flex justify-content-between align-items-start">
+        <span class="lbl">Valor das saídas</span>
+        <span class="ico"><i class="bi bi-cash-stack"></i></span>
       </div>
-      <i class="bi bi-cash-stack text-warning fs-2"></i>
-    </div></div>
+      <div class="val mt-2 text-warning" style="font-size:1.35rem">R$ {{ '%.2f'|format(saida_valor)|replace('.', ',') }}</div>
+      <div class="hint">Custo informado ou preço do material</div>
+    </div>
   </div>
-  <div class="col-12 col-sm-6 col-xl-3">
-    <div class="card stat-card h-100" style="border-left-color:#0dcaf0"><div class="card-body d-flex align-items-center justify-content-between">
-      <div>
-        <div class="text-muted small">Saldo (E − S)</div>
-        <div class="h3 mb-0 number {{ 'text-success' if saldo_total >= 0 else 'text-danger' }}">{{ saldo_total }}</div>
+  <div class="col-6 col-xl-3">
+    <div class="kpi" style="--accent:#0dcaf0">
+      <div class="d-flex justify-content-between align-items-start">
+        <span class="lbl">Saldo (E − S)</span>
+        <span class="ico"><i class="bi bi-calculator"></i></span>
       </div>
-      <i class="bi bi-calculator text-info fs-2"></i>
-    </div></div>
+      <div class="val mt-2 {{ 'text-success' if saldo_total >= 0 else 'text-danger' }}">{{ saldo_total }}</div>
+    </div>
   </div>
 </div>
 
@@ -256,21 +270,7 @@
         </table>
       </div>
 
-      {% if pagination and pagination.pages > 1 %}
-      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 p-3 border-top" style="border-color:#243024 !important">
-        <small class="text-muted">Página {{ pagination.page }} de {{ pagination.pages }} · {{ total_regs }} registros</small>
-        <div class="btn-group">
-          <a class="btn btn-sm btn-outline-light {{ 'disabled' if not pagination.has_prev }}"
-             href="{{ url_for('movements.list_and_new', page=pagination.prev_num, q=request.args.get('q'), type=request.args.get('type'), start=request.args.get('start'), end=request.args.get('end')) if pagination.has_prev else '#' }}">
-            <i class="bi bi-chevron-left"></i> Anterior
-          </a>
-          <a class="btn btn-sm btn-outline-light {{ 'disabled' if not pagination.has_next }}"
-             href="{{ url_for('movements.list_and_new', page=pagination.next_num, q=request.args.get('q'), type=request.args.get('type'), start=request.args.get('start'), end=request.args.get('end')) if pagination.has_next else '#' }}">
-            Próxima <i class="bi bi-chevron-right"></i>
-          </a>
-        </div>
-      </div>
-      {% endif %}
+      {{ pager(pagination) }}
 
       {% else %}
       <div class="empty-state">
