@@ -14,7 +14,7 @@ Tolerante a falhas: qualquer erro nunca derruba o app/servidor.
 import os
 import threading
 import time
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 
 from ..extensions import db
 from ..models.announcement import Announcement
@@ -29,7 +29,6 @@ AUTO_TITLE = "🔔 Alertas automáticos do sistema"
 
 _started = False
 _lock = threading.Lock()
-_last_wpp_date = None  # evita repetir o WhatsApp no mesmo dia
 
 
 # ---------------------------------------------------------------------------
@@ -137,40 +136,77 @@ def publish(app) -> int:
                 # Sem pendências: despublica (some do mural), mas mantém o registro.
                 a.is_active = bool(total)
             db.session.commit()
-
-            _maybe_whatsapp(total, low, lic, stuck, hours)
             return total
         except Exception:  # noqa: BLE001
             db.session.rollback()
             return -1
 
 
-def _maybe_whatsapp(total, low, lic, stuck, hours):
-    """Envia o digest à TI no máximo uma vez por dia (quando há pendências)."""
-    global _last_wpp_date
-    if total <= 0:
-        return
-    today = date.today()
-    if _last_wpp_date == today:
-        return
-    _last_wpp_date = today
-    try:
-        whatsapp.notify_ti(
-            "🔔 *InvenSync — alertas do dia*\n"
-            f"📦 Estoque no mínimo: {len(low)}\n"
-            f"📅 Licenças/garantias: {len(lic)}\n"
-            f"🎫 Chamados parados (>{hours}h): {len(stuck)}\n"
-            "Veja os detalhes na Central de Avisos."
-        )
-    except Exception:  # noqa: BLE001
-        pass
+# ---------------------------------------------------------------------------
+# Digest por WhatsApp — só nas horas-alvo (ex.: 8 e 17), 1x por janela/dia.
+# O controle é persistido em arquivo, então reiniciar o servidor NÃO reenvia.
+# ---------------------------------------------------------------------------
+def _target_hours(app):
+    out = set()
+    for part in str(app.config.get("ALERTS_WHATSAPP_HOURS", "8,17")).split(","):
+        part = part.strip()
+        if part.isdigit() and 0 <= int(part) <= 23:
+            out.add(int(part))
+    return out or {8, 17}
+
+
+def _state_file(app):
+    return os.path.join(app.instance_path, "alerts_wpp.txt")
+
+
+def send_digest_if_window(app):
+    """Dispara o digest se a hora atual é uma das horas-alvo e ainda não foi
+    enviado nesta janela (data#hora). Marca a janela ANTES de enviar para nunca
+    duplicar, mesmo com vários ticks ou reinícios dentro da mesma hora."""
+    with app.app_context():
+        now = datetime.now()
+        if now.hour not in _target_hours(app):
+            return
+        slot = f"{now.date().isoformat()}#{now.hour}"
+        path = _state_file(app)
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                if f.read().strip() == slot:
+                    return  # já processado nesta janela
+        except Exception:  # noqa: BLE001
+            pass
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(slot)
+        except Exception:  # noqa: BLE001
+            pass
+
+        try:
+            days = int(app.config.get("ALERTS_LICENSE_DAYS", 30) or 30)
+            hours = int(app.config.get("ALERTS_TICKET_STUCK_HOURS", 48) or 48)
+            low = _low_stock()
+            lic = _expiring_licenses(days)
+            stuck = _stuck_tickets(hours)
+            total = len(low) + len(lic) + len(stuck)
+            if total <= 0:
+                return
+            whatsapp.notify_ti(
+                "🔔 *InvenSync — alertas do dia*\n"
+                f"📦 Estoque no mínimo: {len(low)}\n"
+                f"📅 Licenças/garantias: {len(lic)}\n"
+                f"🎫 Chamados parados (>{hours}h): {len(stuck)}\n"
+                "Veja os detalhes na Central de Avisos."
+            )
+        except Exception:  # noqa: BLE001
+            db.session.rollback()
 
 
 # ---------------------------------------------------------------------------
 # Agendador em background
 # ---------------------------------------------------------------------------
 def start_scheduler(app):
-    """Thread daemon que publica os alertas a cada ALERTS_INTERVAL_HOURS horas."""
+    """Thread daemon: a cada ALERTS_CHECK_MINUTES atualiza o aviso e, nas
+    horas-alvo, envia o digest por WhatsApp (no máximo 1x por janela/dia)."""
     global _started
     # Sob o reloader do Flask (debug), só roda no processo filho real.
     if app.debug and os.environ.get("WERKZEUG_RUN_MAIN") != "true":
@@ -180,19 +216,21 @@ def start_scheduler(app):
             return
         _started = True
 
-    interval = int(app.config.get("ALERTS_INTERVAL_HOURS", 6) or 6) * 3600
+    check = max(5, int(app.config.get("ALERTS_CHECK_MINUTES", 30) or 30)) * 60
 
     def loop():
         time.sleep(25)  # deixa o servidor subir antes da 1ª rodada
         while True:
             try:
-                publish(app)
+                publish(app)                 # atualiza o aviso (sem WhatsApp)
+                send_digest_if_window(app)   # WhatsApp só nas horas-alvo
             except Exception:  # noqa: BLE001
                 pass
-            time.sleep(interval)
+            time.sleep(check)
 
     threading.Thread(target=loop, daemon=True, name="alerts").start()
     try:
-        app.logger.info("Alertas proativos iniciados (intervalo=%sh).", interval // 3600)
+        app.logger.info("Alertas proativos iniciados (checa a cada %s min; digest em %s).",
+                        check // 60, sorted(_target_hours(app)))
     except Exception:  # noqa: BLE001
         pass

@@ -65,9 +65,12 @@ class Config:
 
     # Alertas proativos (estoque mínimo, licenças/garantias vencendo, chamados parados).
     ALERTS_ENABLED = os.environ.get("ALERTS_ENABLED", "1") in ("1", "true", "True")
-    ALERTS_INTERVAL_HOURS = int(os.environ.get("ALERTS_INTERVAL_HOURS", "6"))
     ALERTS_TICKET_STUCK_HOURS = int(os.environ.get("ALERTS_TICKET_STUCK_HOURS", "48"))
     ALERTS_LICENSE_DAYS = int(os.environ.get("ALERTS_LICENSE_DAYS", "30"))
+    # Digest por WhatsApp: horas do dia em que envia (no máximo 1x por janela/dia).
+    ALERTS_WHATSAPP_HOURS = os.environ.get("ALERTS_WHATSAPP_HOURS", "8,17")
+    # Frequência com que o agendador acorda para checar (minutos).
+    ALERTS_CHECK_MINUTES = int(os.environ.get("ALERTS_CHECK_MINUTES", "30"))
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_pre_ping": True,   # evita conexões mortas após ociosidade
         "pool_recycle": 1800,    # recicla conexões a cada 30 min
