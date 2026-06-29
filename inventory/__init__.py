@@ -160,6 +160,12 @@ def create_app():
     except OSError:
         pass
 
+    # Atrás de proxy reverso HTTPS (IIS/nginx/Caddy): honra X-Forwarded-* para
+    # gerar URLs https corretas e respeitar o esquema. Ative com BEHIND_PROXY=1.
+    if os.environ.get("BEHIND_PROXY", "0") in ("1", "true", "True"):
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
     # Extensões
     db.init_app(app)
     login_manager.init_app(app)

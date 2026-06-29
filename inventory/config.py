@@ -74,4 +74,6 @@ class Config:
     }
 
     SESSION_COOKIE_SAMESITE = "Lax"
-    SESSION_COOKIE_SECURE = False
+    # Ative (SESSION_COOKIE_SECURE=1 no .env) ao servir por HTTPS atrás de proxy.
+    SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "0") in ("1", "true", "True")
+    REMEMBER_COOKIE_SECURE = SESSION_COOKIE_SECURE
