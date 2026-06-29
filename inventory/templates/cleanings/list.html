@@ -16,87 +16,69 @@
   </a>
 </div>
 
-<div class="table-card">
-  <div class="table-card-tools">
-    <form class="d-flex search-box" method="get" role="search">
-      <div class="input-group">
-        <span class="input-group-text"><i class="bi bi-search"></i></span>
-        <input class="form-control" type="search" placeholder="Máquina, usuário, setor, executor..." name="q" value="{{ q }}">
-      </div>
-      {% if q or machine_id %}
-      <a href="{{ url_for('cleanings.list_view') }}" class="btn btn-outline-light ms-2" title="Limpar"><i class="bi bi-x-lg"></i></a>
-      {% endif %}
-    </form>
-  </div>
+<style>
+  .cl-grid{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); }
+  .cl-card{ position:relative; background:#15211a; border:1px solid #243024; border-radius:16px;
+    padding:1rem 1.05rem .85rem; overflow:hidden; transition:transform .14s,border-color .14s; }
+  .cl-card:hover{ transform:translateY(-3px); border-color:#2f6b46; }
+  .cl-card .accent{ position:absolute; left:0; top:0; bottom:0; width:4px; background:#0dcaf0; }
+  .cl-card.overdue .accent{ background:#f44336; }
+  .cl-machine{ font-weight:600; color:#eafff0; }
+  .cl-sub{ color:#8fb0a0; font-size:.75rem; }
+  .cl-row{ display:flex; align-items:center; gap:.4rem; font-size:.8rem; color:#cfe9d8; margin-top:.4rem; }
+  .cl-row .bi{ color:#7fae93; }
+  .cl-foot{ display:flex; align-items:center; justify-content:space-between; gap:.5rem;
+    margin-top:.7rem; padding-top:.6rem; border-top:1px solid #1f2c24; }
+</style>
 
-  <div class="table-responsive">
-    <table class="table table-hover align-middle">
-      <thead>
-        <tr>
-          <th>Máquina</th>
-          <th>Início</th>
-          <th>Fim</th>
-          <th class="text-end">Duração</th>
-          <th>Executado por</th>
-          <th>Próxima limpeza</th>
-          <th class="text-end" style="width:120px">Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for c in items %}
-        <tr>
-          <td>
-            <div class="fw-semibold">
-              <i class="bi {{ kind_icon.get(c.machine.kind, 'bi-hdd') }} text-success me-1"></i>
-              {{ c.machine.model or '—' }}
-            </div>
-            <small class="text-muted">
-              {{ c.machine.assigned_user or 's/ usuário' }}{% if c.machine.sector %} · {{ c.machine.sector }}{% endif %}
-            </small>
-          </td>
-          <td class="text-nowrap number">{{ c.started_at.strftime('%d/%m/%Y %H:%M') if c.started_at else '—' }}</td>
-          <td class="text-nowrap number">{{ c.finished_at.strftime('%d/%m/%Y %H:%M') if c.finished_at else '—' }}</td>
-          <td class="text-end number">
-            {% set dm = c.duration_min %}
-            {% if dm is not none %}
-              {% if dm >= 60 %}{{ dm // 60 }}h {{ '%02d'|format(dm % 60) }}min{% else %}{{ dm }} min{% endif %}
-            {% else %}<span class="contact-muted">—</span>{% endif %}
-          </td>
-          <td>{% if c.executed_by %}{{ c.executed_by }}{% else %}<span class="contact-muted">—</span>{% endif %}</td>
-          <td>
-            {% if c.next_date %}
-              {% set dias = (c.next_date - hoje).days %}
-              {% if dias < 0 %}
-                <span class="badge bg-danger-subtle text-danger"><i class="bi bi-exclamation-triangle me-1"></i>{{ c.next_date.strftime('%d/%m/%Y') }} (vencida)</span>
-              {% elif dias == 0 %}
-                <span class="badge bg-warning-subtle text-warning-emphasis"><i class="bi bi-clock me-1"></i>Hoje</span>
-              {% elif dias <= 7 %}
-                <span class="badge bg-info-subtle text-info-emphasis"><i class="bi bi-clock-history me-1"></i>{{ c.next_date.strftime('%d/%m/%Y') }} ({{ dias }}d)</span>
-              {% else %}
-                <span class="badge bg-success-subtle text-success">{{ c.next_date.strftime('%d/%m/%Y') }}</span>
-              {% endif %}
-            {% else %}<span class="contact-muted">—</span>{% endif %}
-          </td>
-          <td class="text-end">
-            <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('cleanings.edit', cid=c.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
-            <form action="{{ url_for('cleanings.delete', cid=c.id) }}" method="post" class="d-inline" onsubmit="return confirm('Excluir este registro de limpeza?');">
-              <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
-            </form>
-          </td>
-        </tr>
-        {% else %}
-        <tr>
-          <td colspan="7">
-            <div class="empty-state">
-              <i class="bi bi-droplet"></i>
-              {% if q or machine_id %}Nenhuma limpeza encontrada para o filtro.{% else %}Nenhuma limpeza registrada ainda.{% endif %}
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {{ pager(pag) }}
+<div class="table-card mb-3"><div class="table-card-tools">
+  <form class="d-flex search-box" method="get" role="search">
+    <div class="input-group">
+      <span class="input-group-text"><i class="bi bi-search"></i></span>
+      <input class="form-control" type="search" placeholder="Máquina, usuário, setor, executor..." name="q" value="{{ q }}">
+    </div>
+    {% if q or machine_id %}<a href="{{ url_for('cleanings.list_view') }}" class="btn btn-outline-light ms-2" title="Limpar"><i class="bi bi-x-lg"></i></a>{% endif %}
+  </form>
+</div></div>
+
+{% if items %}
+<div class="cl-grid">
+  {% for c in items %}
+  {% set dias = (c.next_date - hoje).days if c.next_date else None %}
+  <article class="cl-card {{ 'overdue' if dias is not none and dias < 0 }}">
+    <span class="accent"></span>
+    <div class="cl-machine"><i class="bi {{ kind_icon.get(c.machine.kind, 'bi-hdd') }} text-success me-1"></i>{{ c.machine.model or '—' }}</div>
+    <div class="cl-sub">{{ c.machine.assigned_user or 's/ usuário' }}{% if c.machine.sector %} · {{ c.machine.sector }}{% endif %}</div>
+
+    <div class="cl-row"><i class="bi bi-play-circle"></i> {{ c.started_at.strftime('%d/%m/%Y %H:%M') if c.started_at else '—' }}
+      {% set dm = c.duration_min %}
+      {% if dm is not none %}<span class="cl-sub ms-auto">{% if dm >= 60 %}{{ dm // 60 }}h{{ '%02d'|format(dm % 60) }}{% else %}{{ dm }}min{% endif %}</span>{% endif %}
+    </div>
+    {% if c.executed_by %}<div class="cl-row"><i class="bi bi-person-gear"></i> {{ c.executed_by }}</div>{% endif %}
+
+    <div class="cl-foot">
+      <span>
+        {% if c.next_date %}
+          {% if dias < 0 %}<span class="badge bg-danger-subtle text-danger"><i class="bi bi-exclamation-triangle me-1"></i>{{ c.next_date.strftime('%d/%m') }} · vencida</span>
+          {% elif dias == 0 %}<span class="badge bg-warning-subtle text-warning-emphasis"><i class="bi bi-clock me-1"></i>hoje</span>
+          {% elif dias <= 7 %}<span class="badge bg-info-subtle text-info-emphasis"><i class="bi bi-clock-history me-1"></i>{{ c.next_date.strftime('%d/%m') }} ({{ dias }}d)</span>
+          {% else %}<span class="badge bg-success-subtle text-success"><i class="bi bi-calendar-check me-1"></i>{{ c.next_date.strftime('%d/%m/%Y') }}</span>{% endif %}
+        {% else %}<span class="cl-sub">sem próxima data</span>{% endif %}
+      </span>
+      <div class="d-flex gap-1">
+        <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('cleanings.edit', cid=c.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
+        <form action="{{ url_for('cleanings.delete', cid=c.id) }}" method="post" class="d-inline" onsubmit="return confirm('Excluir este registro de limpeza?');">
+          <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
+        </form>
+      </div>
+    </div>
+  </article>
+  {% endfor %}
 </div>
+{{ pager(pag) }}
+{% else %}
+<div class="table-card"><div class="empty-state"><i class="bi bi-droplet"></i>
+  {% if q or machine_id %}Nenhuma limpeza encontrada para o filtro.{% else %}Nenhuma limpeza registrada ainda.{% endif %}
+</div></div>
+{% endif %}
 {% endblock %}

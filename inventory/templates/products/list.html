@@ -13,6 +13,19 @@
   'KIT':'Kit/Conjunto','HR':'Hora','MIN':'Minuto'
 } %}
 
+<style>
+  .pz-table tbody tr td:first-child{ border-left:3px solid transparent; }
+  .pz-table tbody tr.lvl-zero td:first-child{ border-left-color:#f44336; }
+  .pz-table tbody tr.lvl-low td:first-child{ border-left-color:#ffb020; }
+  .pz-table tbody tr.lvl-ok td:first-child{ border-left-color:#00c853; }
+  .pz-table tbody tr:hover td{ background:#17241c; }
+  .pz-sku{ font-family:var(--bs-font-monospace,monospace); font-size:.78rem; color:#8fb0a0; }
+  .pz-ico{ width:34px;height:34px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;
+    background:rgba(0,200,83,.12); color:#46e08a; flex:0 0 auto; }
+  .pz-bar{ height:6px;border-radius:999px;background:#0f1a13;overflow:hidden;margin-top:.3rem;max-width:130px; }
+  .pz-bar i{ display:block;height:100%; }
+</style>
+
 <div class="page-header">
   <h1 class="ph-title">
     <span class="ph-icon"><i class="bi bi-box-seam"></i></span>
@@ -81,17 +94,15 @@
   </div>
 
   <div class="table-responsive">
-    <table class="table table-hover align-middle">
+    <table class="table table-hover align-middle pz-table">
       <thead>
         <tr>
-          <th>SKU</th>
           <th>Material</th>
           <th>Unidade</th>
           <th>Categoria</th>
           <th>Fornecedor</th>
           <th class="text-end">Preço</th>
-          <th class="text-end">Estoque</th>
-          <th class="text-end">Mínimo</th>
+          <th style="width:200px">Estoque</th>
           <th class="text-end" style="width:120px">Ações</th>
         </tr>
       </thead>
@@ -99,33 +110,36 @@
         {% for p in items %}
         {% set est = current_stock(p) %}
         {% set mn = p.min_stock or 0 %}
-        <tr class="{% if est <= mn %}table-warning{% endif %}">
-          <td class="text-nowrap font-monospace">{{ p.sku }}</td>
+        {% set lvl = 'lvl-zero' if est <= 0 else ('lvl-low' if est <= mn else 'lvl-ok') %}
+        {% set pct = (est / mn * 100) if (mn > 0 and est > 0) else (100 if est > 0 else 0) %}
+        {% if pct > 100 %}{% set pct = 100 %}{% endif %}
+        <tr class="{{ lvl }}">
           <td>
-            <div class="fw-semibold">{{ p.name }}</div>
-            {% if p.brand or p.model %}
-              <small class="text-muted">{{ p.brand or '' }}{% if p.brand and p.model %} · {% endif %}{{ p.model or '' }}</small>
-            {% endif %}
-            {% if p.location %}
-              <span class="badge bg-secondary-subtle text-secondary-emphasis ms-1"><i class="bi bi-geo-alt"></i> {{ p.location }}</span>
-            {% endif %}
+            <div class="d-flex align-items-center gap-2">
+              <span class="pz-ico"><i class="bi bi-box-seam"></i></span>
+              <div class="min-w-0">
+                <div class="fw-semibold text-truncate">{{ p.name }}</div>
+                <span class="pz-sku">{{ p.sku }}</span>
+                {% if p.brand or p.model %}<span class="text-muted small"> · {{ p.brand or '' }}{% if p.brand and p.model %} {% endif %}{{ p.model or '' }}</span>{% endif %}
+                {% if p.location %}<span class="badge bg-secondary-subtle text-secondary-emphasis ms-1"><i class="bi bi-geo-alt"></i> {{ p.location }}</span>{% endif %}
+              </div>
+            </div>
           </td>
           <td class="text-nowrap">
             <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ p.unit or 'UN' }}</span>
-            <span class="d-none d-xl-inline text-muted small">{{ unit_labels.get(p.unit) or '' }}</span>
           </td>
-          <td>{% if p.category %}{{ p.category.name }}{% else %}<span class="contact-muted">—</span>{% endif %}</td>
+          <td>{% if p.category %}<span class="badge bg-info-subtle text-info-emphasis">{{ p.category.name }}</span>{% else %}<span class="contact-muted">—</span>{% endif %}</td>
           <td>{% if p.supplier %}{{ p.supplier.name }}{% else %}<span class="contact-muted">—</span>{% endif %}</td>
           <td class="text-end number">R$ {{ '%.2f'|format(p.price) }}</td>
-          <td class="text-end number">
-            {{ est }}
-            {% if est <= 0 %}
-              <span class="badge bg-danger-subtle text-danger ms-1">Sem estoque</span>
-            {% elif est <= mn %}
-              <span class="badge bg-warning-subtle text-warning-emphasis ms-1">Baixo</span>
-            {% endif %}
+          <td>
+            <div class="d-flex align-items-center justify-content-between">
+              <span class="number fw-semibold {{ 'text-danger' if est <= 0 else ('text-warning' if est <= mn else 'text-success') }}">{{ est }}</span>
+              <span class="text-muted small">mín {{ mn }}</span>
+            </div>
+            <div class="pz-bar"><i style="width:{{ pct }}%;background:{{ '#f44336' if est <= 0 else ('#ffb020' if est <= mn else '#00c853') }}"></i></div>
+            {% if est <= 0 %}<span class="badge bg-danger-subtle text-danger mt-1">Sem estoque</span>
+            {% elif est <= mn %}<span class="badge bg-warning-subtle text-warning-emphasis mt-1">Baixo</span>{% endif %}
           </td>
-          <td class="text-end number">{{ mn }}</td>
           <td class="text-end">
             <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('products.edit', pid=p.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
             <form action="{{ url_for('products.delete', pid=p.id) }}" method="post" class="d-inline" onsubmit="return confirm('Excluir o material “{{ p.name }}”?');">
@@ -135,7 +149,7 @@
         </tr>
         {% else %}
         <tr>
-          <td colspan="9">
+          <td colspan="7">
             <div class="empty-state">
               <i class="bi bi-grid"></i>
               {% if q %}Nenhum material encontrado para “{{ q }}”.{% else %}Nenhum material cadastrado ainda.{% endif %}

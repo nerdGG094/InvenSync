@@ -34,50 +34,67 @@
   </div>
 </div>
 
-<div class="table-card">
-  <div class="table-card-tools d-flex flex-wrap align-items-center gap-2">
-    <form class="d-flex gap-2" method="get" role="search">
-      <div class="input-group search-box">
-        <span class="input-group-text"><i class="bi bi-search"></i></span>
-        <input class="form-control" type="search" placeholder="Máquina, peça, técnico..." name="q" value="{{ q }}">
-      </div>
-      <select class="form-select" name="kind" style="max-width:170px" onchange="this.form.submit()">
-        <option value="">Tipo: todos</option>
-        {% for k, lbl in kind_choices %}<option value="{{ k }}" {{ 'selected' if kind==k }}>{{ lbl }}</option>{% endfor %}
-      </select>
-      <button class="btn btn-primary btn-icon" type="submit"><i class="bi bi-search"></i></button>
-      {% if q or kind %}<a href="{{ url_for('maintenance.list_view') }}" class="btn btn-outline-light btn-icon"><i class="bi bi-x-lg"></i></a>{% endif %}
-    </form>
-  </div>
+<style>
+  .mt-grid{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); }
+  .mt-card{ background:#15211a; border:1px solid #243024; border-radius:16px; padding:1rem 1.05rem .85rem;
+    transition:transform .14s,border-color .14s; }
+  .mt-card:hover{ transform:translateY(-3px); border-color:#2f6b46; }
+  .mt-machine{ font-weight:600; color:#eafff0; }
+  .mt-sub{ color:#8fb0a0; font-size:.75rem; }
+  .mt-desc{ color:#cfe9d8; font-size:.85rem; margin-top:.55rem; white-space:pre-wrap; }
+  .mt-parts{ color:#8fb0a0; font-size:.75rem; margin-top:.25rem; }
+  .mt-foot{ display:flex; align-items:center; justify-content:space-between; gap:.5rem;
+    margin-top:.8rem; padding-top:.6rem; border-top:1px solid #1f2c24; }
+  .mt-cost{ font-weight:700; color:#ffce6a; }
+</style>
 
-  <div class="table-responsive">
-    <table class="table table-hover align-middle">
-      <thead><tr><th>Data</th><th>Máquina</th><th class="text-center">Tipo</th><th>Descrição</th><th>Executado por</th><th class="text-end">Custo</th><th class="text-end" style="width:110px">Ações</th></tr></thead>
-      <tbody>
-        {% for m in items %}
-        <tr>
-          <td class="number">{{ m.date.strftime('%d/%m/%Y') if m.date else '—' }}</td>
-          <td class="fw-semibold">{{ m.machine.model if m.machine else '—' }}
-            {% if m.machine and m.machine.assigned_user %}<small class="text-muted d-block">{{ m.machine.assigned_user }}</small>{% endif %}</td>
-          <td class="text-center">{% set km = kind_meta.get(m.kind, (m.kind,'secondary')) %}<span class="badge bg-{{ km[1] }}-subtle text-{{ km[1] }}-emphasis">{{ km[0] }}</span></td>
-          <td class="small" style="max-width:280px">{{ m.description }}{% if m.parts %}<small class="text-muted d-block"><i class="bi bi-gear"></i> {{ m.parts }}</small>{% endif %}</td>
-          <td class="small">{{ m.performed_by or '—' }}</td>
-          <td class="text-end number">{% if m.cost is not none %}R$ {{ '%.2f'|format(m.cost) }}{% else %}—{% endif %}</td>
-          <td class="text-end">
-            <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('maintenance.edit', mid=m.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
-            <form action="{{ url_for('maintenance.delete', mid=m.id) }}" method="post" class="d-inline" onsubmit="return confirm('Excluir este registro?');">
-              <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
-            </form>
-          </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="7"><div class="empty-state"><i class="bi bi-tools"></i>
-          {% if q or kind %}Nenhuma manutenção para o filtro.{% else %}Nenhuma manutenção registrada ainda.{% endif %}
-        </div></td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {{ pager(pag) }}
+<div class="table-card mb-3"><div class="table-card-tools d-flex flex-wrap align-items-center gap-2">
+  <form class="d-flex gap-2" method="get" role="search">
+    <div class="input-group search-box">
+      <span class="input-group-text"><i class="bi bi-search"></i></span>
+      <input class="form-control" type="search" placeholder="Máquina, peça, técnico..." name="q" value="{{ q }}">
+    </div>
+    <select class="form-select" name="kind" style="max-width:170px" onchange="this.form.submit()">
+      <option value="">Tipo: todos</option>
+      {% for k, lbl in kind_choices %}<option value="{{ k }}" {{ 'selected' if kind==k }}>{{ lbl }}</option>{% endfor %}
+    </select>
+    <button class="btn btn-primary btn-icon" type="submit"><i class="bi bi-search"></i></button>
+    {% if q or kind %}<a href="{{ url_for('maintenance.list_view') }}" class="btn btn-outline-light btn-icon"><i class="bi bi-x-lg"></i></a>{% endif %}
+  </form>
+</div></div>
+
+{% if items %}
+<div class="mt-grid">
+  {% for m in items %}
+  {% set km = kind_meta.get(m.kind, (m.kind,'secondary')) %}
+  <article class="mt-card">
+    <div class="d-flex align-items-start justify-content-between gap-2">
+      <span class="badge bg-{{ km[1] }}-subtle text-{{ km[1] }}-emphasis"><i class="bi bi-tools me-1"></i>{{ km[0] }}</span>
+      <span class="mt-sub"><i class="bi bi-calendar-event"></i> {{ m.date.strftime('%d/%m/%Y') if m.date else '—' }}</span>
+    </div>
+    <div class="mt-machine mt-2"><i class="bi bi-pc-display text-success me-1"></i>{{ m.machine.model if m.machine else '—' }}</div>
+    {% if m.machine and m.machine.assigned_user %}<div class="mt-sub">{{ m.machine.assigned_user }}{% if m.machine.sector %} · {{ m.machine.sector }}{% endif %}</div>{% endif %}
+    {% if m.description %}<div class="mt-desc">{{ m.description }}</div>{% endif %}
+    {% if m.parts %}<div class="mt-parts"><i class="bi bi-gear me-1"></i>{{ m.parts }}</div>{% endif %}
+    <div class="mt-foot">
+      <div class="mt-sub">
+        <i class="bi bi-person-gear"></i> {{ m.performed_by or '—' }}
+        {% if m.cost is not none %}<span class="mt-cost ms-2">R$ {{ '%.2f'|format(m.cost) }}</span>{% endif %}
+      </div>
+      <div class="d-flex gap-1">
+        <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('maintenance.edit', mid=m.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
+        <form action="{{ url_for('maintenance.delete', mid=m.id) }}" method="post" class="d-inline" onsubmit="return confirm('Excluir este registro?');">
+          <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
+        </form>
+      </div>
+    </div>
+  </article>
+  {% endfor %}
 </div>
+{{ pager(pag) }}
+{% else %}
+<div class="table-card"><div class="empty-state"><i class="bi bi-tools"></i>
+  {% if q or kind %}Nenhuma manutenção para o filtro.{% else %}Nenhuma manutenção registrada ainda.{% endif %}
+</div></div>
+{% endif %}
 {% endblock %}

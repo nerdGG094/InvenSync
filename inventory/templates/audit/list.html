@@ -7,6 +7,9 @@
   'create': ('Criou','success'), 'update': ('Alterou','info'),
   'delete': ('Excluiu','danger'), 'reveal': ('Revelou senha','warning'),
   'export': ('Exportou','secondary'), 'login': ('Login','secondary') } %}
+{% set act_icon = {
+  'create':'bi-plus-circle','update':'bi-pencil','delete':'bi-trash',
+  'reveal':'bi-eye','export':'bi-download','login':'bi-box-arrow-in-right' } %}
 
 <div class="page-header">
   <h1 class="ph-title">
@@ -37,9 +40,14 @@
       <tbody>
         {% for l in logs %}
         <tr>
-          <td class="small text-muted">{{ l.created_at.strftime('%d/%m/%Y %H:%M') if l.created_at else '—' }}</td>
-          <td class="fw-semibold">{{ l.user_name or '—' }}</td>
-          <td>{% set am = act_meta.get(l.action, (l.action,'secondary')) %}<span class="badge bg-{{ am[1] }}-subtle text-{{ am[1] }}-emphasis">{{ am[0] }}</span></td>
+          <td class="small text-muted text-nowrap">{{ l.created_at.strftime('%d/%m/%Y %H:%M') if l.created_at else '—' }}</td>
+          <td>
+            <span class="d-inline-flex align-items-center gap-2">
+              <span class="avatar-circle" style="width:26px;height:26px;flex-basis:26px;font-size:.64rem">{{ (l.user_name or '?')[:2]|upper }}</span>
+              <span class="fw-semibold">{{ l.user_name or '—' }}</span>
+            </span>
+          </td>
+          <td>{% set am = act_meta.get(l.action, (l.action,'secondary')) %}<span class="badge bg-{{ am[1] }}-subtle text-{{ am[1] }}-emphasis"><i class="bi {{ act_icon.get(l.action,'bi-dot') }} me-1"></i>{{ am[0] }}</span></td>
           <td class="small">{{ l.entity or '—' }}{% if l.entity_id %} <span class="text-muted">#{{ l.entity_id }}</span>{% endif %}</td>
           <td class="small">{{ l.summary or '' }}</td>
           <td class="font-monospace small text-muted">{{ l.ip or '—' }}</td>
