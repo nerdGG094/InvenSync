@@ -401,6 +401,14 @@
 {% block breadcrumb %}{% endblock %}
 
 <main class="container py-4">
+  {% if current_user.is_authenticated and current_user.is_admin and not current_user.is_2fa_enabled %}
+  <div class="alert alert-warning d-flex align-items-center gap-2 mb-3" id="twofaNudge" role="alert">
+    <i class="bi bi-shield-exclamation"></i>
+    <span class="flex-grow-1">Sua conta de administrador está <strong>sem verificação em duas etapas (2FA)</strong>. Ative para mais segurança.</span>
+    <a href="{{ url_for('profile.twofa_setup') }}" class="btn btn-sm btn-warning"><i class="bi bi-shield-lock"></i> Ativar 2FA</a>
+    <button type="button" class="btn-close" aria-label="Fechar" onclick="this.closest('#twofaNudge').remove()"></button>
+  </div>
+  {% endif %}
   {% with messages = get_flashed_messages(with_categories=True) %}
     {% if messages %}
       {% set ticon = {'success':'bi-check-circle-fill','danger':'bi-x-octagon-fill','warning':'bi-exclamation-triangle-fill','info':'bi-info-circle-fill','message':'bi-bell-fill'} %}

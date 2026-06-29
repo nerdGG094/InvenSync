@@ -15,7 +15,8 @@ class ColaboradorForm(FlaskForm):
 
     # ===== Acesso ao sistema (login) — opcional =====
     can_login = BooleanField("Tem acesso ao sistema (login)")
-    password = PasswordField("Senha (deixe em branco para manter)", validators=[Optional(), Length(min=6)])
+    password = PasswordField("Senha (deixe em branco para manter)",
+                             validators=[Optional(), Length(min=8, message="Use ao menos 8 caracteres.")])
     is_admin = BooleanField("Administrador (equipe de TI — acesso total)")
     whatsapp = StringField("WhatsApp (notificações)", validators=[Optional(), Length(max=30)])
 

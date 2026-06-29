@@ -13,7 +13,8 @@ class ProfileForm(FlaskForm):
         Optional(),
         FileAllowed(["png", "jpg", "jpeg", "gif", "webp"], "Apenas imagens (png, jpg, gif, webp)."),
     ])
-    new_password = PasswordField("Nova senha", validators=[Optional(), Length(min=6)])
+    new_password = PasswordField("Nova senha",
+                                 validators=[Optional(), Length(min=8, message="Use ao menos 8 caracteres.")])
     confirm = PasswordField("Confirmar nova senha", validators=[
         Optional(), EqualTo("new_password", message="As senhas não conferem."),
     ])
