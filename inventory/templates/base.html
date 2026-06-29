@@ -570,9 +570,27 @@
         hint.style.display = none ? '' : 'none';
       }
 
-      // Estado inicial: respeita a pill já marcada como .active; senão, começa oculto.
+      // Há busca/filtro aplicado na página? (ex.: digitou nome de usuário)
+      var filtering = false;
+      document.querySelectorAll('.table-card-tools input:not([type=hidden]):not([type=submit]):not([type=button]), .table-card-tools select').forEach(function(el){
+        if((el.value||'').trim() !== '') filtering = true;
+      });
+
+      // Estado inicial:
+      //  - pill já marcada -> respeita;
+      //  - com busca ativa -> mostra TODOS os resultados (não precisa abrir depto);
+      //  - senão -> começa oculto (escolher departamento).
       var initial = tabs.querySelector('.dept-pill.active');
-      apply(initial ? initial.getAttribute('data-dept') : null);
+      if(initial){
+        apply(initial.getAttribute('data-dept'));
+      } else if(filtering){
+        var allPill = tabs.querySelector('.dept-pill[data-dept=""]');
+        if(allPill){ allPill.classList.add('active'); }
+        lbl.textContent = 'Todos';
+        apply('');
+      } else {
+        apply(null);
+      }
       setOpen(false);   // lista de departamentos recolhida por padrão
 
       toggle.addEventListener('click', function(){
