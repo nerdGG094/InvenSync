@@ -129,6 +129,14 @@
     .gsearch-item .t .titulo{ font-size:.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .gsearch-item .t .sub{ font-size:.74rem; color:#8fb0a0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .gsearch-empty{ padding:1.2rem 1rem; color:#7d9b8a; text-align:center; font-size:.85rem; }
+    /* ===== Modal de confirmação ===== */
+    .cfm-ov{ position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:2200; display:none; align-items:center; justify-content:center; padding:1rem; }
+    .cfm-ov.show{ display:flex; }
+    .cfm{ width:100%; max-width:430px; background:#15211a; border:1px solid #2e4b3b; border-radius:14px; box-shadow:0 20px 60px rgba(0,0,0,.6); overflow:hidden; }
+    .cfm-body{ padding:1.2rem; display:flex; gap:.8rem; }
+    .cfm-body > .bi{ font-size:1.6rem; color:#ffce6a; flex:0 0 auto; }
+    .cfm-msg{ color:#e6ffe9; white-space:pre-wrap; font-size:.92rem; line-height:1.45; }
+    .cfm-foot{ display:flex; justify-content:flex-end; gap:.5rem; padding:.8rem 1.2rem; border-top:1px solid #243024; background:#111a14; }
     footer { border-top: 1px solid #183224; color:#9ed9b2; }
     .brand-logo{ height: 28px; width: auto; display: inline-block; object-fit: contain; }
 
@@ -617,6 +625,44 @@
   })();
 </script>
 {% endif %}
+
+<div class="cfm-ov" id="cfmOv">
+  <div class="cfm" role="alertdialog" aria-modal="true">
+    <div class="cfm-body"><i class="bi bi-exclamation-triangle-fill"></i><div class="cfm-msg" id="cfmMsg"></div></div>
+    <div class="cfm-foot">
+      <button type="button" class="btn btn-outline-light btn-sm" id="cfmNo">Cancelar</button>
+      <button type="button" class="btn btn-danger btn-sm" id="cfmYes">Confirmar</button>
+    </div>
+  </div>
+</div>
+<script>
+  // Modal de confirmação: intercepta onsubmit="return confirm('...')" e mostra
+  // um diálogo estilizado. CSRF não é afetado (o token já é injetado no load).
+  (function(){
+    var ov=document.getElementById('cfmOv'); if(!ov) return;
+    var msgEl=document.getElementById('cfmMsg'), yes=document.getElementById('cfmYes'), no=document.getElementById('cfmNo');
+    var resolver=null;
+    function show(msg){ msgEl.textContent=msg||'Confirma a ação?'; ov.classList.add('show'); setTimeout(function(){ yes.focus(); },30);
+      return new Promise(function(res){ resolver=res; }); }
+    function done(v){ ov.classList.remove('show'); if(resolver){ resolver(v); resolver=null; } }
+    yes.addEventListener('click', function(){ done(true); });
+    no.addEventListener('click', function(){ done(false); });
+    ov.addEventListener('click', function(e){ if(e.target===ov) done(false); });
+    document.addEventListener('keydown', function(e){ if(e.key==='Escape' && ov.classList.contains('show')) done(false); });
+    window.__confirm = show;
+
+    document.addEventListener('submit', function(e){
+      var form=e.target; if(!(form instanceof HTMLFormElement)) return;
+      if(form.dataset.cfmDone==='1') return;
+      var oc=form.getAttribute('onsubmit')||'';
+      var m=oc.match(/confirm\((['"])([\s\S]*?)\1\s*\)/);
+      if(!m) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      var msg=m[2].replace(/\\n/g,'\n').replace(/\\'/g,"'").replace(/\\"/g,'"');
+      show(msg).then(function(ok){ if(ok){ form.dataset.cfmDone='1'; form.removeAttribute('onsubmit'); form.submit(); } });
+    }, true);
+  })();
+</script>
 
 <script>
   // PWA: registra o service worker (escopo raiz).
