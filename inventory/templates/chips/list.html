@@ -126,7 +126,7 @@
 
 {% if items %}
 <div class="dept-tabs" data-dept-tabs="#chipGrid">
-  <button type="button" class="dept-pill active" data-dept=""><i class="bi bi-grid"></i> Todos <span class="c">{{ items|length }}</span></button>
+  <button type="button" class="dept-pill" data-dept=""><i class="bi bi-grid"></i> Todos <span class="c">{{ items|length }}</span></button>
   {% for g in grupos %}
   <button type="button" class="dept-pill" data-dept="{{ g.name or '__none__' }}">
     <i class="bi {{ 'bi-diagram-3' if g.name else 'bi-dash-circle' }}"></i> {{ g.name or 'Sem setor' }} <span class="c">{{ g['items']|length }}</span>

@@ -84,8 +84,15 @@
   </a>
 </div>
 
+<div class="summary-chips mb-3">
+  <span class="pchip green"><i class="bi bi-check-circle"></i> {{ ativos }} ativos</span>
+  <span class="pchip"><i class="bi bi-slash-circle"></i> {{ items|length - ativos }} inativos</span>
+  <span class="pchip blue"><i class="bi bi-box-arrow-in-right"></i> {{ com_login }} com login</span>
+  <span class="pchip amber"><i class="bi bi-shield-check"></i> {{ admins }} admins</span>
+</div>
+
 <div class="table-card mb-3">
-  <div class="table-card-tools d-flex flex-wrap align-items-center justify-content-between gap-2">
+  <div class="table-card-tools">
     <form class="d-flex search-box" method="get" role="search">
       <div class="input-group">
         <span class="input-group-text"><i class="bi bi-search"></i></span>
@@ -95,18 +102,12 @@
       <a href="{{ url_for('colaboradores.list_view') }}" class="btn btn-outline-light ms-2" title="Limpar"><i class="bi bi-x-lg"></i></a>
       {% endif %}
     </form>
-    <div class="summary-chips">
-      <span class="pchip green"><i class="bi bi-check-circle"></i> {{ ativos }} ativos</span>
-      <span class="pchip"><i class="bi bi-slash-circle"></i> {{ items|length - ativos }} inativos</span>
-      <span class="pchip blue"><i class="bi bi-box-arrow-in-right"></i> {{ com_login }} com login</span>
-      <span class="pchip amber"><i class="bi bi-shield-check"></i> {{ admins }} admins</span>
-    </div>
   </div>
 </div>
 
 {% if items %}
 <div class="dept-tabs" data-dept-tabs="#peopleGrid">
-  <button type="button" class="dept-pill active" data-dept=""><i class="bi bi-grid"></i> Todos <span class="c">{{ items|length }}</span></button>
+  <button type="button" class="dept-pill" data-dept=""><i class="bi bi-grid"></i> Todos <span class="c">{{ items|length }}</span></button>
   {% for g in grupos %}
   <button type="button" class="dept-pill" data-dept="{{ g.name or '__none__' }}">
     <i class="bi {{ 'bi-diagram-3' if g.name else 'bi-dash-circle' }}"></i> {{ g.name or 'Sem setor' }} <span class="c">{{ g['items']|length }}</span>

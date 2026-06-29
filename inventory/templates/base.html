@@ -497,6 +497,40 @@
 </script>
 
 <script>
+  // Filtros recolhíveis: esconde a barra de filtros e mostra só sob demanda.
+  // - Detecta automaticamente qualquer .table-card-tools que tenha campos.
+  // - Barra de filtro isolada -> esconde o card inteiro; filtro junto da tabela
+  //   -> esconde só a barra (mantém a tabela visível).
+  // - Se já houver filtro ativo (busca/seleção), começa aberta.
+  (function(){
+    document.querySelectorAll('.table-card-tools').forEach(function(tools){
+      var fields = tools.querySelectorAll('input:not([type=hidden]):not([type=submit]):not([type=button]), select');
+      if(!fields.length) return;
+      var card = tools.closest('.table-card');
+      if(!card) return;
+      var combined = card.querySelector('table') || card.querySelector('[class*="grid"]');
+      var target = combined ? tools : card;
+
+      var active = false;
+      fields.forEach(function(el){ if((el.value||'').trim() !== '') active = true; });
+
+      var bar = document.createElement('div');
+      bar.className = 'd-flex justify-content-end mb-2';
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn btn-outline-light btn-sm' + (active ? ' active' : '');
+      btn.innerHTML = '<i class="bi bi-funnel"></i> Filtros';
+      bar.appendChild(btn);
+      card.parentNode.insertBefore(bar, card);
+
+      if(!active) target.classList.add('d-none');
+      btn.addEventListener('click', function(){
+        var hidden = target.classList.toggle('d-none');
+        btn.classList.toggle('active', !hidden);
+      });
+    });
+  })();
+
   // Filtro por departamento (pills): mostra só os cards do depto selecionado.
   // Marcação: <div class="dept-tabs" data-dept-tabs="#idDaGrade"> ... pills com data-dept ...
   //           <div id="idDaGrade"> ... cards com data-dept ... </div>
@@ -505,11 +539,25 @@
       var grid = document.querySelector(tabs.getAttribute('data-dept-tabs'));
       if(!grid) return;
       var cards = grid.querySelectorAll('[data-dept]');
+      // Aviso quando nenhum departamento está selecionado (início oculto).
+      var hint = document.createElement('div');
+      hint.className = 'empty-state';
+      hint.innerHTML = '<i class="bi bi-hand-index-thumb"></i> Selecione um departamento acima para ver os itens.';
+      grid.parentNode.insertBefore(hint, grid.nextSibling);
+      function apply(d){
+        var none = (d === null);
+        cards.forEach(function(c){
+          c.style.display = none ? 'none' : ((!d || c.getAttribute('data-dept') === d) ? '' : 'none');
+        });
+        hint.style.display = none ? '' : 'none';
+      }
+      // Estado inicial: respeita a pill já marcada como .active; senão, começa oculto.
+      var initial = tabs.querySelector('.dept-pill.active');
+      apply(initial ? initial.getAttribute('data-dept') : null);
       tabs.addEventListener('click', function(e){
         var b = e.target.closest('.dept-pill'); if(!b) return;
         tabs.querySelectorAll('.dept-pill').forEach(function(p){ p.classList.toggle('active', p===b); });
-        var d = b.getAttribute('data-dept');
-        cards.forEach(function(c){ c.style.display = (!d || c.getAttribute('data-dept') === d) ? '' : 'none'; });
+        apply(b.getAttribute('data-dept'));
       });
     });
   })();
