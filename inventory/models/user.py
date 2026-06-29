@@ -1,7 +1,14 @@
 
+import secrets
+
 from ..extensions import db
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+
+
+def _new_token() -> str:
+    return secrets.token_hex(16)
+
 
 class User(db.Model, UserMixin):
     """Cadastro central de pessoas (colaboradores) da empresa.
@@ -32,11 +39,23 @@ class User(db.Model, UserMixin):
     photo = db.Column(db.String(255), nullable=True)    # caminho da foto (avatar)
     whatsapp = db.Column(db.String(30), nullable=True)  # número p/ notificações
 
+    # Token de sessão: ao rotacionar, invalida sessões/cookies "lembrar-me" em
+    # outros dispositivos ("sair de todas as sessões").
+    session_token = db.Column(db.String(32), nullable=True, default=_new_token)
+
     # Autenticação em dois fatores (TOTP / Google Authenticator)
     totp_secret = db.Column(db.String(64), nullable=True)
     is_2fa_enabled = db.Column(
         db.Boolean, nullable=False, default=False, server_default=db.text("false")
     )
+
+    def get_id(self) -> str:
+        """ID para o Flask-Login no formato "id:token". Rotacionar o token
+        invalida sessões e cookies "lembrar-me" emitidos antes (logout global)."""
+        return f"{self.id}:{self.session_token or ''}"
+
+    def rotate_session_token(self) -> None:
+        self.session_token = _new_token()
 
     @property
     def initials(self) -> str:

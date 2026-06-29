@@ -38,6 +38,10 @@ class Config:
     # páginas abertas há muito tempo falhem ao enviar (comum em uso interno).
     WTF_CSRF_TIME_LIMIT = None
 
+    # Logout automático por inatividade (minutos). 0 = desligado (padrão), para
+    # não conflitar com o "lembrar-me". Defina INACTIVITY_MINUTES no .env p/ ligar.
+    INACTIVITY_MINUTES = int(os.environ.get("INACTIVITY_MINUTES", "0"))
+
     # Recarrega templates alterados sem precisar reiniciar o servidor
     # (conveniente mesmo rodando em produção via waitress).
     TEMPLATES_AUTO_RELOAD = True

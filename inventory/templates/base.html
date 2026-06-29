@@ -664,6 +664,20 @@
   })();
 </script>
 
+{% if config.INACTIVITY_MINUTES and current_user.is_authenticated %}
+<script>
+  // Logout automático por inatividade (configurável via INACTIVITY_MINUTES).
+  (function(){
+    var mins = {{ config.INACTIVITY_MINUTES|int }};
+    if(!(mins > 0)) return;
+    var ms = mins*60000, t;
+    function reset(){ clearTimeout(t); t = setTimeout(function(){ window.location = '{{ url_for("auth.logout") }}'; }, ms); }
+    ['click','keydown','mousemove','scroll','touchstart'].forEach(function(ev){ document.addEventListener(ev, reset, {passive:true}); });
+    reset();
+  })();
+</script>
+{% endif %}
+
 <script>
   // PWA: registra o service worker (escopo raiz).
   if ('serviceWorker' in navigator) {

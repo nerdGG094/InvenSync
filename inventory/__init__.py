@@ -15,6 +15,9 @@ def _run_light_migrations():
     """
     stmts = [
         'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS totp_secret VARCHAR(64)',
+        # Token de sessão p/ "sair de todas as sessões" (backfill aleatório nos já existentes).
+        'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS session_token VARCHAR(32)',
+        "UPDATE \"user\" SET session_token = md5(random()::text || id::text) WHERE session_token IS NULL",
         'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS is_2fa_enabled BOOLEAN NOT NULL DEFAULT false',
         'ALTER TABLE stock_movement ADD COLUMN IF NOT EXISTS nf_filename VARCHAR(255)',
         'ALTER TABLE stock_movement ADD COLUMN IF NOT EXISTS nf_original_name VARCHAR(255)',
@@ -227,7 +230,16 @@ def create_app():
     @login_manager.user_loader
     def load_user(user_id):
         try:
-            return User.query.get(int(user_id))
+            raw = str(user_id)
+            uid, _, tok = raw.partition(":")
+            u = User.query.get(int(uid))
+            if u is None:
+                return None
+            # Se o id traz token (formato novo), precisa bater com o atual.
+            # Cookies legados (só "id") continuam válidos até o próximo login.
+            if tok and (u.session_token or "") and tok != u.session_token:
+                return None
+            return u
         except Exception:
             return None
 

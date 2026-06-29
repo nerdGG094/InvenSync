@@ -122,3 +122,17 @@ def twofa_disable():
     db.session.commit()
     flash("Verificação em duas etapas desativada.", "success")
     return redirect(url_for("profile.edit"))
+
+
+@bp.route("/logout-others", methods=["POST"])
+@login_required
+def logout_others():
+    """Encerra todas as outras sessões (rotaciona o token; mantém a atual)."""
+    from flask_login import login_user
+    u = current_user._get_current_object()
+    u.rotate_session_token()
+    db.session.commit()
+    session.permanent = True
+    login_user(u, remember=True)  # re-emite a sessão atual com o token novo
+    flash("Você saiu de todos os outros dispositivos.", "success")
+    return redirect(url_for("profile.edit"))
