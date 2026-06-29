@@ -3,7 +3,7 @@ import datetime
 import os
 import sys
 
-from flask import Blueprint, render_template, redirect, url_for, flash, abort
+from flask import Blueprint, render_template, redirect, url_for, flash, abort, send_file
 from flask_login import login_required, current_user
 
 from ..services import audit
@@ -38,6 +38,17 @@ def index():
         age_hours=age_hours,
         backup_dir=str(backup_db.backup_dir()),
     )
+
+
+@bp.route("/download/<path:name>")
+def download(name):
+    import backup_db
+    safe = os.path.basename(name)   # evita path traversal
+    path = backup_db.backup_dir() / safe
+    if not safe.endswith(".dump") or not path.exists():
+        abort(404)
+    audit.record("export", "backup", None, f"Baixou backup {safe}")
+    return send_file(str(path), as_attachment=True, download_name=safe)
 
 
 @bp.route("/run", methods=["POST"])
