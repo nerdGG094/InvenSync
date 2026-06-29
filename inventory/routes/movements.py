@@ -138,12 +138,16 @@ def list_and_new():
         query = query.filter(StockMovement.created_at < end_dt)
 
     # ===== Paginação =====
+    from ..services.pagination import PER_PAGE_OPTIONS
     page = request.args.get("page", 1, type=int)
-    per_page = 20
+    per_page = request.args.get("per_page", 20, type=int)
+    if per_page not in PER_PAGE_OPTIONS:
+        per_page = 20
     pagination = (
         query.order_by(StockMovement.created_at.desc())
         .paginate(page=page, per_page=per_page, error_out=False)
     )
+    pagination.per_page_options = list(PER_PAGE_OPTIONS)
 
     items = pagination.items
 

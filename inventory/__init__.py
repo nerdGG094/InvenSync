@@ -1,5 +1,6 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import (Flask, render_template, request, redirect, url_for, flash,
+                   send_from_directory, make_response)
 from flask_login import current_user
 from sqlalchemy import text
 from .extensions import db, login_manager, csrf, limiter
@@ -144,7 +145,7 @@ def _seed_departments_from_sectors():
 # Endpoints liberados para usuários NÃO administradores (perfil "comum").
 # Eles só acessam Chamados, o próprio Perfil, autenticação e estáticos.
 NON_ADMIN_PREFIXES = ("tickets.", "profile.", "auth.", "kb.", "announcements.")
-NON_ADMIN_ENDPOINTS = ("static", "health.health")
+NON_ADMIN_ENDPOINTS = ("static", "health.health", "service_worker", "manifest")
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
@@ -344,6 +345,15 @@ def create_app():
     def too_many_requests(e):
         flash("Muitas tentativas em pouco tempo. Aguarde um instante e tente novamente.", "warning")
         return redirect(url_for("auth.login"))
+
+    # PWA: service worker servido da raiz (escopo "/") para controlar todo o app
+    @app.route("/sw.js", endpoint="service_worker")
+    def _service_worker():
+        resp = make_response(send_from_directory(app.static_folder, "sw.js"))
+        resp.headers["Content-Type"] = "application/javascript"
+        resp.headers["Service-Worker-Allowed"] = "/"
+        resp.headers["Cache-Control"] = "no-cache"
+        return resp
 
     # Monitoramento de uptime em segundo plano (ping/HTTP + alerta WhatsApp)
     if app.config.get("MONITORING_ENABLED", True):

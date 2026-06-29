@@ -145,6 +145,25 @@ def delete(cid):
     return redirect(url_for("chips.list_view"))
 
 
+@bp.route("/export")
+def export():
+    from ..services.exports import xlsx_response
+    q = (request.args.get("q") or "").strip()
+    usage = (request.args.get("usage") or "").strip()
+    items = chip_repo.list_chips(q or None, usage or None)
+    headers = ["Número", "Operadora", "Plano", "ICCID", "Uso", "Responsável",
+               "Setor", "Aparelho", "Entregue em"]
+    rows = []
+    for c in items:
+        rows.append([
+            c.phone_number, c.carrier or "", c.plan or "", c.iccid or "",
+            c.usage_label, c.assigned_employee or "", c.sector or "",
+            (f"{c.mobile.brand or ''} {c.mobile.model}".strip() if c.mobile else ""),
+            c.handed_at.strftime("%d/%m/%Y") if c.handed_at else "",
+        ])
+    return xlsx_response("Chips", headers, rows, filename="chips_linhas")
+
+
 @bp.route("/<int:cid>/termo")
 def termo(cid):
     c = chip_repo.get_chip(cid)

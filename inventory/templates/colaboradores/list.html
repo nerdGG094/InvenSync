@@ -79,9 +79,12 @@
     Colaboradores
     <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ items|length }}</span>
   </h1>
-  <a href="{{ url_for('colaboradores.new') }}" class="btn btn-primary">
-    <i class="bi bi-plus-circle"></i> Nova Pessoa
-  </a>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('colaboradores.export', q=q) }}" class="btn btn-outline-light"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+    <a href="{{ url_for('colaboradores.new') }}" class="btn btn-primary">
+      <i class="bi bi-plus-circle"></i> Nova Pessoa
+    </a>
+  </div>
 </div>
 
 <div class="summary-chips mb-3">

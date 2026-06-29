@@ -167,6 +167,12 @@
       <div class="d-flex align-items-start justify-content-between gap-2">
         <span class="tk-code">{{ t.code }}</span>
         <div class="d-flex gap-1 flex-shrink-0">
+          {% if t.is_open and t.age_label %}
+            <span class="badge {{ 'bg-danger-subtle text-danger' if t.is_stuck(48) else 'bg-secondary-subtle text-secondary-emphasis' }}"
+                  title="{{ 'Parado' if t.is_stuck(48) else 'Aberto' }} há {{ t.age_label }}">
+              <i class="bi bi-hourglass-split me-1"></i>{{ t.age_label }}
+            </span>
+          {% endif %}
           <span class="badge bg-{{ pm[1] }}-subtle text-{{ pm[1] }}-emphasis"><i class="bi bi-flag me-1"></i>{{ pm[0] }}</span>
           <span class="badge bg-{{ sm[1] }}-subtle text-{{ sm[1] }}-emphasis">{{ sm[0] }}</span>
         </div>

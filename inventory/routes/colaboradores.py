@@ -130,6 +130,28 @@ def list_view():
                            grupos=grupos, asset_counts=_asset_counts())
 
 
+@bp.route("/export")
+def export():
+    from ..services.exports import xlsx_response
+    q = (request.args.get("q") or "").strip()
+    query = User.query
+    if q:
+        like = f"%{q}%"
+        query = query.filter((User.name.ilike(like)) | (User.sector.ilike(like)) | (User.email.ilike(like)))
+    items = query.order_by(User.name).all()
+    headers = ["Nome", "E-mail", "Setor", "Acesso", "Ativo", "2FA", "WhatsApp"]
+    rows = []
+    for p in items:
+        acesso = "Admin" if (p.can_login and p.is_admin) else ("Login" if p.can_login else "Sem login")
+        rows.append([
+            p.name, p.email or "", p.sector or "", acesso,
+            "Sim" if p.is_active else "Não",
+            "Sim" if p.is_2fa_enabled else "Não",
+            p.whatsapp or "",
+        ])
+    return xlsx_response("Colaboradores", headers, rows, filename="colaboradores")
+
+
 @bp.route("/new", methods=["GET", "POST"])
 def new():
     form = ColaboradorForm()

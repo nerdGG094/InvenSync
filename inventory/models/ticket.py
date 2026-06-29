@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from ..extensions import db
 
 
@@ -30,6 +32,34 @@ class Ticket(db.Model):
     opened_by = db.relationship("User", foreign_keys=[opened_by_id])
     assigned_to = db.relationship("User", foreign_keys=[assigned_to_id])
     machine = db.relationship("Machine")
+
+    @property
+    def is_open(self) -> bool:
+        return self.status in ("aberto", "em_andamento")
+
+    @property
+    def age_hours(self):
+        """Horas desde a abertura (até a resolução, se já resolvido)."""
+        if not self.created_at:
+            return None
+        end = (self.resolved_at if (not self.is_open and self.resolved_at) else datetime.now())
+        return (end - self.created_at).total_seconds() / 3600.0
+
+    @property
+    def age_label(self) -> str:
+        h = self.age_hours
+        if h is None:
+            return ""
+        if h < 1:
+            return "agora há pouco"
+        if h < 24:
+            return f"{int(h)}h"
+        return f"{int(h // 24)}d"
+
+    def is_stuck(self, hours: int = 48) -> bool:
+        """Chamado em aberto parado há mais de `hours` horas."""
+        h = self.age_hours
+        return bool(self.is_open and h is not None and h >= hours)
 
     def __repr__(self) -> str:
         return f"<Ticket {self.code} status={self.status!r} title={self.title!r}>"

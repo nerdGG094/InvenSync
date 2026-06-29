@@ -12,6 +12,11 @@
   <!-- Token CSRF (injetado automaticamente em todos os forms POST via JS) -->
   <meta name="csrf-token" content="{{ csrf_token() }}">
 
+  <!-- PWA: instalável no celular/desktop -->
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
   <!-- Favicon / App Icons -->
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
   <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
@@ -91,6 +96,23 @@
     .alert-danger { background:#2a0f14; border-color:#512029; color:#ffd6dc; }
     .alert-warning { background:#26210e; border-color:#4f4520; color:#ffefc2; }
     .alert-info { background:#0f1f2a; border-color:#1f3e51; color:#cfe9ff; }
+    /* ===== Toasts (flash messages flutuantes) ===== */
+    .toast-stack{ position:fixed; top:1rem; right:1rem; z-index:2000; display:flex; flex-direction:column; gap:.5rem; max-width:360px; }
+    @media (max-width:575.98px){ .toast-stack{ left:1rem; right:1rem; max-width:none; } }
+    .toastmsg{ display:flex; align-items:flex-start; gap:.6rem; padding:.7rem .85rem; border-radius:12px;
+      border:1px solid #243024; background:#15211a; color:#e6ffe9; box-shadow:0 10px 30px rgba(0,0,0,.45); animation:toastIn .25s ease; }
+    .toastmsg.hide{ animation:toastOut .25s ease forwards; }
+    .toastmsg > .bi{ font-size:1.1rem; margin-top:.05rem; }
+    .toastmsg .t-text{ flex:1; font-size:.88rem; line-height:1.35; }
+    .toastmsg .t-close{ background:none; border:0; color:#9bb6a6; font-size:1.15rem; line-height:1; cursor:pointer; padding:0 .15rem; }
+    .toastmsg .t-close:hover{ color:#fff; }
+    .toast-success{ border-left:4px solid #00c853; } .toast-success > .bi{ color:#46e08a; }
+    .toast-danger{ border-left:4px solid #f44336; } .toast-danger > .bi{ color:#ff6b6b; }
+    .toast-warning{ border-left:4px solid #ffb020; } .toast-warning > .bi{ color:#ffce6a; }
+    .toast-info{ border-left:4px solid #0dcaf0; } .toast-info > .bi{ color:#5ad6ee; }
+    .toast-message{ border-left:4px solid #6c757d; }
+    @keyframes toastIn{ from{ opacity:0; transform:translateX(20px);} to{ opacity:1; transform:none;} }
+    @keyframes toastOut{ to{ opacity:0; transform:translateX(20px);} }
     footer { border-top: 1px solid #183224; color:#9ed9b2; }
     .brand-logo{ height: 28px; width: auto; display: inline-block; object-fit: contain; }
 
@@ -358,11 +380,13 @@
 <main class="container py-4">
   {% with messages = get_flashed_messages(with_categories=True) %}
     {% if messages %}
-      <div class="mb-3">
+      {% set ticon = {'success':'bi-check-circle-fill','danger':'bi-x-octagon-fill','warning':'bi-exclamation-triangle-fill','info':'bi-info-circle-fill','message':'bi-bell-fill'} %}
+      <div class="toast-stack" id="toastStack">
         {% for category, message in messages %}
-          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+          <div class="toastmsg toast-{{ category }}" role="alert">
+            <i class="bi {{ ticon.get(category, 'bi-bell-fill') }}"></i>
+            <span class="t-text">{{ message }}</span>
+            <button type="button" class="t-close" aria-label="Fechar">&times;</button>
           </div>
         {% endfor %}
       </div>
@@ -496,6 +520,29 @@
       document.querySelectorAll('form').forEach(ensure);
     });
     document.addEventListener('submit', function(e){ ensure(e.target); }, true);
+  })();
+</script>
+
+<script>
+  // PWA: registra o service worker (escopo raiz).
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('/sw.js').catch(function(){});
+    });
+  }
+</script>
+
+<script>
+  // Toasts: fecha no clique e some sozinho após alguns segundos.
+  (function(){
+    var stack = document.getElementById('toastStack');
+    if(!stack) return;
+    stack.querySelectorAll('.toastmsg').forEach(function(t, i){
+      function close(){ t.classList.add('hide'); setTimeout(function(){ t.remove(); }, 250); }
+      var btn = t.querySelector('.t-close');
+      if(btn) btn.addEventListener('click', close);
+      setTimeout(close, 5000 + i*500);
+    });
   })();
 </script>
 
