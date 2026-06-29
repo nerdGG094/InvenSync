@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Auditoria{% endblock %}
 {% block content %}
+{% from "_macros.html" import pager with context %}
 
 {% set act_meta = {
   'create': ('Criou','success'), 'update': ('Alterou','info'),
@@ -11,7 +12,7 @@
   <h1 class="ph-title">
     <span class="ph-icon"><i class="bi bi-shield-lock"></i></span>
     Auditoria
-    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ logs|length }}</span>
+    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ pag.total }}</span>
   </h1>
 </div>
 
@@ -49,5 +50,6 @@
       </tbody>
     </table>
   </div>
+  {{ pager(pag) }}
 </div>
 {% endblock %}

@@ -7,6 +7,7 @@ from flask_login import login_required, current_user
 from ..repositories import cleaning_repo
 from ..forms.machines import CleaningForm
 from ..models.machine import Machine
+from ..services.pagination import paginate
 
 bp = Blueprint("cleanings", __name__)
 
@@ -44,7 +45,8 @@ def list_view():
     machine_id = request.args.get("machine_id", type=int)
     items = cleaning_repo.list_cleanings(q or None, machine_id)
     hoje = date.today()
-    return render_template("cleanings/list.html", items=items, q=q,
+    items, pag = paginate(items)
+    return render_template("cleanings/list.html", items=items, q=q, pag=pag,
                            machine_id=machine_id, hoje=hoje)
 
 

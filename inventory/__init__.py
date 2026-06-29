@@ -315,7 +315,14 @@ def create_app():
             if user and getattr(user, "photo", None):
                 return url_for("static", filename="uploads/avatars/" + user.photo)
             return None
-        return {"avatar_url": avatar_url}
+
+        def page_url(page):
+            """URL da página `page` preservando os filtros atuais da query."""
+            args = request.args.to_dict(flat=True)
+            args["page"] = page
+            return url_for(request.endpoint, **args)
+
+        return {"avatar_url": avatar_url, "page_url": page_url}
 
     # Handlers de erro
     @app.errorhandler(403)

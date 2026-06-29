@@ -2,6 +2,7 @@ import re
 import unicodedata
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from ..services.pagination import paginate
 from flask_login import login_required
 from sqlalchemy.exc import IntegrityError
 
@@ -148,9 +149,12 @@ def list_view():
         if est <= (p.min_stock or 0):
             low_count += 1
 
+    # Totais acima refletem a lista inteira; aqui paginamos só a exibição.
+    items, pag = paginate(items)
+
     return render_template(
         "products/list.html",
-        items=items, q=q,
+        items=items, q=q, pag=pag,
         current_stock=product_repo.current_stock,
         total_qty=total_qty,
         total_value=total_value,

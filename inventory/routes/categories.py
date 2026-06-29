@@ -4,6 +4,7 @@ from flask_login import login_required
 from ..repositories import category_repo
 from ..forms.catalog import CategoryForm
 from ..models.category import Category
+from ..services.pagination import paginate
 
 bp = Blueprint("categories", __name__)
 
@@ -12,7 +13,8 @@ bp = Blueprint("categories", __name__)
 def list_view():
     q = request.args.get("q","")
     items = category_repo.list_categories(q)
-    return render_template("categories/list.html", items=items, q=q)
+    items, pag = paginate(items)
+    return render_template("categories/list.html", items=items, q=q, pag=pag)
 
 @bp.route("/new", methods=["GET","POST"])
 @login_required

@@ -1,0 +1,20 @@
+{# Controle de paginação reutilizável. Recebe o dict `pag` de services.pagination
+   e usa o helper de contexto `page_url(n)`, que preserva os filtros atuais (q,
+   status, etc.) trocando só o parâmetro `page`. #}
+{% macro pager(p) %}
+{% if p and p.pages > 1 %}
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 p-3 border-top" style="border-color:#243024 !important">
+  <small class="text-muted">Página {{ p.page }} de {{ p.pages }} · {{ p.total }} registros</small>
+  <div class="btn-group">
+    <a class="btn btn-sm btn-outline-light {{ 'disabled' if not p.has_prev }}"
+       href="{{ page_url(p.page - 1) if p.has_prev else '#' }}">
+      <i class="bi bi-chevron-left"></i> Anterior
+    </a>
+    <a class="btn btn-sm btn-outline-light {{ 'disabled' if not p.has_next }}"
+       href="{{ page_url(p.page + 1) if p.has_next else '#' }}">
+      Próxima <i class="bi bi-chevron-right"></i>
+    </a>
+  </div>
+</div>
+{% endif %}
+{% endmacro %}

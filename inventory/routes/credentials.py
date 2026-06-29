@@ -5,6 +5,7 @@ from flask_login import login_required, current_user
 from ..repositories import credential_repo
 from ..forms.credential import CredentialForm, CATEGORY_CHOICES
 from ..services import audit
+from ..services.pagination import paginate
 
 bp = Blueprint("credentials", __name__)
 
@@ -36,7 +37,8 @@ def list_view():
     q = (request.args.get("q") or "").strip()
     category = (request.args.get("category") or "").strip()
     items = credential_repo.list_credentials(q or None, category or None)
-    return render_template("credentials/list.html", items=items, q=q,
+    items, pag = paginate(items)
+    return render_template("credentials/list.html", items=items, q=q, pag=pag,
                            category=category, categories=CATEGORY_CHOICES)
 
 

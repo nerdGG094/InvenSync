@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Manutenções{% endblock %}
 {% block content %}
+{% from "_macros.html" import pager with context %}
 {% set kind_meta = {
   'preventiva': ('Preventiva','info'), 'corretiva': ('Corretiva','warning'),
   'upgrade': ('Upgrade','success'), 'formatacao': ('Formatação','secondary'),
@@ -10,7 +11,7 @@
   <h1 class="ph-title">
     <span class="ph-icon"><i class="bi bi-tools"></i></span>
     Manutenções
-    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ items|length }}</span>
+    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ pag.total }}</span>
   </h1>
   <div class="d-flex gap-2">
     <a href="{{ url_for('maintenance.export', q=q, kind=kind, machine_id=machine_id) }}" class="btn btn-outline-light"><i class="bi bi-file-earmark-excel"></i> Excel</a>
@@ -21,7 +22,7 @@
 <div class="row g-3 mb-3">
   <div class="col-6 col-lg-4">
     <div class="card stat-card h-100"><div class="card-body d-flex align-items-center justify-content-between">
-      <div><div class="text-muted small">Registros</div><div class="h3 mb-0 number">{{ items|length }}</div></div>
+      <div><div class="text-muted small">Registros</div><div class="h3 mb-0 number">{{ pag.total }}</div></div>
       <i class="bi bi-wrench-adjustable fs-2 text-success"></i>
     </div></div>
   </div>
@@ -77,5 +78,6 @@
       </tbody>
     </table>
   </div>
+  {{ pager(pag) }}
 </div>
 {% endblock %}

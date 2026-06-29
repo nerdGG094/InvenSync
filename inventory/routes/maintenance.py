@@ -11,6 +11,7 @@ from ..models.machine_maintenance import MachineMaintenance
 from ..extensions import db
 from ..services import audit
 from ..services.exports import xlsx_response
+from ..services.pagination import paginate
 
 bp = Blueprint("maintenance", __name__)
 
@@ -50,7 +51,8 @@ def list_view():
     kind = (request.args.get("kind") or "").strip()
     items = maintenance_repo.list_maintenances(q or None, machine_id, kind or None)
     total_cost = sum((m.cost or 0) for m in items)
-    return render_template("maintenance/list.html", items=items, q=q,
+    items, pag = paginate(items)
+    return render_template("maintenance/list.html", items=items, q=q, pag=pag,
                            machine_id=machine_id, kind=kind, total_cost=total_cost,
                            kind_choices=KIND_CHOICES)
 

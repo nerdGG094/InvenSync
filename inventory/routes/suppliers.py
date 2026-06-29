@@ -4,6 +4,7 @@ from flask_login import login_required
 from ..repositories import supplier_repo
 from ..forms.catalog import SupplierForm
 from ..models.supplier import Supplier
+from ..services.pagination import paginate
 
 bp = Blueprint("suppliers", __name__)
 
@@ -12,7 +13,8 @@ bp = Blueprint("suppliers", __name__)
 def list_view():
     q = request.args.get("q","")
     items = supplier_repo.list_suppliers(q)
-    return render_template("suppliers/list.html", items=items, q=q)
+    items, pag = paginate(items)
+    return render_template("suppliers/list.html", items=items, q=q, pag=pag)
 
 @bp.route("/new", methods=["GET","POST"])
 @login_required

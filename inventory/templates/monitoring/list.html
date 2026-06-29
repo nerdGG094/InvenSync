@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Monitoramento{% endblock %}
 {% block content %}
+{% from "_macros.html" import pager with context %}
 
 {% set kind_icon = {'servidor':'bi-hdd-rack','impressora':'bi-printer','roteador':'bi-router','switch':'bi-diagram-3','site':'bi-globe2','outro':'bi-pc'} %}
 
@@ -16,7 +17,7 @@
   <h1 class="ph-title">
     <span class="ph-icon"><i class="bi bi-activity"></i></span>
     Monitoramento de Uptime
-    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ items|length }}</span>
+    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ pag.total }}</span>
   </h1>
   <div class="d-flex gap-2 flex-wrap">
     <form action="{{ url_for('monitoring.check_now') }}" method="post" class="d-inline">
@@ -130,6 +131,7 @@
       </tbody>
     </table>
   </div>
+  {{ pager(pag) }}
 </div>
 
 <p class="text-muted small mt-2">

@@ -12,6 +12,7 @@ from ..extensions import db
 from ..models.department import Department
 from ..models.user import User
 from ..forms.department import DepartmentForm
+from ..services.pagination import paginate
 
 bp = Blueprint("departments", __name__)
 
@@ -47,7 +48,8 @@ def list_view():
     if q:
         query = query.filter(Department.name.ilike(f"%{q}%"))
     items = query.order_by(Department.name).all()
-    return render_template("departments/list.html", items=items, q=q,
+    items, pag = paginate(items)
+    return render_template("departments/list.html", items=items, q=q, pag=pag,
                            counts=_people_counts())
 
 

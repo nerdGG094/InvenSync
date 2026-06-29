@@ -1,12 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Fornecedores{% endblock %}
 {% block content %}
+{% from "_macros.html" import pager with context %}
 
 <div class="page-header">
   <h1 class="ph-title">
     <span class="ph-icon"><i class="bi bi-truck"></i></span>
     Fornecedores
-    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ items|length }}</span>
+    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ pag.total }}</span>
   </h1>
   <a href="{{ url_for('suppliers.new') }}" class="btn btn-primary">
     <i class="bi bi-plus-circle"></i> Novo Fornecedor
@@ -75,5 +76,6 @@
       </tbody>
     </table>
   </div>
+  {{ pager(pag) }}
 </div>
 {% endblock %}

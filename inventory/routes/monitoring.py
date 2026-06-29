@@ -8,6 +8,7 @@ from ..models.monitor import MonitoredHost
 from ..models.machine import Machine
 from ..models.router import Router
 from ..services import monitoring, audit
+from ..services.pagination import paginate
 
 bp = Blueprint("monitoring", __name__)
 
@@ -39,7 +40,8 @@ def list_view():
     down = sum(1 for h in items if h.last_status == "down")
     unknown = sum(1 for h in items if h.last_status == "unknown")
     interval = int(current_app.config.get("MONITORING_INTERVAL", 120) or 120)
-    return render_template("monitoring/list.html", items=items, q=q,
+    items, pag = paginate(items)
+    return render_template("monitoring/list.html", items=items, q=q, pag=pag,
                            up=up, down=down, unknown=unknown,
                            kind_labels=dict(KIND_CHOICES), interval=interval)
 

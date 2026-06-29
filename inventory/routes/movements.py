@@ -139,7 +139,7 @@ def list_and_new():
 
     # ===== Paginação =====
     page = request.args.get("page", 1, type=int)
-    per_page = 15
+    per_page = 20
     pagination = (
         query.order_by(StockMovement.created_at.desc())
         .paginate(page=page, per_page=per_page, error_out=False)
