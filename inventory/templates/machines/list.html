@@ -166,6 +166,7 @@
     <div class="machine-foot">
       <span></span>
       <div class="machine-actions">
+        <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('machines.history', mid=m.id) }}" title="Histórico"><i class="bi bi-clock-history"></i></a>
         <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('machines.edit', mid=m.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
         <form action="{{ url_for('machines.delete', mid=m.id) }}" method="post" class="d-inline" onsubmit="return confirm('Excluir a máquina “{{ m.model or m.name or '' }}”?');">
           <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>

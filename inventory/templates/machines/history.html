@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Histórico — {{ m.model or m.name or m.id }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .tl{ position:relative; padding-left:28px; }
+  .tl:before{ content:""; position:absolute; left:9px; top:6px; bottom:6px; width:2px; background:#243024; }
+  .tl-item{ position:relative; margin-bottom:1rem; }
+  .tl-item:before{ content:""; position:absolute; left:-24px; top:3px; width:14px; height:14px; border-radius:50%;
+                   background:#15211a; border:2px solid #46e08a; box-shadow:0 0 0 3px #0f1a13; }
+  .tl-item.c-info:before{ border-color:#5ad6ee; }
+  .tl-item.c-warning:before{ border-color:#ffce6a; }
+  .tl-item.c-primary:before{ border-color:#7aa7ff; }
+  .tl-item.c-success:before{ border-color:#46e08a; }
+  .tl-when{ font-size:.74rem; color:#8fb0a0; }
+  .tl-card{ background:#15211a; border:1px solid #243024; border-radius:12px; padding:.6rem .8rem; margin-top:.25rem; }
+  .tl-title{ font-weight:600; color:#e6ffe9; }
+  .tl-sub{ color:#9bb6a6; font-size:.85rem; white-space:pre-wrap; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set st_meta = {'aberto':('Aberto','info'),'em_andamento':('Em andamento','warning'),'resolvido':('Resolvido','success'),'cancelado':('Cancelado','secondary')} %}
+
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-clock-history"></i></span>
+    Histórico do ativo
+    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ events|length }}</span>
+  </h1>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('machines.list_view') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Voltar</a>
+    <a href="{{ url_for('machines.edit', mid=m.id) }}" class="btn btn-outline-light btn-sm"><i class="bi bi-pencil"></i> Editar</a>
+  </div>
+</div>
+
+<div class="table-card p-3 mb-3">
+  <div class="d-flex flex-wrap align-items-center gap-3">
+    <span class="fw-semibold"><i class="bi bi-pc-display text-success me-1"></i>{{ m.model or m.name or '—' }}</span>
+    {% if m.assigned_user %}<span class="pill"><i class="bi bi-person"></i> {{ m.assigned_user }}</span>{% endif %}
+    {% if m.sector %}<span class="pill"><i class="bi bi-diagram-3"></i> {{ m.sector }}</span>{% endif %}
+    {% if m.ip_address %}<span class="pill font-monospace"><i class="bi bi-hdd-network"></i> {{ m.ip_address }}</span>{% endif %}
+    {% if m.patrimony %}<span class="pill"><i class="bi bi-tag"></i> {{ m.patrimony }}</span>{% endif %}
+  </div>
+</div>
+
+{% if events %}
+<div class="table-card p-3">
+  <div class="tl">
+    {% for e in events %}
+    <div class="tl-item c-{{ e.color }}">
+      <div class="tl-when">{{ e.when.strftime('%d/%m/%Y %H:%M') if e.when else '' }}</div>
+      <div class="tl-card">
+        <div class="d-flex align-items-center justify-content-between gap-2">
+          <span class="tl-title"><i class="bi {{ e.icon }} me-1"></i>{{ e.title }}</span>
+          {% if e.status %}{% set sm = st_meta.get(e.status, (e.status,'secondary')) %}
+            <span class="badge bg-{{ sm[1] }}-subtle text-{{ sm[1] }}-emphasis">{{ sm[0] }}</span>{% endif %}
+        </div>
+        {% if e.sub %}<div class="tl-sub mt-1">{{ e.sub }}</div>{% endif %}
+        {% if e.link %}<a href="{{ e.link }}" class="small">abrir <i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% else %}
+<div class="table-card"><div class="empty-state"><i class="bi bi-clock-history"></i>
+  Nenhum evento registrado para este ativo ainda.
+</div></div>
+{% endif %}
+{% endblock %}

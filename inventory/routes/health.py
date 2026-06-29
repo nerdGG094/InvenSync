@@ -1,8 +1,9 @@
 # inventory/routes/health.py
 """Endpoint /health — usado pelo launcher para testar as conexões."""
 import time
+from datetime import datetime
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, current_app
 from sqlalchemy import text
 
 from ..extensions import db
@@ -10,6 +11,50 @@ from ..extensions import db
 bp = Blueprint("health", __name__)
 
 _START = time.time()
+
+
+def _info() -> dict:
+    """Informações operacionais (não afetam o status crítico)."""
+    out = {}
+    # Schedulers em segundo plano
+    try:
+        from ..services import monitoring, alerts
+        out["monitoring"] = {
+            "enabled": bool(current_app.config.get("MONITORING_ENABLED")),
+            "running": bool(getattr(monitoring, "_started", False)),
+        }
+        out["alerts"] = {
+            "enabled": bool(current_app.config.get("ALERTS_ENABLED")),
+            "running": bool(getattr(alerts, "_started", False)),
+        }
+    except Exception:  # noqa: BLE001
+        pass
+    # WhatsApp configurado?
+    try:
+        from ..services import whatsapp
+        out["whatsapp"] = {
+            "enabled": bool(current_app.config.get("WHATSAPP_ENABLED")),
+            "configured": whatsapp.configured(),
+        }
+    except Exception:  # noqa: BLE001
+        pass
+    # Último backup e idade
+    try:
+        import backup_db
+        items = backup_db.list_backups()
+        if items:
+            last = items[0]["mtime"]
+            age_h = (datetime.now() - last).total_seconds() / 3600.0
+            out["last_backup"] = {
+                "name": items[0]["name"],
+                "age_hours": round(age_h, 1),
+                "stale": age_h > 26,  # mais de ~1 dia sem backup
+            }
+        else:
+            out["last_backup"] = {"name": None, "age_hours": None, "stale": True}
+    except Exception:  # noqa: BLE001
+        pass
+    return out
 
 
 def _uptime() -> str:
@@ -46,5 +91,6 @@ def health():
         "status": "ok" if all_ok else "degraded",
         "uptime": _uptime(),
         "checks": checks,
+        "info": _info(),
     }
     return jsonify(payload), (200 if all_ok else 503)

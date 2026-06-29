@@ -113,3 +113,53 @@ def delete(mid):
     machine_repo.delete_machine(m)
     flash("Máquina excluída.", "success")
     return redirect(url_for("machines.list_view"))
+
+
+@bp.route("/<int:mid>/historico")
+@login_required
+def history(mid):
+    """Linha do tempo do ativo: cadastro, limpezas, manutenções e chamados."""
+    from datetime import datetime, date, time as _time
+    from ..models.machine_cleaning import MachineCleaning
+    from ..models.machine_maintenance import MachineMaintenance
+    from ..models.ticket import Ticket
+
+    m = machine_repo.get_machine(mid)
+
+    def _dt(v):
+        # normaliza date -> datetime para ordenar junto com datetimes
+        if isinstance(v, datetime):
+            return v
+        if isinstance(v, date):
+            return datetime.combine(v, _time.min)
+        return None
+
+    ev = []
+    if m.created_at:
+        ev.append({"when": m.created_at, "icon": "bi-plus-circle", "color": "success",
+                   "title": "Máquina cadastrada", "sub": m.model or m.name or ""})
+
+    for c in MachineCleaning.query.filter_by(machine_id=mid).all():
+        dm = c.duration_min
+        dur = (f" · {dm} min" if dm is not None else "")
+        ev.append({"when": _dt(c.started_at), "icon": "bi-droplet-half", "color": "info",
+                   "title": "Limpeza", "sub": f"{c.executed_by or 'sem executor'}{dur}",
+                   "link": url_for("cleanings.list_view", q=(m.model or ''))})
+
+    kind_lbl = {"preventiva": "Preventiva", "corretiva": "Corretiva", "upgrade": "Upgrade",
+                "formatacao": "Formatação", "troca_peca": "Troca de peça", "outro": "Outro"}
+    for mt in MachineMaintenance.query.filter_by(machine_id=mid).all():
+        custo = (f" · R$ {mt.cost:.2f}" if mt.cost is not None else "")
+        ev.append({"when": _dt(mt.date), "icon": "bi-tools", "color": "warning",
+                   "title": f"Manutenção — {kind_lbl.get(mt.kind, mt.kind)}",
+                   "sub": (mt.description or "")[:140] + (f" · {mt.performed_by}" if mt.performed_by else "") + custo})
+
+    for t in Ticket.query.filter_by(machine_id=mid).all():
+        ev.append({"when": t.created_at, "icon": "bi-headset", "color": "primary",
+                   "title": f"Chamado {t.code}", "sub": t.title,
+                   "link": url_for("tickets.detail", tid=t.id),
+                   "status": t.status})
+
+    ev = [e for e in ev if e["when"] is not None]
+    ev.sort(key=lambda e: e["when"], reverse=True)
+    return render_template("machines/history.html", m=m, events=ev)
