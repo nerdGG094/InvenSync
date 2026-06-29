@@ -113,6 +113,22 @@
     .toast-message{ border-left:4px solid #6c757d; }
     @keyframes toastIn{ from{ opacity:0; transform:translateX(20px);} to{ opacity:1; transform:none;} }
     @keyframes toastOut{ to{ opacity:0; transform:translateX(20px);} }
+    /* ===== Busca global (Ctrl+K) ===== */
+    .gsearch-ov{ position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:2100; display:none; align-items:flex-start; justify-content:center; padding:10vh 1rem; }
+    .gsearch-ov.show{ display:flex; }
+    .gsearch{ width:100%; max-width:620px; background:#15211a; border:1px solid #2e4b3b; border-radius:14px; box-shadow:0 20px 60px rgba(0,0,0,.6); overflow:hidden; }
+    .gsearch-in{ display:flex; align-items:center; gap:.5rem; padding:.8rem 1rem; border-bottom:1px solid #243024; }
+    .gsearch-in input{ flex:1; background:transparent; border:0; outline:0; color:#eafff0; font-size:1rem; }
+    .gsearch-in kbd{ font-size:.7rem; background:#0f1a13; border:1px solid #243024; border-radius:6px; padding:.05rem .35rem; color:#8fb0a0; }
+    .gsearch-res{ max-height:50vh; overflow:auto; }
+    .gsearch-grp{ font-size:.68rem; text-transform:uppercase; letter-spacing:.1em; color:#7fae93; padding:.55rem 1rem .2rem; }
+    .gsearch-item{ display:flex; align-items:center; gap:.6rem; padding:.5rem 1rem; color:#dceede; text-decoration:none; }
+    .gsearch-item:hover, .gsearch-item.active{ background:#1b2a1f; }
+    .gsearch-item > .bi{ color:#46e08a; }
+    .gsearch-item .t{ flex:1; min-width:0; }
+    .gsearch-item .t .titulo{ font-size:.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .gsearch-item .t .sub{ font-size:.74rem; color:#8fb0a0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .gsearch-empty{ padding:1.2rem 1rem; color:#7d9b8a; text-align:center; font-size:.85rem; }
     footer { border-top: 1px solid #183224; color:#9ed9b2; }
     .brand-logo{ height: 28px; width: auto; display: inline-block; object-fit: contain; }
 
@@ -306,6 +322,13 @@
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('departments.') %}active{% endif %}" href="{{ url_for('departments.list_view') }}"><i class="bi bi-diagram-3 me-2"></i> Departamentos</a></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('assets.') %}active{% endif %}" href="{{ url_for('assets.list_view') }}"><i class="bi bi-person-badge me-2"></i> Ativos</a></li>
           </ul>
+        </li>
+        {% endif %}
+        {% if current_user.is_admin %}
+        <li class="nav-item">
+          <a class="nav-link" href="#" onclick="if(window.__openGSearch){window.__openGSearch();}return false;" title="Buscar (Ctrl+K)">
+            <i class="bi bi-search"></i> Buscar
+          </a>
         </li>
         {% endif %}
         <li class="nav-item">
@@ -522,6 +545,70 @@
     document.addEventListener('submit', function(e){ ensure(e.target); }, true);
   })();
 </script>
+
+{% if current_user.is_authenticated and current_user.is_admin %}
+<div class="gsearch-ov" id="gsearchOv">
+  <div class="gsearch" role="dialog" aria-label="Busca global">
+    <div class="gsearch-in">
+      <i class="bi bi-search text-success"></i>
+      <input id="gsearchInput" type="text" placeholder="Buscar material, máquina, chamado, pessoa, chip..." autocomplete="off">
+      <kbd>Esc</kbd>
+    </div>
+    <div class="gsearch-res" id="gsearchRes">
+      <div class="gsearch-empty">Digite ao menos 2 caracteres…</div>
+    </div>
+  </div>
+</div>
+<script>
+  // Busca global (Ctrl+K / ⌘K)
+  (function(){
+    var ov = document.getElementById('gsearchOv'); if(!ov) return;
+    var input = document.getElementById('gsearchInput');
+    var res = document.getElementById('gsearchRes');
+    var idx = -1, timer = null;
+    var URL_API = '{{ url_for("search.api") }}';
+    function esc(s){ return (s||'').replace(/[&<>"]/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]; }); }
+    function open(){ ov.classList.add('show'); input.value=''; res.innerHTML='<div class="gsearch-empty">Digite ao menos 2 caracteres…</div>'; idx=-1; setTimeout(function(){ input.focus(); }, 30); }
+    function close(){ ov.classList.remove('show'); }
+    window.__openGSearch = open;
+    document.addEventListener('keydown', function(e){
+      if((e.ctrlKey||e.metaKey) && (e.key==='k'||e.key==='K')){ e.preventDefault(); open(); }
+      else if(e.key==='Escape' && ov.classList.contains('show')){ close(); }
+    });
+    ov.addEventListener('click', function(e){ if(e.target===ov) close(); });
+    function items(){ return res.querySelectorAll('.gsearch-item'); }
+    function highlight(){ items().forEach(function(el,i){ el.classList.toggle('active', i===idx); }); var a=items()[idx]; if(a) a.scrollIntoView({block:'nearest'}); }
+    input.addEventListener('keydown', function(e){
+      var els = items();
+      if(e.key==='ArrowDown'){ e.preventDefault(); idx=Math.min(idx+1, els.length-1); highlight(); }
+      else if(e.key==='ArrowUp'){ e.preventDefault(); idx=Math.max(idx-1, 0); highlight(); }
+      else if(e.key==='Enter'){ var a=els[idx]||els[0]; if(a){ window.location = a.getAttribute('href'); } }
+    });
+    input.addEventListener('input', function(){
+      var q = input.value.trim();
+      clearTimeout(timer);
+      if(q.length < 2){ res.innerHTML='<div class="gsearch-empty">Digite ao menos 2 caracteres…</div>'; return; }
+      timer = setTimeout(function(){
+        fetch(URL_API + '?q=' + encodeURIComponent(q), {headers:{'Accept':'application/json'}})
+          .then(function(r){ return r.json(); })
+          .then(function(d){
+            var rs = d.results || []; idx = -1;
+            if(!rs.length){ res.innerHTML='<div class="gsearch-empty">Nada encontrado.</div>'; return; }
+            var html='', grp=null;
+            rs.forEach(function(it){
+              if(it.grupo!==grp){ grp=it.grupo; html += '<div class="gsearch-grp">'+esc(grp)+'</div>'; }
+              html += '<a class="gsearch-item" href="'+it.url+'"><i class="bi '+esc(it.icon)+'"></i>'
+                   + '<div class="t"><div class="titulo">'+esc(it.titulo)+'</div>'
+                   + (it.sub ? '<div class="sub">'+esc(it.sub)+'</div>' : '') + '</div></a>';
+            });
+            res.innerHTML = html;
+          })
+          .catch(function(){ res.innerHTML='<div class="gsearch-empty">Erro na busca.</div>'; });
+      }, 220);
+    });
+  })();
+</script>
+{% endif %}
 
 <script>
   // PWA: registra o service worker (escopo raiz).
