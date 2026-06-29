@@ -539,11 +539,26 @@
       var grid = document.querySelector(tabs.getAttribute('data-dept-tabs'));
       if(!grid) return;
       var cards = grid.querySelectorAll('[data-dept]');
+
       // Aviso quando nenhum departamento está selecionado (início oculto).
       var hint = document.createElement('div');
       hint.className = 'empty-state';
-      hint.innerHTML = '<i class="bi bi-hand-index-thumb"></i> Selecione um departamento acima para ver os itens.';
+      hint.innerHTML = '<i class="bi bi-hand-index-thumb"></i> Selecione um departamento para ver os itens.';
       grid.parentNode.insertBefore(hint, grid.nextSibling);
+
+      // Botão que recolhe/expande a própria lista de departamentos.
+      var toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'btn btn-outline-light btn-sm mb-2';
+      toggle.innerHTML = '<i class="bi bi-diagram-3"></i> <span class="lbl">Departamentos</span> <i class="bi bi-chevron-down chev ms-1"></i>';
+      tabs.parentNode.insertBefore(toggle, tabs);
+      var lbl = toggle.querySelector('.lbl');
+      var chev = toggle.querySelector('.chev');
+
+      function setOpen(open){
+        tabs.classList.toggle('d-none', !open);
+        chev.className = 'bi chev ms-1 ' + (open ? 'bi-chevron-up' : 'bi-chevron-down');
+      }
       function apply(d){
         var none = (d === null);
         cards.forEach(function(c){
@@ -551,13 +566,23 @@
         });
         hint.style.display = none ? '' : 'none';
       }
+
       // Estado inicial: respeita a pill já marcada como .active; senão, começa oculto.
       var initial = tabs.querySelector('.dept-pill.active');
       apply(initial ? initial.getAttribute('data-dept') : null);
+      setOpen(false);   // lista de departamentos recolhida por padrão
+
+      toggle.addEventListener('click', function(){
+        setOpen(tabs.classList.contains('d-none'));
+      });
+
       tabs.addEventListener('click', function(e){
         var b = e.target.closest('.dept-pill'); if(!b) return;
         tabs.querySelectorAll('.dept-pill').forEach(function(p){ p.classList.toggle('active', p===b); });
         apply(b.getAttribute('data-dept'));
+        // mostra o depto escolhido no botão e recolhe a lista
+        lbl.textContent = (b.textContent || 'Departamentos').replace(/\s+/g,' ').trim().replace(/\s*\d+$/,'') || 'Departamentos';
+        setOpen(false);
       });
     });
   })();
