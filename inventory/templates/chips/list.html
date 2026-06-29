@@ -125,18 +125,19 @@
 </div>
 
 {% if items %}
-{% for g in grupos %}
-<details class="group-section">
-  <summary class="group-head {{ 'no-sector' if not g.name }}">
-    <i class="bi bi-chevron-right chev"></i>
-    <i class="bi {{ 'bi-diagram-3' if g.name else 'bi-dash-circle' }}"></i>
-    {{ g.name or 'Sem setor' }}
-    <span class="count">{{ g['items']|length }}</span>
-  </summary>
-  <div class="phone-grid">
-  {% for c in g['items'] %}
+<div class="dept-tabs" data-dept-tabs="#chipGrid">
+  <button type="button" class="dept-pill active" data-dept=""><i class="bi bi-grid"></i> Todos <span class="c">{{ items|length }}</span></button>
+  {% for g in grupos %}
+  <button type="button" class="dept-pill" data-dept="{{ g.name or '__none__' }}">
+    <i class="bi {{ 'bi-diagram-3' if g.name else 'bi-dash-circle' }}"></i> {{ g.name or 'Sem setor' }} <span class="c">{{ g['items']|length }}</span>
+  </button>
+  {% endfor %}
+</div>
+
+<div class="phone-grid" id="chipGrid">
+  {% for g in grupos %}{% for c in g['items'] %}
   {% set um = u_meta.get(c.usage, ('—','secondary')) %}
-  <article class="phone-card {{ 'dim' if c.usage == 'cancelado' }}" style="border-left-color:{{ u_color.get(c.usage,'#5c6b5c') }}">
+  <article class="phone-card {{ 'dim' if c.usage == 'cancelado' }}" data-dept="{{ g.name or '__none__' }}" style="border-left-color:{{ u_color.get(c.usage,'#5c6b5c') }}">
     <div class="phone-top">
       <span class="phone-avatar"><i class="bi bi-sim"></i></span>
       <div class="flex-grow-1 min-w-0">
@@ -173,10 +174,8 @@
       </div>
     </div>
   </article>
-  {% endfor %}
-  </div>
-</details>
-{% endfor %}
+  {% endfor %}{% endfor %}
+</div>
 {% else %}
 <div class="table-card">
   <div class="empty-state"><i class="bi bi-sim"></i>

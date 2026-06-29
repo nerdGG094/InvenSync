@@ -127,18 +127,19 @@
 </div>
 
 {% if items %}
-{% for g in grupos %}
-<details class="group-section">
-  <summary class="group-head {{ 'no-sector' if not g.name }}">
-    <i class="bi bi-chevron-right chev"></i>
-    <i class="bi {{ 'bi-diagram-3' if g.name else 'bi-dash-circle' }}"></i>
-    {{ g.name or 'Sem setor' }}
-    <span class="count">{{ g['items']|length }}</span>
-  </summary>
-  <div class="machine-grid">
-  {% for m in g['items'] %}
+<div class="dept-tabs" data-dept-tabs="#machGrid">
+  <button type="button" class="dept-pill active" data-dept=""><i class="bi bi-grid"></i> Todos <span class="c">{{ items|length }}</span></button>
+  {% for g in grupos %}
+  <button type="button" class="dept-pill" data-dept="{{ g.name or '__none__' }}">
+    <i class="bi {{ 'bi-diagram-3' if g.name else 'bi-dash-circle' }}"></i> {{ g.name or 'Sem setor' }} <span class="c">{{ g['items']|length }}</span>
+  </button>
+  {% endfor %}
+</div>
+
+<div class="machine-grid" id="machGrid">
+  {% for g in grupos %}{% for m in g['items'] %}
   {% set km = kinds.get(m.kind, ('bi-hdd','—','secondary')) %}
-  <article class="machine-card {{ 'dim' if not m.is_active }}" style="border-left-color:{{ '#5c6b5c' if not m.is_active else kind_color.get(m.kind,'#5c6b5c') }}">
+  <article class="machine-card {{ 'dim' if not m.is_active }}" data-dept="{{ g.name or '__none__' }}" style="border-left-color:{{ '#5c6b5c' if not m.is_active else kind_color.get(m.kind,'#5c6b5c') }}">
     <div class="machine-top">
       <span class="machine-avatar"><i class="bi {{ km[0] }}"></i></span>
       <div class="flex-grow-1 min-w-0">
@@ -172,10 +173,8 @@
       </div>
     </div>
   </article>
-  {% endfor %}
-  </div>
-</details>
-{% endfor %}
+  {% endfor %}{% endfor %}
+</div>
 {% else %}
 <div class="table-card">
   <div class="empty-state">

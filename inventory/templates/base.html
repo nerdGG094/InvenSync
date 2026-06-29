@@ -53,8 +53,30 @@
     }
     .btn-outline-light { border-color: #2e4b3b; color: #e7ffe9; }
     .btn-outline-light:hover { background: #1a3427; border-color: #3c6b52; }
-    .stat-card { border-left: 4px solid var(--brand); background: var(--bg-2); color: #d0ffd6; }
-    .table { --bs-table-bg: var(--bg-2); --bs-table-color: var(--text-1); }
+    /* ===== Design system global (mesmo padrão da dashboard) ===== */
+    /* Cartões genéricos (formulários, painéis) no tema escuro */
+    .card { background:#15211a; border:1px solid #243024; border-radius:16px; }
+    .card-header { background:#17261c; border-bottom:1px solid #243024; color:#dceede; font-weight:600; }
+    .card-header:first-child { border-radius:16px 16px 0 0; }
+    /* Card de tabela: mesmo fundo e cantos mais suaves */
+    .table-card { background:#15211a !important; border-radius:16px !important; }
+    /* Cartões de número (KPIs): visual premium com acento + hover (definido após .card p/ prevalecer) */
+    .stat-card { background:linear-gradient(160deg,#1a2820,#14201a); border:1px solid #243024;
+      border-left:4px solid var(--brand); color:#d0ffd6; border-radius:16px;
+      box-shadow:0 1px 3px rgba(0,0,0,.25); transition:transform .14s ease, border-color .14s ease, box-shadow .14s ease; }
+    .stat-card:hover { transform:translateY(-3px); border-color:#2f6b46; box-shadow:0 10px 24px rgba(0,0,0,.35); }
+    /* Cabeçalho de página um pouco maior e respirado */
+    .page-header { margin-bottom:1.35rem; }
+    .page-header .ph-title { font-size:1.5rem; }
+    /* Rótulo de seção reutilizável em qualquer página */
+    .section-label { display:flex; align-items:center; gap:.55rem; margin:1.7rem 0 .85rem;
+      font-size:.74rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#7fae93; }
+    .section-label::after { content:""; flex:1; height:1px; background:linear-gradient(90deg,#243024,transparent); }
+    /* Refino de botões e campos */
+    .btn { border-radius:9px; }
+    .form-control, .form-select { border-radius:9px; }
+    /* ============================================================ */
+    .table { --bs-table-bg: transparent; --bs-table-color: var(--text-1); }
     .table thead th { background: #17261c; color: #a5d6a7; }
     .table-warning { --bs-table-bg: #142419; --bs-table-color: #d2ffe3; }
     a, .btn-link { color: var(--brand-2); }
@@ -71,6 +93,16 @@
     .alert-info { background:#0f1f2a; border-color:#1f3e51; color:#cfe9ff; }
     footer { border-top: 1px solid #183224; color:#9ed9b2; }
     .brand-logo{ height: 28px; width: auto; display: inline-block; object-fit: contain; }
+
+    /* Filtro por departamento (pills) — usado nas listas agrupadas por setor */
+    .dept-tabs{ display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1rem; }
+    .dept-pill{ background:#15211a; border:1px solid #243024; color:#9bb6a6; border-radius:999px;
+      padding:.35rem .85rem; font-size:.82rem; font-weight:600; cursor:pointer;
+      display:inline-flex; align-items:center; gap:.4rem; transition:border-color .12s,color .12s,background .12s; }
+    .dept-pill:hover{ border-color:#2f6b46; color:#cfe9d8; }
+    .dept-pill.active{ background:var(--brand); border-color:var(--brand); color:#06210f; }
+    .dept-pill .c{ background:rgba(0,0,0,.18); border-radius:999px; padding:0 .42rem; font-size:.72rem; }
+    .dept-pill.active .c{ background:rgba(255,255,255,.25); }
 
     /* ===================================================================
        DESKTOP (>=992px): menu vira barra lateral esquerda só com ícones
@@ -461,6 +493,25 @@
       document.querySelectorAll('form').forEach(ensure);
     });
     document.addEventListener('submit', function(e){ ensure(e.target); }, true);
+  })();
+</script>
+
+<script>
+  // Filtro por departamento (pills): mostra só os cards do depto selecionado.
+  // Marcação: <div class="dept-tabs" data-dept-tabs="#idDaGrade"> ... pills com data-dept ...
+  //           <div id="idDaGrade"> ... cards com data-dept ... </div>
+  (function(){
+    document.querySelectorAll('[data-dept-tabs]').forEach(function(tabs){
+      var grid = document.querySelector(tabs.getAttribute('data-dept-tabs'));
+      if(!grid) return;
+      var cards = grid.querySelectorAll('[data-dept]');
+      tabs.addEventListener('click', function(e){
+        var b = e.target.closest('.dept-pill'); if(!b) return;
+        tabs.querySelectorAll('.dept-pill').forEach(function(p){ p.classList.toggle('active', p===b); });
+        var d = b.getAttribute('data-dept');
+        cards.forEach(function(c){ c.style.display = (!d || c.getAttribute('data-dept') === d) ? '' : 'none'; });
+      });
+    });
   })();
 </script>
 
