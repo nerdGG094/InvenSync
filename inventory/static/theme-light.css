@@ -73,9 +73,16 @@ html[data-theme="light"] .av-meta, html[data-theme="light"] .mon-when,
 html[data-theme="light"] .contact-muted { color: #5b6b62 !important; }
 
 /* ----- Tabelas ----- */
-html[data-theme="light"] .table { --bs-table-bg: transparent; --bs-table-color: #1a2b22; }
+/* style.css fixa .table{background-color:#1e1e1e}; é preciso sobrescrever o
+   background-color (não só a variável --bs-table-bg do Bootstrap). */
+html[data-theme="light"] .table {
+  background-color: transparent !important; color: #1a2b22;
+  --bs-table-bg: transparent; --bs-table-color: #1a2b22;
+}
+html[data-theme="light"] .table > :not(caption) > * > * { background-color: transparent; color: #1a2b22; }
+html[data-theme="light"] .table th { background-color: #eef3f0; color: #2f5a41; }
 html[data-theme="light"] .table thead th { background: #eef3f0; color: #2f5a41; border-color: #e2e8e4; }
-html[data-theme="light"] .table td { border-color: #e8eee9; }
+html[data-theme="light"] .table td { border-color: #e8eee9; color: #1a2b22; }
 html[data-theme="light"] .table-warning { --bs-table-bg: #fff7e6; --bs-table-color: #5a4708; }
 
 /* ----- Inputs ----- */
