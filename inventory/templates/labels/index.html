@@ -18,6 +18,8 @@
   .qr-label .info .sub .ip { font-family:monospace; color:#0a4b8c; }
   .qr-label .info .pat { font-family:monospace; color:#111; }
   .lbl-pick { position:absolute; top:6px; right:6px; }
+  .lbl-applied { position:absolute; top:4px; left:4px; font-size:10px; font-weight:700;
+    padding:1px 6px; border-radius:999px; background:#0f5132; color:#d7ffe6; }
   .qr-wrap { position:relative; }
   .dept-hidden { display:none !important; }   /* oculto pelo filtro de departamento */
   @media print {
@@ -45,9 +47,18 @@
 <div class="labels-tools table-card p-3 mb-3">
   <div class="d-flex flex-wrap gap-2 align-items-center">
     <span class="text-muted small me-2">Tipo de ativo:</span>
-    <a href="{{ url_for('labels.index', kind='machine') }}" class="btn btn-sm {{ 'btn-primary' if kind=='machine' else 'btn-outline-light' }}"><i class="bi bi-pc-display"></i> Máquinas</a>
-    <a href="{{ url_for('labels.index', kind='router') }}" class="btn btn-sm {{ 'btn-primary' if kind=='router' else 'btn-outline-light' }}"><i class="bi bi-router"></i> Roteadores</a>
-    <a href="{{ url_for('labels.index', kind='mobile') }}" class="btn btn-sm {{ 'btn-primary' if kind=='mobile' else 'btn-outline-light' }}"><i class="bi bi-phone"></i> Celulares</a>
+    <a href="{{ url_for('labels.index', kind='machine', status=status) }}" class="btn btn-sm {{ 'btn-primary' if kind=='machine' else 'btn-outline-light' }}"><i class="bi bi-pc-display"></i> Máquinas</a>
+    <a href="{{ url_for('labels.index', kind='router', status=status) }}" class="btn btn-sm {{ 'btn-primary' if kind=='router' else 'btn-outline-light' }}"><i class="bi bi-router"></i> Roteadores</a>
+    <a href="{{ url_for('labels.index', kind='mobile', status=status) }}" class="btn btn-sm {{ 'btn-primary' if kind=='mobile' else 'btn-outline-light' }}"><i class="bi bi-phone"></i> Celulares</a>
+  </div>
+
+  <hr class="my-2" style="border-color:#243024">
+
+  <div class="d-flex flex-wrap gap-2 align-items-center">
+    <span class="text-muted small me-2">Situação:</span>
+    <a href="{{ url_for('labels.index', kind=kind, status='pendente') }}" class="btn btn-sm {{ 'btn-warning' if status=='pendente' else 'btn-outline-light' }}"><i class="bi bi-sticky"></i> Não coladas <span class="badge bg-dark-subtle text-dark-emphasis">{{ totals.pendente }}</span></a>
+    <a href="{{ url_for('labels.index', kind=kind, status='colada') }}" class="btn btn-sm {{ 'btn-success' if status=='colada' else 'btn-outline-light' }}"><i class="bi bi-check2-circle"></i> Coladas <span class="badge bg-dark-subtle text-dark-emphasis">{{ totals.colada }}</span></a>
+    <a href="{{ url_for('labels.index', kind=kind, status='todas') }}" class="btn btn-sm {{ 'btn-primary' if status=='todas' else 'btn-outline-light' }}"><i class="bi bi-grid"></i> Todas <span class="badge bg-dark-subtle text-dark-emphasis">{{ totals.todas }}</span></a>
   </div>
 
   <hr class="my-2" style="border-color:#243024">
@@ -79,6 +90,7 @@
 <div class="label-grid">
   {% for it in items %}
   <div class="qr-label qr-wrap" data-label data-dept="{{ it.sector or '' }}">
+    {% if it.applied %}<span class="lbl-applied qr-hide-print"><i class="bi bi-check2"></i> colada</span>{% endif %}
     <input type="checkbox" class="form-check-input lbl-pick" checked title="Incluir na impressão">
     <img class="qr" src="{{ url_for('labels.qr_png', kind=it.kind, oid=it.id) }}" alt="QR">
     <div class="info">
