@@ -3,8 +3,7 @@
 
 {% block extra_head %}
 <style>
-  .people-grid{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fill, minmax(290px, 1fr)); }
-
+  /* .people-grid e .pchip vivem em static/style.css (compartilhados) */
   .person-card{
     position:relative; background:#1e1e1e; border:1px solid #243024; border-radius:16px;
     padding:1.1rem 1.1rem 0.9rem; display:flex; flex-direction:column; gap:.85rem;
@@ -27,16 +26,6 @@
   .person-mail.muted{ color:#6b7d70; font-style:italic; }
 
   .person-chips{ display:flex; flex-wrap:wrap; gap:.4rem; }
-  .pchip{
-    display:inline-flex; align-items:center; gap:.3rem; font-size:.74rem; font-weight:600;
-    padding:.2rem .55rem; border-radius:999px; text-decoration:none;
-    background:#15211a; border:1px solid #243024; color:#9bb6a6;
-  }
-  .pchip i{ font-size:.85rem; }
-  .pchip.green{ background:rgba(0,200,83,.12); border-color:rgba(0,200,83,.35); color:#46e08a; }
-  .pchip.blue{ background:rgba(13,202,240,.12); border-color:rgba(13,202,240,.35); color:#5ad6ee; }
-  .pchip.amber{ background:rgba(255,176,32,.12); border-color:rgba(255,176,32,.35); color:#ffce6a; }
-  a.pchip:hover{ filter:brightness(1.15); }
 
   .person-foot{
     display:flex; align-items:center; justify-content:space-between; gap:.5rem;
@@ -47,24 +36,6 @@
   .person-actions{ display:flex; gap:.35rem; }
 
   .summary-chips{ display:flex; flex-wrap:wrap; gap:.5rem; }
-
-  .group-section{ margin-bottom:1rem; border:1px solid #243024; border-radius:14px; background:#161616; overflow:hidden; }
-  .group-head{
-    display:flex; align-items:center; gap:.55rem; cursor:pointer; user-select:none; list-style:none;
-    font-weight:700; color:#cfe9d8; font-size:1.02rem; padding:.85rem 1rem;
-  }
-  .group-head::-webkit-details-marker{ display:none; }
-  .group-head:hover{ background:#1b2a1f; }
-  .group-head > i{ color:#46e08a; }
-  .group-head .chev{ color:#6b7d70; transition:transform .15s ease; }
-  .group-section[open] > .group-head .chev{ transform:rotate(90deg); }
-  .group-section[open] > .group-head{ border-bottom:1px solid #243024; }
-  .group-head .count{
-    font-size:.78rem; font-weight:600; color:#9bb6a6;
-    background:#15211a; border:1px solid #243024; border-radius:999px; padding:.1rem .55rem;
-  }
-  .group-head.no-sector, .group-head.no-sector > i{ color:#9bb6a6; }
-  .group-section .people-grid{ padding:1rem; }
 </style>
 {% endblock %}
 

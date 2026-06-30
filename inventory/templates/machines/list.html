@@ -3,7 +3,7 @@
 
 {% block extra_head %}
 <style>
-  .machine-grid{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); }
+  /* .machine-grid e .pchip vivem em static/style.css (compartilhados) */
   .machine-card{
     background:#1e1e1e; border:1px solid #243024; border-radius:16px;
     padding:1.1rem 1.1rem 0.9rem; display:flex; flex-direction:column; gap:.8rem;
@@ -20,36 +20,9 @@
   }
   .machine-name{ font-weight:600; color:#e6ffe9; line-height:1.2; word-break:break-word; }
   .machine-sub{ font-size:.8rem; color:#9bb6a6; }
-  .pchip{
-    display:inline-flex; align-items:center; gap:.3rem; font-size:.74rem; font-weight:600;
-    padding:.2rem .55rem; border-radius:999px; background:#15211a; border:1px solid #243024; color:#9bb6a6;
-  }
-  .pchip i{ font-size:.85rem; }
-  .pchip.green{ background:rgba(0,200,83,.12); border-color:rgba(0,200,83,.35); color:#46e08a; }
-  .pchip.blue{ background:rgba(13,202,240,.12); border-color:rgba(13,202,240,.35); color:#5ad6ee; }
-  .pchip.amber{ background:rgba(255,193,7,.12); border-color:rgba(255,193,7,.35); color:#ffce6a; }
-  .pchip.mono{ font-family:var(--bs-font-monospace, monospace); font-weight:500; }
   .machine-chips{ display:flex; flex-wrap:wrap; gap:.4rem; }
   .machine-foot{ display:flex; align-items:center; justify-content:space-between; gap:.5rem; margin-top:auto; padding-top:.75rem; border-top:1px solid #243024; }
   .machine-actions{ display:flex; gap:.35rem; }
-
-  .group-section{ margin-bottom:1rem; border:1px solid #243024; border-radius:14px; background:#161616; overflow:hidden; }
-  .group-head{
-    display:flex; align-items:center; gap:.55rem; cursor:pointer; user-select:none; list-style:none;
-    font-weight:700; color:#cfe9d8; font-size:1.02rem; padding:.85rem 1rem;
-  }
-  .group-head::-webkit-details-marker{ display:none; }
-  .group-head:hover{ background:#1b2a1f; }
-  .group-head > i{ color:#46e08a; }
-  .group-head .chev{ color:#6b7d70; transition:transform .15s ease; }
-  .group-section[open] > .group-head .chev{ transform:rotate(90deg); }
-  .group-section[open] > .group-head{ border-bottom:1px solid #243024; }
-  .group-head.no-sector, .group-head.no-sector > i{ color:#9bb6a6; }
-  .group-head .count{
-    font-size:.78rem; font-weight:600; color:#9bb6a6;
-    background:#15211a; border:1px solid #243024; border-radius:999px; padding:.1rem .55rem;
-  }
-  .group-section .machine-grid{ padding:1rem; }
 </style>
 {% endblock %}
 
