@@ -77,3 +77,35 @@ def auth_client(client, admin_email):
                     follow_redirects=False)
     assert r.status_code in (301, 302, 303), f"login falhou: {r.status_code}"
     return client
+
+
+COMMON_EMAIL = "pytest-common@invensync.local"
+COMMON_PASS = "pytest-common-123"
+
+
+@pytest.fixture
+def common_email(app):
+    """Garante um usuário COMUM (não-admin) ativo, com login e senha conhecida."""
+    with app.app_context():
+        u = User.query.filter_by(email=COMMON_EMAIL).first()
+        if u is None:
+            u = User(name="Pytest Comum", email=COMMON_EMAIL)
+            db.session.add(u)
+        u.is_admin = False
+        u.can_login = True
+        u.is_active = True
+        u.is_2fa_enabled = False
+        u.sector = "Comercial"
+        u.set_password(COMMON_PASS)
+        db.session.commit()
+        return COMMON_EMAIL
+
+
+@pytest.fixture
+def common_client(app, common_email):
+    """Cliente logado como usuário comum (sessão isolada do auth_client)."""
+    c = app.test_client()
+    r = c.post("/login", data={"email": common_email, "password": COMMON_PASS},
+               follow_redirects=False)
+    assert r.status_code in (301, 302, 303), f"login comum falhou: {r.status_code}"
+    return c
