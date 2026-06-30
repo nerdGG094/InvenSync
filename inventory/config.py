@@ -59,6 +59,19 @@ class Config:
     WHATSAPP_ENABLED = os.environ.get("WHATSAPP_ENABLED", "0") in ("1", "true", "True")
     CALLMEBOT_RECIPIENTS = os.environ.get("CALLMEBOT_RECIPIENTS", "")
 
+    # Notificações por e-mail (SMTP) — desligado até MAIL_ENABLED=1.
+    MAIL_ENABLED = os.environ.get("MAIL_ENABLED", "0") in ("1", "true", "True")
+    SMTP_HOST = os.environ.get("SMTP_HOST", "")
+    SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+    SMTP_USER = os.environ.get("SMTP_USER", "")
+    SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+    SMTP_TLS = os.environ.get("SMTP_TLS", "1") in ("1", "true", "True")
+    MAIL_FROM = os.environ.get("MAIL_FROM", "")
+    MAIL_TI = os.environ.get("MAIL_TI", "")  # destinatários da TI, separados por vírgula
+
+    # Chave dedicada do cofre de senhas (Fernet). Se vazia, deriva do SECRET_KEY.
+    VAULT_KEY = os.environ.get("VAULT_KEY", "")
+
     # Monitoramento de uptime (ping/HTTP em segundo plano).
     MONITORING_ENABLED = os.environ.get("MONITORING_ENABLED", "1") in ("1", "true", "True")
     MONITORING_INTERVAL = int(os.environ.get("MONITORING_INTERVAL", "120"))  # segundos

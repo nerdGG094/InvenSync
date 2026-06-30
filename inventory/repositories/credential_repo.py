@@ -4,6 +4,7 @@ from sqlalchemy import or_
 
 from ..extensions import db
 from ..models.credential import Credential
+from ..services import crypto
 
 _ALLOWED = {"name", "category", "url", "username", "password", "sector", "notes"}
 
@@ -28,7 +29,9 @@ def get_credential(cid: int) -> Credential:
 
 
 def create_credential(**kwargs) -> Credential:
-    c = Credential(**{k: kwargs.get(k) for k in _ALLOWED})
+    data = {k: kwargs.get(k) for k in _ALLOWED}
+    data["password"] = crypto.encrypt(data.get("password")) or None
+    c = Credential(**data)
     db.session.add(c)
     db.session.commit()
     return c
@@ -36,8 +39,14 @@ def create_credential(**kwargs) -> Credential:
 
 def update_credential(c: Credential, **kwargs) -> Credential:
     for k in _ALLOWED:
+        if k == "password":
+            continue
         if k in kwargs:
             setattr(c, k, kwargs[k])
+    # Senha em branco ao editar = manter a atual; se informada, cifra.
+    pw = kwargs.get("password")
+    if pw:
+        c.password = crypto.encrypt(pw)
     db.session.commit()
     return c
 

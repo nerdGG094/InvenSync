@@ -29,12 +29,16 @@ def _info() -> dict:
         }
     except Exception:  # noqa: BLE001
         pass
-    # WhatsApp configurado?
+    # WhatsApp / e-mail configurados?
     try:
-        from ..services import whatsapp
+        from ..services import whatsapp, mailer
         out["whatsapp"] = {
             "enabled": bool(current_app.config.get("WHATSAPP_ENABLED")),
             "configured": whatsapp.configured(),
+        }
+        out["email"] = {
+            "enabled": bool(current_app.config.get("MAIL_ENABLED")),
+            "configured": mailer.configured(),
         }
     except Exception:  # noqa: BLE001
         pass

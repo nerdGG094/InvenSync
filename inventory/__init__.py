@@ -15,6 +15,8 @@ def _run_light_migrations():
     """
     stmts = [
         'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS totp_secret VARCHAR(64)',
+        # Cofre de senhas: armazenado cifrado (token Fernet) — TEXT comporta o tamanho.
+        "ALTER TABLE credential ALTER COLUMN password TYPE TEXT",
         # Token de sessão p/ "sair de todas as sessões" (backfill aleatório nos já existentes).
         'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS session_token VARCHAR(32)',
         "UPDATE \"user\" SET session_token = md5(random()::text || id::text) WHERE session_token IS NULL",
@@ -145,6 +147,24 @@ def _seed_departments_from_sectors():
         db.session.rollback()
 
 
+def _encrypt_credentials():
+    """Cifra senhas do cofre que ainda estejam em texto puro (migração única).
+
+    Idempotente: tokens já cifrados são detectados e ignorados."""
+    from .models.credential import Credential
+    from .services import crypto
+    try:
+        changed = False
+        for c in Credential.query.filter(Credential.password.isnot(None)).all():
+            if c.password and not crypto.is_encrypted(c.password):
+                c.password = crypto.encrypt(c.password)
+                changed = True
+        if changed:
+            db.session.commit()
+    except Exception:  # noqa: BLE001
+        db.session.rollback()
+
+
 # Endpoints liberados para usuários NÃO administradores (perfil "comum").
 # Eles só acessam Chamados, o próprio Perfil, autenticação e estáticos.
 NON_ADMIN_PREFIXES = ("tickets.", "profile.", "auth.", "kb.", "announcements.")
@@ -230,6 +250,8 @@ def create_app():
         _seed_departments_from_sectors()
         # Gera nº de patrimônio para máquinas/celulares já cadastrados sem o campo.
         _backfill_patrimony()
+        # Cifra senhas do cofre que ainda estejam em texto puro.
+        _encrypt_credentials()
         db.session.commit()
 
     # Loader do usuário

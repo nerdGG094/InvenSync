@@ -4,7 +4,7 @@ from flask_login import login_required, current_user
 
 from ..repositories import credential_repo
 from ..forms.credential import CredentialForm, CATEGORY_CHOICES
-from ..services import audit
+from ..services import audit, crypto
 from ..services.pagination import paginate
 
 bp = Blueprint("credentials", __name__)
@@ -57,6 +57,8 @@ def new():
 def edit(cid):
     c = credential_repo.get_credential(cid)
     form = CredentialForm(obj=c)
+    if request.method == "GET":
+        form.password.data = ""  # não expõe a senha; em branco = manter
     if form.validate_on_submit():
         credential_repo.update_credential(c, **_to_kwargs(form))
         audit.record("update", "credential", c.id, f"Alterou credencial '{c.name}'")
@@ -79,4 +81,4 @@ def reveal(cid):
     """Retorna a senha em texto e registra na auditoria quem revelou."""
     c = credential_repo.get_credential(cid)
     audit.record("reveal", "credential", c.id, f"Revelou senha de '{c.name}'")
-    return jsonify(password=c.password or "")
+    return jsonify(password=crypto.decrypt(c.password))

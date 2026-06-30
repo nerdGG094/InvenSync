@@ -22,7 +22,7 @@ from ..models.license import License
 from ..models.product import Product
 from ..models.ticket import Ticket
 from ..repositories import product_repo
-from . import whatsapp
+from . import whatsapp, mailer
 
 # Título fixo do aviso automático (upsert: criamos uma vez, depois atualizamos).
 AUTO_TITLE = "🔔 Alertas automáticos do sistema"
@@ -190,13 +190,14 @@ def send_digest_if_window(app):
             total = len(low) + len(lic) + len(stuck)
             if total <= 0:
                 return
-            whatsapp.notify_ti(
-                "🔔 *InvenSync — alertas do dia*\n"
+            resumo = (
                 f"📦 Estoque no mínimo: {len(low)}\n"
                 f"📅 Licenças/garantias: {len(lic)}\n"
                 f"🎫 Chamados parados (>{hours}h): {len(stuck)}\n"
                 "Veja os detalhes na Central de Avisos."
             )
+            whatsapp.notify_ti("🔔 *InvenSync — alertas do dia*\n" + resumo)
+            mailer.notify_ti("[InvenSync] Alertas do dia", "Alertas do dia\n\n" + resumo)
         except Exception:  # noqa: BLE001
             db.session.rollback()
 

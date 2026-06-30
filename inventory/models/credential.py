@@ -13,7 +13,8 @@ class Credential(db.Model):
                          server_default="sistema", index=True)
     url = db.Column(db.String(255), nullable=True)               # host/URL de acesso
     username = db.Column(db.String(150), nullable=True)
-    password = db.Column(db.String(255), nullable=True)
+    # Guardada CIFRADA em repouso (Fernet); TEXT comporta o token. Ver services/crypto.py.
+    password = db.Column(db.Text, nullable=True)
     sector = db.Column(db.String(120), nullable=True)            # setor/dono
     notes = db.Column(db.Text, nullable=True)
 

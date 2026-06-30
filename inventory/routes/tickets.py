@@ -16,7 +16,7 @@ from ..forms.tickets import (TicketForm, CommentForm, STATUS_CHOICES,
                              CATEGORY_CHOICES, PRIORITY_CHOICES)
 from ..models.ticket import Ticket
 from ..models.user import User
-from ..services import people, whatsapp, audit
+from ..services import people, whatsapp, audit, mailer
 from ..services.exports import xlsx_response
 
 STATUS_LABELS = dict(STATUS_CHOICES)
@@ -277,13 +277,17 @@ def new():
             data["assigned_to_id"] = None
             data["resolution"] = None
         t = ticket_repo.create_ticket(opened_by_id=current_user.id, **data)
-        # Notifica a equipe de TI por WhatsApp (best-effort)
+        # Notifica a equipe de TI por WhatsApp + e-mail (best-effort)
+        _aberto = (f"Aberto por: {t.requester or current_user.name}"
+                   f"{(' · ' + t.sector) if t.sector else ''}")
         whatsapp.notify_ti(
-            f"🆕 *Novo chamado {t.code}*\n"
-            f"Aberto por: {t.requester or current_user.name}"
-            f"{(' · ' + t.sector) if t.sector else ''}\n"
-            f"Prioridade: {t.priority}\n"
-            f"{t.title}"
+            f"🆕 *Novo chamado {t.code}*\n{_aberto}\n"
+            f"Prioridade: {t.priority}\n{t.title}"
+        )
+        mailer.notify_ti(
+            f"[InvenSync] Novo chamado {t.code} — {t.title}",
+            f"{t.code} — {t.title}\n{_aberto}\nPrioridade: {t.priority}\n"
+            f"{(t.description or '').strip()}"
         )
         flash(f"Chamado {t.code} aberto!", "success")
         return redirect(url_for("tickets.detail", tid=t.id))
@@ -315,16 +319,27 @@ def comment(tid):
         new_status = form.new_status.data if current_user.is_admin else None
         ticket_repo.add_comment(t, body=body, author_id=current_user.id,
                                 new_status=new_status or None)
-        # Notificações por WhatsApp (best-effort)
+        # Notificações por WhatsApp + e-mail (best-effort)
         if current_user.is_admin:
+            _st = STATUS_LABELS.get(t.status, t.status)
             whatsapp.notify_user(
                 t.opened_by,
                 f"🔔 *Chamado {t.code}* atualizado por {current_user.name}:\n{body}\n"
-                f"Status: {STATUS_LABELS.get(t.status, t.status)}"
+                f"Status: {_st}"
+            )
+            mailer.notify_user(
+                t.opened_by,
+                f"[InvenSync] Chamado {t.code} atualizado — {t.title}",
+                f"{t.code} — {t.title}\nAtualizado por {current_user.name}.\n"
+                f"Status: {_st}\n\n{body}"
             )
         else:
             whatsapp.notify_ti(
                 f"💬 *{t.requester or current_user.name}* respondeu no chamado {t.code}:\n{body}"
+            )
+            mailer.notify_ti(
+                f"[InvenSync] Resposta no chamado {t.code} — {t.title}",
+                f"{t.requester or current_user.name} respondeu no chamado {t.code}:\n\n{body}"
             )
         flash("Andamento adicionado.", "success")
     else:
