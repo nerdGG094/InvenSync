@@ -182,3 +182,46 @@ html[data-theme="light"] .router-card { color: #1a2b22; }
 html[data-theme="light"] .table-hover > tbody > tr:hover > * { background: #f3f8f5; }
 html[data-theme="light"] .mov-row:hover td,
 html[data-theme="light"] .pz-table tbody tr:hover td { background: #f3f8f5; }
+
+/* ===== Revisão geral: textos secundários legíveis no tema claro ===== */
+html[data-theme="light"] .asset-devices,
+html[data-theme="light"] .asset-devices .more,
+html[data-theme="light"] .asset-sub,
+html[data-theme="light"] .av-meta,
+html[data-theme="light"] .auth-badge,
+html[data-theme="light"] .cl-sub,
+html[data-theme="light"] .cred-row,
+html[data-theme="light"] .cred-sub,
+html[data-theme="light"] .dash-head .sub,
+html[data-theme="light"] .docs-intro,
+html[data-theme="light"] .group-head .count,
+html[data-theme="light"] .kanban-card .meta,
+html[data-theme="light"] .kanban-empty,
+html[data-theme="light"] .kpi .lbl,
+html[data-theme="light"] .machine-sub,
+html[data-theme="light"] .meta-list dt,
+html[data-theme="light"] .mon-host,
+html[data-theme="light"] .mon-stat .l,
+html[data-theme="light"] .mon-status.paused,
+html[data-theme="light"] .mon-status.unknown,
+html[data-theme="light"] .mov-meta,
+html[data-theme="light"] .mt-parts,
+html[data-theme="light"] .mt-sub,
+html[data-theme="light"] .person-mail,
+html[data-theme="light"] .phone-line,
+html[data-theme="light"] .pz-sku,
+html[data-theme="light"] .reg-sub,
+html[data-theme="light"] .router-sub,
+html[data-theme="light"] .router-creds .cred,
+html[data-theme="light"] .tk-code,
+html[data-theme="light"] .tk-meta,
+html[data-theme="light"] .tl-meta,
+html[data-theme="light"] .tl-sub,
+html[data-theme="light"] .tl-when { color: #5b6b62 !important; }
+
+/* Conteúdo (mais escuro) e ícones/labels de seção */
+html[data-theme="light"] .dash-head h1,
+html[data-theme="light"] .router-creds .secret { color: #173a28; }
+html[data-theme="light"] .sec-label { color: #2f5a41; }
+html[data-theme="light"] .cred-row .bi,
+html[data-theme="light"] .cl-row .bi { color: #2f6b46; }
