@@ -56,4 +56,43 @@
     </ol>
   </details>
 </div>
+
+<div class="table-card p-4 mt-3">
+  <h2 class="h6 mb-3"><i class="bi bi-envelope-at text-success me-1"></i> Notificações por E-mail (SMTP)</h2>
+  <ul class="list-unstyled mb-4">
+    <li class="mb-2">
+      Status:
+      {% if mail_enabled %}
+        <span class="badge bg-success-subtle text-success-emphasis"><i class="bi bi-check-circle me-1"></i>Ativo (MAIL_ENABLED=1)</span>
+      {% else %}
+        <span class="badge bg-warning-subtle text-warning-emphasis"><i class="bi bi-exclamation-triangle me-1"></i>Desativado — defina MAIL_ENABLED=1 no .env</span>
+      {% endif %}
+    </li>
+    <li>
+      Destinatários da TI:
+      {% if mail_ti %}
+        <span class="badge bg-success-subtle text-success-emphasis">{{ mail_ti|length }} e-mail(s)</span>
+        <div class="mt-2">{% for e in mail_ti %}<code class="me-2">{{ e }}</code>{% endfor %}</div>
+      {% else %}
+        <span class="badge bg-warning-subtle text-warning-emphasis">nenhum — preencha MAIL_TI no .env</span>
+      {% endif %}
+    </li>
+  </ul>
+
+  <form action="{{ url_for('wpp.email_test') }}" method="post">
+    <button class="btn btn-success" {% if not (mail_enabled and mail_configured) %}disabled{% endif %}>
+      <i class="bi bi-send me-1"></i> Enviar e-mail de teste à TI
+    </button>
+  </form>
+
+  <hr class="my-4">
+  <details>
+    <summary class="fw-semibold" style="cursor:pointer">Como configurar o SMTP</summary>
+    <ol class="mt-3 text-muted">
+      <li>No <code>.env</code>: <code>MAIL_ENABLED=1</code>, <code>SMTP_HOST</code>, <code>SMTP_PORT</code> (587 c/ TLS ou 465 SSL), <code>SMTP_USER</code>, <code>SMTP_PASSWORD</code>.</li>
+      <li><code>MAIL_FROM</code> (remetente) e <code>MAIL_TI</code> (destinos da TI, separados por vírgula).</li>
+      <li>Reinicie o servidor e clique em <strong>Enviar e-mail de teste</strong>.</li>
+    </ol>
+  </details>
+</div>
 {% endblock %}
