@@ -301,7 +301,9 @@
 (function(){
   if (typeof Chart === 'undefined') return;
 
-  const TICK='rgba(255,255,255,.78)', GRID='rgba(255,255,255,.07)';
+  const LIGHT = document.documentElement.getAttribute('data-theme') === 'light';
+  const TICK = LIGHT ? 'rgba(26,43,34,.85)' : 'rgba(255,255,255,.78)';
+  const GRID = LIGHT ? 'rgba(20,40,28,.12)' : 'rgba(255,255,255,.07)';
   const PAL = ['#00c853','#ffb020','#0dcaf0','#ff7043','#9c6bff','#00b894','#f44336','#26c6da'];
   const rgba=(hex,a)=>{const h=hex.replace('#','');const n=parseInt(h,16);
     return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;};
@@ -310,8 +312,10 @@
   Chart.defaults.font.family = "system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
   Chart.defaults.plugins.legend.labels.boxWidth = 12;
   Chart.defaults.plugins.legend.labels.usePointStyle = true;
-  Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(8,16,11,.95)';
-  Chart.defaults.plugins.tooltip.borderColor = '#2e6b45';
+  Chart.defaults.plugins.tooltip.backgroundColor = LIGHT ? 'rgba(255,255,255,.98)' : 'rgba(8,16,11,.95)';
+  Chart.defaults.plugins.tooltip.titleColor = LIGHT ? '#173a28' : '#eafff0';
+  Chart.defaults.plugins.tooltip.bodyColor = LIGHT ? '#1a2b22' : '#dceede';
+  Chart.defaults.plugins.tooltip.borderColor = LIGHT ? '#cfe3d6' : '#2e6b45';
   Chart.defaults.plugins.tooltip.borderWidth = 1;
   Chart.defaults.plugins.tooltip.padding = 10;
 
@@ -342,8 +346,8 @@
     afterDraw(c){ const t=c.config.options.plugins.centerText; if(!t||!t.text) return;
       const {ctx,chartArea:{left,right,top,bottom}}=c; const x=(left+right)/2, y=(top+bottom)/2;
       ctx.save(); ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillStyle='#eafff0'; ctx.font='700 1.5rem system-ui'; ctx.fillText(t.text, x, y-4);
-      ctx.fillStyle='#8fb0a0'; ctx.font='600 .62rem system-ui'; ctx.fillText(t.sub||'', x, y+16); ctx.restore(); }
+      ctx.fillStyle=LIGHT?'#173a28':'#eafff0'; ctx.font='700 1.5rem system-ui'; ctx.fillText(t.text, x, y-4);
+      ctx.fillStyle=LIGHT?'#5b6b62':'#8fb0a0'; ctx.font='600 .62rem system-ui'; ctx.fillText(t.sub||'', x, y+16); ctx.restore(); }
   };
 
   // 1) Movimentações (área, 2 séries)
@@ -362,7 +366,7 @@
   (function(){ const el=document.getElementById('chStockHealth'); if(!el||!hasV(DATA.health)) return;
     new Chart(el,{type:'doughnut',plugins:[centerText],data:{labels:DATA.health.labels,datasets:[{
       data:DATA.health.data,backgroundColor:[rgba(PAL[0],.85),rgba(PAL[1],.85),rgba(PAL[6],.85)],
-      borderColor:'#0f1a13',borderWidth:2}]},
+      borderColor:(LIGHT?'#ffffff':'#0f1a13'),borderWidth:2}]},
       options:{responsive:true,maintainAspectRatio:false,cutout:'72%',
         plugins:{legend:{position:'bottom'},centerText:{text:(DATA.health.pct_ok||0)+'%',sub:'SAUDÁVEL'}}}});
   })();
@@ -399,7 +403,7 @@
   // Helpers categóricos (TI)
   function doughnut(id,d){ const el=document.getElementById(id); if(!el||!hasV(d)) return;
     new Chart(el,{type:'doughnut',data:{labels:d.labels,datasets:[{data:d.data,
-      backgroundColor:d.labels.map((_,i)=>rgba(PAL[i%PAL.length],.8)),borderColor:'#0f1a13',borderWidth:2}]},
+      backgroundColor:d.labels.map((_,i)=>rgba(PAL[i%PAL.length],.8)),borderColor:(LIGHT?'#ffffff':'#0f1a13'),borderWidth:2}]},
       options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom'}}}}); }
   function bars(id,d){ const el=document.getElementById(id); if(!el||!hasV(d)) return;
     new Chart(el,{type:'bar',data:{labels:d.labels,datasets:[{label:'Qtd',data:d.data,
