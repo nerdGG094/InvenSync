@@ -50,6 +50,7 @@ def edit():
             current_user.email = email
             current_user.sector = (form.sector.data or "").strip() or None
             current_user.whatsapp = (form.whatsapp.data or "").strip() or None
+            current_user.theme = form.theme.data if form.theme.data in ("dark", "light") else "dark"
             if form.photo.data:
                 current_user.photo = _save_avatar(form.photo.data)
             if form.new_password.data:

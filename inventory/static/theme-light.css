@@ -1,0 +1,116 @@
+/* ==========================================================================
+   InvenSync — Tema CLARO
+   Carregado só quando o usuário escolhe (perfil). Sobrepõe as superfícies
+   escuras fixas do app. Componentes Bootstrap adaptam via data-bs-theme=light.
+   ========================================================================== */
+
+html[data-theme="light"] {
+  --bg-1: #f4f7f5;
+  --bg-2: #ffffff;
+  --text-1: #1a2b22;
+  --text-2: #0f5132;
+}
+html[data-theme="light"] body { background: #f4f7f5; color: #1a2b22; }
+
+/* ----- Navbar / rail lateral ----- */
+html[data-theme="light"] .navbar { background: #ffffff; border-color: #e2e8e4; }
+html[data-theme="light"] .navbar .nav-link { color: #33503f !important; }
+html[data-theme="light"] .navbar .nav-link:hover,
+html[data-theme="light"] .navbar .nav-link.active { background: #eaf4ee; color: #0f5132 !important; }
+html[data-theme="light"] .navbar .dropdown-menu { background: #ffffff; border-color: #e2e8e4; box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+html[data-theme="light"] .navbar .dropdown-item { color: #33503f; }
+html[data-theme="light"] .navbar .dropdown-item:hover,
+html[data-theme="light"] .navbar .dropdown-item.active { background: #eaf4ee; color: #0f5132; }
+html[data-theme="light"] .navbar .dropdown-divider { border-color: #e2e8e4; }
+
+/* ----- Superfícies de card (todas as variantes do app) ----- */
+html[data-theme="light"] .card,
+html[data-theme="light"] .table-card,
+html[data-theme="light"] .stat-card,
+html[data-theme="light"] .kpi,
+html[data-theme="light"] .ch-card,
+html[data-theme="light"] .mon-stat,
+html[data-theme="light"] .mon-card,
+html[data-theme="light"] .machine-card,
+html[data-theme="light"] .phone-card,
+html[data-theme="light"] .asset-card,
+html[data-theme="light"] .person-card,
+html[data-theme="light"] .tk-card,
+html[data-theme="light"] .av-card,
+html[data-theme="light"] .cred-card,
+html[data-theme="light"] .mt-card,
+html[data-theme="light"] .cl-card { background: #ffffff !important; border-color: #e6ece8 !important; color: #1a2b22; }
+
+html[data-theme="light"] .card-header,
+html[data-theme="light"] .ch-card .ch-head,
+html[data-theme="light"] .table-card .table-card-tools { background: #f1f6f3 !important; border-color: #e2e8e4 !important; color: #173a28; }
+
+/* ----- Títulos e nomes ----- */
+html[data-theme="light"] h1, html[data-theme="light"] h2, html[data-theme="light"] h3,
+html[data-theme="light"] h4, html[data-theme="light"] h5, html[data-theme="light"] h6,
+html[data-theme="light"] .ph-title,
+html[data-theme="light"] .kpi .val,
+html[data-theme="light"] .machine-name,
+html[data-theme="light"] .phone-name,
+html[data-theme="light"] .asset-name,
+html[data-theme="light"] .person-name,
+html[data-theme="light"] .tk-title,
+html[data-theme="light"] .tk-title a,
+html[data-theme="light"] .av-title,
+html[data-theme="light"] .cred-name,
+html[data-theme="light"] .mt-machine,
+html[data-theme="light"] .cl-machine { color: #173a28; }
+
+/* ----- Textos secundários / muted ----- */
+html[data-theme="light"] .text-muted,
+html[data-theme="light"] .kpi .lbl, html[data-theme="light"] .kpi .hint,
+html[data-theme="light"] .machine-sub, html[data-theme="light"] .phone-line,
+html[data-theme="light"] .asset-sub, html[data-theme="light"] .person-mail,
+html[data-theme="light"] .tk-meta, html[data-theme="light"] .tk-code,
+html[data-theme="light"] .cred-sub, html[data-theme="light"] .cred-row,
+html[data-theme="light"] .mt-sub, html[data-theme="light"] .cl-sub,
+html[data-theme="light"] .av-meta, html[data-theme="light"] .mon-when,
+html[data-theme="light"] .contact-muted { color: #5b6b62 !important; }
+
+/* ----- Tabelas ----- */
+html[data-theme="light"] .table { --bs-table-bg: transparent; --bs-table-color: #1a2b22; }
+html[data-theme="light"] .table thead th { background: #eef3f0; color: #2f5a41; border-color: #e2e8e4; }
+html[data-theme="light"] .table td { border-color: #e8eee9; }
+html[data-theme="light"] .table-warning { --bs-table-bg: #fff7e6; --bs-table-color: #5a4708; }
+
+/* ----- Inputs ----- */
+html[data-theme="light"] .form-control,
+html[data-theme="light"] .form-select { background: #ffffff; border-color: #cfd8d2; color: #1a2b22; }
+html[data-theme="light"] .input-group-text { background: #eef3f0; border-color: #cfd8d2; color: #2f5a41; }
+
+/* ----- Botões outline-light (no escuro são claros; no claro precisam de contraste) ----- */
+html[data-theme="light"] .btn-outline-light { border-color: #cfd8d2; color: #2f5a41; }
+html[data-theme="light"] .btn-outline-light:hover { background: #eef3f0; border-color: #b9c8bf; color: #173a28; }
+
+/* ----- Pills / chips ----- */
+html[data-theme="light"] .pill, html[data-theme="light"] .pchip,
+html[data-theme="light"] .dept-pill { background: #f1f6f3; border-color: #dbe5df; color: #3a4a42; }
+html[data-theme="light"] .dept-pill:hover { border-color: #2f6b46; color: #0f5132; }
+html[data-theme="light"] .dept-pill.active { background: var(--brand); border-color: var(--brand); color: #06210f; }
+
+/* ----- Toasts / modais / busca ----- */
+html[data-theme="light"] .toastmsg,
+html[data-theme="light"] .cfm,
+html[data-theme="light"] .gsearch { background: #ffffff; border-color: #e2e8e4; color: #1a2b22; }
+html[data-theme="light"] .cfm-foot { background: #f1f6f3; border-color: #e2e8e4; }
+html[data-theme="light"] .cfm-msg { color: #1a2b22; }
+html[data-theme="light"] .gsearch-in { border-color: #e2e8e4; }
+html[data-theme="light"] .gsearch-in input { color: #1a2b22; }
+html[data-theme="light"] .gsearch-item { color: #22332a; }
+html[data-theme="light"] .gsearch-item:hover,
+html[data-theme="light"] .gsearch-item.active { background: #eef6f0; }
+
+/* ----- Diversos ----- */
+html[data-theme="light"] .empty-state { color: #6b8275; }
+html[data-theme="light"] a { color: #0a7d3a; }
+html[data-theme="light"] a:hover { color: #0f5132; }
+html[data-theme="light"] footer { border-color: #e2e8e4; color: #5b6b62; }
+html[data-theme="light"] .mon-bar { background: #e6ece8; }
+html[data-theme="light"] .pz-bar { background: #e6ece8; }
+html[data-theme="light"] .tl-card { background: #ffffff; border-color: #e6ece8; }
+html[data-theme="light"] .tl:before { background: #dbe5df; }

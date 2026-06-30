@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
-from wtforms import StringField, PasswordField, SubmitField
+from wtforms import StringField, PasswordField, SubmitField, SelectField
 from wtforms.validators import DataRequired, Length, Email, Optional, EqualTo
 
 
@@ -9,6 +9,8 @@ class ProfileForm(FlaskForm):
     email = StringField("E-mail", validators=[DataRequired(), Email(check_deliverability=False)])
     sector = StringField("Setor", validators=[Optional(), Length(max=120)])
     whatsapp = StringField("WhatsApp", validators=[Optional(), Length(max=30)])
+    theme = SelectField("Tema da interface", choices=[("dark", "Escuro"), ("light", "Claro")],
+                        default="dark")
     photo = FileField("Foto de perfil", validators=[
         Optional(),
         FileAllowed(["png", "jpg", "jpeg", "gif", "webp"], "Apenas imagens (png, jpg, gif, webp)."),

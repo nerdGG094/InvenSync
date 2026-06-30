@@ -37,6 +37,8 @@ class User(db.Model, UserMixin):
     )
     sector = db.Column(db.String(120), nullable=True)   # departamento / setor
     photo = db.Column(db.String(255), nullable=True)    # caminho da foto (avatar)
+    theme = db.Column(db.String(10), nullable=False, default="dark",
+                      server_default="dark")            # preferência de tema (dark|light)
     whatsapp = db.Column(db.String(30), nullable=True)  # número p/ notificações
 
     # Token de sessão: ao rotacionar, invalida sessões/cookies "lembrar-me" em

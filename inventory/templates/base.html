@@ -1,5 +1,6 @@
 <!doctype html>
-<html lang="pt-br" data-bs-theme="dark">
+{% set ui_theme = (current_user.theme if (current_user.is_authenticated and current_user.theme) else 'dark') %}
+<html lang="pt-br" data-bs-theme="{{ ui_theme }}" data-theme="{{ ui_theme }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -29,6 +30,9 @@
 
   <!-- CSS do app -->
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% if ui_theme == 'light' %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='theme-light.css') }}">
+  {% endif %}
 
   {% block extra_head %}{% endblock %}
   <style>

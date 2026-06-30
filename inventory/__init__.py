@@ -23,6 +23,8 @@ def _run_light_migrations():
         # Bloqueio de conta por tentativas de senha erradas.
         'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS failed_logins INTEGER NOT NULL DEFAULT 0',
         'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP',
+        # Preferência de tema (claro/escuro) por usuário.
+        "ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS theme VARCHAR(10) NOT NULL DEFAULT 'dark'",
         'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS is_2fa_enabled BOOLEAN NOT NULL DEFAULT false',
         'ALTER TABLE stock_movement ADD COLUMN IF NOT EXISTS nf_filename VARCHAR(255)',
         'ALTER TABLE stock_movement ADD COLUMN IF NOT EXISTS nf_original_name VARCHAR(255)',
