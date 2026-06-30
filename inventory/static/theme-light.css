@@ -114,3 +114,41 @@ html[data-theme="light"] .mon-bar { background: #e6ece8; }
 html[data-theme="light"] .pz-bar { background: #e6ece8; }
 html[data-theme="light"] .tl-card { background: #ffffff; border-color: #e6ece8; }
 html[data-theme="light"] .tl:before { background: #dbe5df; }
+
+/* ----- Cards extras (licenças/domínios/roteadores) ----- */
+html[data-theme="light"] .reg-card,
+html[data-theme="light"] .router-card { background: #ffffff !important; border-color: #e6ece8 !important; color: #1a2b22; }
+html[data-theme="light"] .reg-name, html[data-theme="light"] .router-name { color: #173a28; }
+
+/* ----- Timeline do chamado + sidebar de detalhes ----- */
+html[data-theme="light"] .tl-body { background: #f5f8f6; border-color: #e6ece8; color: #1a2b22; }
+html[data-theme="light"] .tl-title { color: #173a28; }
+html[data-theme="light"] .meta-list dd { color: #1a2b22; }
+html[data-theme="light"] .meta-list dt { color: #5b6b62; }
+
+/* ----- Kanban ----- */
+html[data-theme="light"] .kanban-col-head { background: #f1f6f3; border-color: #e2e8e4; }
+html[data-theme="light"] .kanban-card { background: #ffffff; border-color: #e6ece8; }
+html[data-theme="light"] .kanban-progress { background: #e6ece8; }
+
+/* ----- Documentação (admin) ----- */
+html[data-theme="light"] .docs-card,
+html[data-theme="light"] .docs-panel { background: #ffffff; border-color: #e6ece8; color: #1a2b22; }
+html[data-theme="light"] .docs-table th,
+html[data-theme="light"] .md-doc th { background: #eef3f0; color: #2f5a41; }
+
+/* ----- Avatares e chips de contato ----- */
+html[data-theme="light"] .avatar-circle { background: #e3f1e8; border-color: #cfe3d6; color: #1f7a44; }
+html[data-theme="light"] .contact-chip { color: #3a4a42; }
+html[data-theme="light"] .contact-chip i { color: #2f6b46; }
+
+/* ----- Gavetas legadas (se ainda renderizadas em algum lugar) ----- */
+html[data-theme="light"] .group-section { background: #ffffff; border-color: #e6ece8; }
+html[data-theme="light"] .group-head { color: #173a28; }
+html[data-theme="light"] .group-head:hover { background: #eef6f0; }
+html[data-theme="light"] .group-head .count { background: #f1f6f3; border-color: #dbe5df; color: #3a4a42; }
+
+/* ----- Linhas de tabela: hover no claro ----- */
+html[data-theme="light"] .table-hover > tbody > tr:hover > * { background: #f3f8f5; }
+html[data-theme="light"] .mov-row:hover td,
+html[data-theme="light"] .pz-table tbody tr:hover td { background: #f3f8f5; }
