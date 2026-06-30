@@ -52,6 +52,24 @@ def user_choices(blank: str = "— Selecione —") -> list:
     return [("", blank)] + [(u, u) for u in user_names()]
 
 
+def department_choices(current=None) -> list:
+    """Choices para SelectField de departamento: ('' em branco) + departamentos
+    ativos (cadastro de Departamentos, a fonte da verdade dos setores).
+
+    Inclui o valor atual (`current`) mesmo que esteja inativo ou ainda não
+    cadastrado, para não perder o vínculo ao editar registros antigos com setor
+    digitado livremente."""
+    from ..models.department import Department
+    nomes = [d.name for d in Department.query
+             .filter(Department.is_active.is_(True))
+             .order_by(Department.name).all()]
+    atual = (current or "").strip()
+    if atual and atual not in nomes:
+        nomes.append(atual)
+        nomes.sort(key=str.lower)
+    return [("", "— Selecione —")] + [(n, n) for n in nomes]
+
+
 def sector_for(name: str) -> str:
     """Setor/departamento de uma pessoa, a partir do cadastro (User) — fonte da
     verdade. Usado para preencher o setor automaticamente nos formulários quando

@@ -28,20 +28,9 @@ def _clean(v):
 
 
 def _dept_choices(current=None):
-    """Opções do seletor de departamento: ('' em branco) + departamentos ativos.
-
-    Inclui o setor atual da pessoa mesmo que ele esteja inativo ou ainda não
-    cadastrado, para não perder o vínculo ao editar registros antigos.
-    """
-    from ..models.department import Department
-    nomes = [d.name for d in Department.query
-             .filter(Department.is_active.is_(True))
-             .order_by(Department.name).all()]
-    atual = (current or "").strip()
-    if atual and atual not in nomes:
-        nomes.append(atual)
-        nomes.sort(key=str.lower)
-    return [("", "— Selecione —")] + [(n, n) for n in nomes]
+    """Opções do seletor de departamento — ver services.people.department_choices."""
+    from ..services import people
+    return people.department_choices(current)
 
 
 def _asset_counts() -> dict:

@@ -7,6 +7,7 @@ from flask_login import login_required, current_user
 from ..repositories import cleaning_repo
 from ..forms.machines import CleaningForm
 from ..models.machine import Machine
+from ..services import people
 from ..services.pagination import paginate
 
 bp = Blueprint("cleanings", __name__)
@@ -20,10 +21,17 @@ def _machine_label(m: Machine) -> str:
     return f"{kinds.get(m.kind, m.kind)} · " + " · ".join(parts)
 
 
-def _populate(form: CleaningForm):
+def _populate(form: CleaningForm, current_exec=None):
     machines = Machine.query.order_by(Machine.assigned_user.asc().nullslast(),
                                       Machine.model.asc()).all()
     form.machine_id.choices = [(m.id, _machine_label(m)) for m in machines]
+    # Quem executou vem do cadastro de pessoas; inclui o valor atual ao editar
+    # um registro antigo cujo executor não esteja (mais) na lista.
+    choices = people.user_choices()
+    cur = (current_exec or "").strip()
+    if cur and cur not in [v for v, _ in choices]:
+        choices.append((cur, cur))
+    form.executed_by.choices = choices
 
 
 def _to_kwargs(form: CleaningForm) -> dict:
@@ -83,7 +91,7 @@ def new():
 def edit(cid):
     c = cleaning_repo.get_cleaning(cid)
     form = CleaningForm(obj=c)
-    _populate(form)
+    _populate(form, form.executed_by.data)
     if request.method == "GET":
         form.machine_id.data = c.machine_id
 

@@ -49,7 +49,7 @@
             {{ form.executed_by.label(class="form-label fw-semibold") }}
             <div class="input-group">
               <span class="input-group-text"><i class="bi bi-person-gear"></i></span>
-              {{ form.executed_by(class="form-control" + (" is-invalid" if form.executed_by.errors else ""), placeholder="Quem executou") }}
+              {{ form.executed_by(class="form-select" + (" is-invalid" if form.executed_by.errors else "")) }}
             </div>
             {{ field_error(form.executed_by) }}
           </div>

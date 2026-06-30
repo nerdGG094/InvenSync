@@ -4,7 +4,7 @@ from flask_login import login_required, current_user
 
 from ..repositories import credential_repo
 from ..forms.credential import CredentialForm, CATEGORY_CHOICES
-from ..services import audit, crypto
+from ..services import audit, crypto, people
 from ..services.pagination import paginate
 
 bp = Blueprint("credentials", __name__)
@@ -45,6 +45,7 @@ def list_view():
 @bp.route("/new", methods=["GET", "POST"])
 def new():
     form = CredentialForm()
+    form.sector.choices = people.department_choices(form.sector.data)
     if form.validate_on_submit():
         c = credential_repo.create_credential(**_to_kwargs(form))
         audit.record("create", "credential", c.id, f"Criou credencial '{c.name}'")
@@ -57,6 +58,7 @@ def new():
 def edit(cid):
     c = credential_repo.get_credential(cid)
     form = CredentialForm(obj=c)
+    form.sector.choices = people.department_choices(form.sector.data)  # inclui o setor atual
     if request.method == "GET":
         form.password.data = ""  # não expõe a senha; em branco = manter
     if form.validate_on_submit():

@@ -39,7 +39,9 @@ class CleaningForm(FlaskForm):
                                     validators=[DataRequired()])
     finished_at = DateTimeLocalField("Fim", format="%Y-%m-%dT%H:%M",
                                      validators=[Optional()])
-    executed_by = StringField("Usuário de execução", validators=[Optional(), Length(max=150)])
+    # Quem executou: escolhido do cadastro de pessoas (choices preenchidas na rota).
+    executed_by = SelectField("Usuário de execução", choices=[], validate_choice=False,
+                              validators=[Optional(), Length(max=150)])
     period_days = IntegerField("Periodicidade (dias)", validators=[Optional(), NumberRange(min=1, max=3650)])
     next_date = DateField("Próxima limpeza", validators=[Optional()])
     notes = TextAreaField("Observações", validators=[Optional()])
