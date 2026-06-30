@@ -126,6 +126,10 @@ html[data-theme="light"] .tl:before { background: #dbe5df; }
 html[data-theme="light"] .reg-card,
 html[data-theme="light"] .router-card { background: #ffffff !important; border-color: #e6ece8 !important; color: #1a2b22; }
 html[data-theme="light"] .reg-name, html[data-theme="light"] .router-name { color: #173a28; }
+/* Box de credenciais do roteador: clarear o fundo escuro fixo */
+html[data-theme="light"] .router-creds { background: #f1f6f3; border-color: #dbe5df; }
+html[data-theme="light"] .router-creds .cred i.lead,
+html[data-theme="light"] .router-creds .toggle-secret { color: #5b6b62; }
 
 /* ----- Timeline do chamado + sidebar de detalhes ----- */
 html[data-theme="light"] .tl-body { background: #f5f8f6; border-color: #e6ece8; color: #1a2b22; }

@@ -23,6 +23,8 @@ instance/*.db
 instance/*.sqlite
 instance/*.sqlite3
 instance/alerts_wpp.txt
+# Backups de reparo do cofre (contêm tokens de credenciais — nunca versionar)
+instance/credentials_backup_*.json
 !instance/.keep
 
 # === Uploads (fotos de perfil) ===

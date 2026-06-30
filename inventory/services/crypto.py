@@ -10,9 +10,13 @@ são retornados como estão.
 """
 import base64
 import hashlib
+import re
 
 from flask import current_app
 from cryptography.fernet import Fernet, InvalidToken
+
+# Estrutura de um token Fernet em base64url (começa por 'gAAAAA' = versão 0x80).
+_FERNET_RE = re.compile(r"^gAAAAA[A-Za-z0-9_=\-]{20,}$")
 
 
 def _fernet() -> Fernet:
@@ -27,6 +31,15 @@ def encrypt(plain):
     if not plain:
         return plain
     return _fernet().encrypt(plain.encode("utf-8")).decode("ascii")
+
+
+def looks_encrypted(token) -> bool:
+    """Detecta um token Fernet pela ESTRUTURA — independe da chave atual.
+
+    Diferente de `is_encrypted()`, não tenta decifrar; logo não dá falso
+    negativo quando a chave mudou. Use para nunca re-cifrar (empilhar uma nova
+    camada sobre) um valor que já é um token — foi o que corrompeu o cofre."""
+    return bool(token) and isinstance(token, str) and _FERNET_RE.match(token) is not None
 
 
 def is_encrypted(token) -> bool:

@@ -155,13 +155,16 @@ def _seed_departments_from_sectors():
 def _encrypt_credentials():
     """Cifra senhas do cofre que ainda estejam em texto puro (migração única).
 
-    Idempotente: tokens já cifrados são detectados e ignorados."""
+    Idempotente: usa `looks_encrypted` (detecção estrutural) — assim NUNCA
+    re-cifra um valor que já é um token, mesmo que a chave atual não o decifre.
+    Isso evita o empilhamento de camadas que corrompia o cofre quando a
+    SECRET_KEY/VAULT_KEY mudava entre boots."""
     from .models.credential import Credential
     from .services import crypto
     try:
         changed = False
         for c in Credential.query.filter(Credential.password.isnot(None)).all():
-            if c.password and not crypto.is_encrypted(c.password):
+            if c.password and not crypto.looks_encrypted(c.password):
                 c.password = crypto.encrypt(c.password)
                 changed = True
         if changed:

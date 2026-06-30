@@ -49,6 +49,23 @@ def test_encrypt_empty_is_noop(app):
         assert crypto.decrypt("") == ""
 
 
+def test_looks_encrypted_is_structural(app):
+    """looks_encrypted detecta token pela estrutura — mesmo cifrado com OUTRA
+    chave (regressão do cofre multi-cifrado: nunca re-cifrar um token)."""
+    import base64, hashlib
+    from cryptography.fernet import Fernet
+    with app.app_context():
+        own = crypto.encrypt("abc")
+        d = hashlib.sha256(b"chave-totalmente-diferente").digest()
+        foreign = Fernet(base64.urlsafe_b64encode(d)).encrypt(b"abc").decode("ascii")
+        assert crypto.looks_encrypted(own) is True
+        assert crypto.looks_encrypted(foreign) is True      # estrutural, ignora a chave
+        assert crypto.is_encrypted(foreign) is False         # mas a chave atual não decifra
+        assert crypto.looks_encrypted("senha-em-texto") is False
+        assert crypto.looks_encrypted("") is False
+        assert crypto.looks_encrypted(None) is False
+
+
 # --------------------------------------------------------------------------- #
 # Repositório
 # --------------------------------------------------------------------------- #
