@@ -155,6 +155,29 @@ html[data-theme="light"] .group-head { color: #173a28; }
 html[data-theme="light"] .group-head:hover { background: #eef6f0; }
 html[data-theme="light"] .group-head .count { background: #f1f6f3; border-color: #dbe5df; color: #3a4a42; }
 
+/* ----- Textos claros que faltaram (ficavam quase invisíveis no claro) ----- */
+html[data-theme="light"] .mon-name,
+html[data-theme="light"] .ch-head,
+html[data-theme="light"] .reg-name,
+html[data-theme="light"] .router-name,
+html[data-theme="light"] .docs-bp-count { color: #173a28; }
+html[data-theme="light"] .av-body,
+html[data-theme="light"] .cl-row,
+html[data-theme="light"] .mt-desc,
+html[data-theme="light"] .secret { color: #1a2b22; }
+/* garante texto escuro genérico dentro de qualquer card no tema claro */
+html[data-theme="light"] .card,
+html[data-theme="light"] .table-card,
+html[data-theme="light"] .ch-card,
+html[data-theme="light"] .mon-card,
+html[data-theme="light"] .tk-card,
+html[data-theme="light"] .av-card,
+html[data-theme="light"] .cred-card,
+html[data-theme="light"] .mt-card,
+html[data-theme="light"] .cl-card,
+html[data-theme="light"] .reg-card,
+html[data-theme="light"] .router-card { color: #1a2b22; }
+
 /* ----- Linhas de tabela: hover no claro ----- */
 html[data-theme="light"] .table-hover > tbody > tr:hover > * { background: #f3f8f5; }
 html[data-theme="light"] .mov-row:hover td,
