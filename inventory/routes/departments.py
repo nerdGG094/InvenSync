@@ -26,12 +26,22 @@ def _only_admin():
 
 def _people_counts() -> dict:
     """{ nome_do_setor_em_minúsculas: nº de colaboradores naquele setor }."""
-    counts = {}
-    for u in User.query.all():
-        s = (u.sector or "").strip().lower()
-        if s:
-            counts[s] = counts.get(s, 0) + 1
-    return counts
+    key = db.func.lower(db.func.trim(User.sector))
+    rows = (db.session.query(key, db.func.count(User.id))
+            .filter(User.sector.isnot(None))
+            .filter(db.func.trim(User.sector) != "")
+            .group_by(key)
+            .all())
+    return {s: n for s, n in rows}
+
+
+def _sector_count(name: str) -> int:
+    """Nº de colaboradores num setor específico (sem montar o mapa inteiro)."""
+    n = (name or "").strip().lower()
+    if not n:
+        return 0
+    return db.session.query(db.func.count(User.id))\
+        .filter(db.func.lower(db.func.trim(User.sector)) == n).scalar() or 0
 
 
 def _name_taken(nome, ignore_id=None):
@@ -111,7 +121,7 @@ def toggle_active(did):
 @bp.route("/<int:did>/delete", methods=["POST"])
 def delete(did):
     dep = Department.query.get_or_404(did)
-    em_uso = _people_counts().get(dep.name.strip().lower(), 0)
+    em_uso = _sector_count(dep.name)
     if em_uso:
         flash(f"Não é possível excluir: {em_uso} colaborador(es) usam “{dep.name}”. "
               "Inative o departamento ou mova esses colaboradores antes.", "warning")

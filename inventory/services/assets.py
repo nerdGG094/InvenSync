@@ -5,6 +5,7 @@ Reúne Máquinas (assigned_user) e Celulares (assigned_employee) sob o nome da
 pessoa responsável, para a tela "Ativos por Colaborador" e o Termo de
 Responsabilidade.
 """
+from ..extensions import db
 from ..models.machine import Machine
 from ..models.mobile import MobileDevice
 
@@ -46,9 +47,21 @@ def people_with_assets() -> list:
 def assets_for(name: str) -> dict:
     """Ativos de uma pessoa específica (ou estrutura vazia)."""
     nome = _norm(name)
-    machines = [m for m in Machine.query.all() if _norm(m.assigned_user).lower() == nome.lower()]
-    mobiles = [d for d in MobileDevice.query.all()
-               if any(_norm(e).lower() == nome.lower() for e in d.employees)]
+    if not nome:
+        return {"name": nome, "machines": [], "mobiles": [], "sector": "", "total": 0}
+    low = nome.lower()
+    # Filtra direto no banco (case-insensitive), em vez de varrer todas as linhas.
+    machines = (Machine.query
+                .filter(db.func.lower(db.func.trim(Machine.assigned_user)) == low)
+                .all())
+    # Aparelho compartilhado: bate em qualquer um dos 3 campos de funcionário.
+    mobiles = (MobileDevice.query
+               .filter(db.or_(
+                   db.func.lower(db.func.trim(MobileDevice.assigned_employee)) == low,
+                   db.func.lower(db.func.trim(MobileDevice.assigned_employee_2)) == low,
+                   db.func.lower(db.func.trim(MobileDevice.assigned_employee_3)) == low,
+               ))
+               .all())
     sector = ""
     for m in machines:
         if m.sector:

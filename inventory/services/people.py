@@ -22,21 +22,22 @@ def users_sector_map() -> dict:
     """
     info = {}
 
-    # Compatibilidade: nomes que já estão nos ativos.
-    for m in Machine.query.all():
-        u = (m.assigned_user or "").strip()
-        if u and (u not in info or (not info[u] and m.sector)):
-            info[u] = (m.sector or "").strip()
-    for d in MobileDevice.query.all():
-        u = (d.assigned_employee or "").strip()
-        if u and (u not in info or (not info[u] and d.sector)):
-            info[u] = (d.sector or "").strip()
+    # Compatibilidade: nomes que já estão nos ativos. Só lemos as duas colunas
+    # necessárias (nome + setor) em vez de hidratar os objetos inteiros.
+    for nome, sector in db.session.query(Machine.assigned_user, Machine.sector):
+        u = (nome or "").strip()
+        if u and (u not in info or (not info[u] and sector)):
+            info[u] = (sector or "").strip()
+    for nome, sector in db.session.query(MobileDevice.assigned_employee, MobileDevice.sector):
+        u = (nome or "").strip()
+        if u and (u not in info or (not info[u] and sector)):
+            info[u] = (sector or "").strip()
 
     # Fonte da verdade: pessoas ativas do cadastro central (setor = sector).
-    for p in User.query.filter_by(is_active=True).all():
-        nome = (p.name or "").strip()
+    for nome, sector in db.session.query(User.name, User.sector).filter_by(is_active=True):
+        nome = (nome or "").strip()
         if nome:
-            info[nome] = (p.sector or "").strip() or info.get(nome, "")
+            info[nome] = (sector or "").strip() or info.get(nome, "")
 
     return info
 
