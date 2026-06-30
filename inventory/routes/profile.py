@@ -51,7 +51,9 @@ def edit():
             current_user.sector = (form.sector.data or "").strip() or None
             current_user.whatsapp = (form.whatsapp.data or "").strip() or None
             current_user.theme = form.theme.data if form.theme.data in ("dark", "light") else "dark"
-            if form.photo.data:
+            # Só salva se houver um upload real (FileStorage com filename).
+            # Sem novo arquivo, obj=current_user deixa data como o nome atual (str).
+            if getattr(form.photo.data, "filename", ""):
                 current_user.photo = _save_avatar(form.photo.data)
             if form.new_password.data:
                 current_user.set_password(form.new_password.data)
