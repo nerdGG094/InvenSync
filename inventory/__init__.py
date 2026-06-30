@@ -67,6 +67,10 @@ def _seed_people_into_users():
     from .models.user import User
     from .models.colaborador import Colaborador
     try:
+        # Nada legado para migrar? Sai cedo — evita varrer a tabela `user` (duas
+        # vezes) a cada boot depois que a migração já ocorreu uma vez.
+        if not Colaborador.query.first():
+            return
         existentes = {(u.name or "").strip().lower() for u in User.query.all()}
         emails = {(u.email or "").strip().lower() for u in User.query.all() if u.email}
         novos = {}  # chave_nome -> (nome, setor, email)
@@ -109,13 +113,15 @@ def _backfill_patrimony():
     from .models.mobile import MobileDevice
     from .services import patrimony
     try:
-        faltantes = []
-        for m in Machine.query.order_by(Machine.id.asc()).all():
-            if not (m.patrimony or "").strip():
-                faltantes.append(m)
-        for d in MobileDevice.query.order_by(MobileDevice.id.asc()).all():
-            if not (d.patrimony or "").strip():
-                faltantes.append(d)
+        # Carrega só quem está SEM patrimônio (filtra no banco), em vez de varrer
+        # as tabelas inteiras a cada boot depois que o backfill já foi feito.
+        from sqlalchemy import or_, func
+        def _sem_patrimonio(model):
+            return (model.query
+                    .filter(or_(model.patrimony.is_(None),
+                                func.trim(model.patrimony) == ""))
+                    .order_by(model.id.asc()).all())
+        faltantes = _sem_patrimonio(Machine) + _sem_patrimonio(MobileDevice)
         if not faltantes:
             return
         seq = patrimony.current_max_seq()
@@ -139,8 +145,10 @@ def _seed_departments_from_sectors():
     try:
         existentes = {(d.name or "").strip().lower() for d in Department.query.all()}
         novos = {}  # chave -> nome original
-        for u in User.query.all():
-            nome = (u.sector or "").strip()
+        # Lê apenas os setores DISTINTOS (uma coluna) em vez de hidratar todos os
+        # usuários a cada boot — mesmo resultado, muito menos carga.
+        for (sector,) in db.session.query(User.sector).distinct():
+            nome = (sector or "").strip()
             chave = nome.lower()
             if nome and chave not in existentes and chave not in novos:
                 novos[chave] = nome

@@ -9,8 +9,6 @@ from ..extensions import db
 from ..models.machine import Machine
 from ..models.mobile import MobileDevice
 
-KIND_LABELS = {"computador": "Computador", "notebook": "Notebook", "impressora": "Impressora"}
-
 
 def _norm(name: str) -> str:
     return (name or "").strip()
