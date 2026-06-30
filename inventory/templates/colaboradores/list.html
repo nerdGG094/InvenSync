@@ -3,38 +3,21 @@
 
 {% block extra_head %}
 <style>
-  /* .people-grid e .pchip vivem em static/style.css (compartilhados) */
-  .person-card{
-    position:relative; background:#1e1e1e; border:1px solid #243024; border-radius:16px;
-    padding:1.1rem 1.1rem 0.9rem; display:flex; flex-direction:column; gap:.85rem;
-    border-left:4px solid #00c853;
-    transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
-  }
-  .person-card:hover{ transform:translateY(-3px); box-shadow:0 10px 24px rgba(0,0,0,.4); border-color:#2e4b3b; border-left-color:#00e676; }
+  /* Grid, .pchip e estrutura dos cartões vivem em static/style.css */
+  .person-card{ position:relative; border-left-color:#00c853; }
+  .person-card:hover{ border-left-color:#00e676; }
   .person-card.is-inactive{ border-left-color:#5c6b5c; opacity:.7; }
   .person-card.is-inactive .person-avatar{ filter:grayscale(.7); }
-
-  .person-top{ display:flex; align-items:flex-start; gap:.8rem; }
   .person-avatar{
     width:54px; height:54px; flex:0 0 54px; border-radius:50%;
     display:inline-flex; align-items:center; justify-content:center;
     background:linear-gradient(135deg,#0f5132,#00c853); color:#fff;
     font-weight:700; font-size:1.1rem; text-transform:uppercase; object-fit:cover;
   }
-  .person-name{ font-weight:600; color:#e6ffe9; line-height:1.2; word-break:break-word; }
   .person-mail{ font-size:.82rem; color:#9bb6a6; word-break:break-all; }
   .person-mail.muted{ color:#6b7d70; font-style:italic; }
-
-  .person-chips{ display:flex; flex-wrap:wrap; gap:.4rem; }
-
-  .person-foot{
-    display:flex; align-items:center; justify-content:space-between; gap:.5rem;
-    margin-top:auto; padding-top:.75rem; border-top:1px solid #243024;
-  }
   .person-foot .form-switch .form-check-input{ width:2.3em; height:1.15em; cursor:pointer; }
   .person-foot .form-switch .form-check-input:checked{ background-color:#00c853; border-color:#00c853; }
-  .person-actions{ display:flex; gap:.35rem; }
-
   .summary-chips{ display:flex; flex-wrap:wrap; gap:.5rem; }
 </style>
 {% endblock %}

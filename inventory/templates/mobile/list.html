@@ -3,33 +3,11 @@
 
 {% block extra_head %}
 <style>
-  /* .phone-grid e .pchip vivem em static/style.css (compartilhados) */
-  .phone-card{
-    position:relative; background:#1e1e1e; border:1px solid #243024; border-radius:16px;
-    padding:1.1rem 1.1rem 0.9rem; display:flex; flex-direction:column; gap:.85rem;
-    border-left:4px solid #5c6b5c;
-    transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
-  }
-  .phone-card:hover{ transform:translateY(-3px); box-shadow:0 10px 24px rgba(0,0,0,.4); border-color:#2e4b3b; }
+  /* Grid, .pchip e estrutura dos cartões vivem em static/style.css */
+  .phone-card{ position:relative; }
   .phone-card.dim{ opacity:.65; }
-
-  .phone-top{ display:flex; align-items:flex-start; gap:.8rem; }
-  .phone-avatar{
-    width:50px; height:50px; flex:0 0 50px; border-radius:14px;
-    display:inline-flex; align-items:center; justify-content:center; font-size:1.35rem;
-    background:linear-gradient(135deg,#0f5132,#1e1e1e); color:#46e08a; border:1px solid #2e4b3b;
-  }
-  .phone-name{ font-weight:600; color:#e6ffe9; line-height:1.2; word-break:break-word; }
   .phone-line{ font-size:.85rem; color:#9bb6a6; }
   .phone-line.muted{ color:#6b7d70; font-style:italic; }
-
-  .phone-chips{ display:flex; flex-wrap:wrap; gap:.4rem; }
-
-  .phone-foot{
-    display:flex; align-items:center; justify-content:space-between; gap:.5rem;
-    margin-top:auto; padding-top:.75rem; border-top:1px solid #243024;
-  }
-  .phone-actions{ display:flex; gap:.35rem; }
 </style>
 {% endblock %}
 

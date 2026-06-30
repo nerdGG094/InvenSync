@@ -3,27 +3,14 @@
 
 {% block extra_head %}
 <style>
+  /* .pchip e estrutura dos cartões (.reg-card) vivem em static/style.css */
   .reg-grid{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fill, minmax(310px, 1fr)); }
-  .reg-card{
-    background:#1e1e1e; border:1px solid #243024; border-radius:16px;
-    padding:1.1rem 1.1rem 0.9rem; display:flex; flex-direction:column; gap:.8rem;
-    border-left:4px solid #5c6b5c;
-    transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
-  }
-  .reg-card:hover{ transform:translateY(-3px); box-shadow:0 10px 24px rgba(0,0,0,.4); border-color:#2e4b3b; }
   .reg-card.dim{ opacity:.7; }
-  .reg-top{ display:flex; align-items:flex-start; gap:.8rem; }
   .reg-avatar{
     width:48px; height:48px; flex:0 0 48px; border-radius:14px;
     display:inline-flex; align-items:center; justify-content:center; font-size:1.25rem;
     background:linear-gradient(135deg,#0f5132,#1e1e1e); color:#46e08a; border:1px solid #2e4b3b;
   }
-  .reg-name{ font-weight:600; color:#e6ffe9; line-height:1.2; word-break:break-word; }
-  .reg-sub{ font-size:.8rem; color:#9bb6a6; }
-  /* .pchip vive em static/style.css (compartilhado) */
-  .reg-chips{ display:flex; flex-wrap:wrap; gap:.4rem; }
-  .reg-foot{ display:flex; align-items:center; justify-content:space-between; gap:.5rem; margin-top:auto; padding-top:.75rem; border-top:1px solid #243024; }
-  .reg-actions{ display:flex; gap:.35rem; }
 </style>
 {% endblock %}
 

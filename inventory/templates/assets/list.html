@@ -3,15 +3,8 @@
 
 {% block extra_head %}
 <style>
-  /* .asset-grid e .pchip vivem em static/style.css (compartilhados) */
-  .asset-card{
-    background:#1e1e1e; border:1px solid #243024; border-radius:16px;
-    padding:1.1rem 1.1rem 0.9rem; display:flex; flex-direction:column; gap:.85rem;
-    border-left:4px solid #00c853;
-    transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
-  }
-  .asset-card:hover{ transform:translateY(-3px); box-shadow:0 10px 24px rgba(0,0,0,.4); border-color:#2e4b3b; }
-
+  /* Grid, .pchip e estrutura dos cartões vivem em static/style.css */
+  .asset-card{ border-left-color:#00c853; }
   .asset-top{ display:flex; align-items:center; gap:.8rem; }
   .asset-avatar{
     width:50px; height:50px; flex:0 0 50px; border-radius:50%;
@@ -19,9 +12,6 @@
     background:linear-gradient(135deg,#0f5132,#00c853); color:#fff;
     font-weight:700; font-size:1.05rem; text-transform:uppercase;
   }
-  .asset-name{ font-weight:600; color:#e6ffe9; line-height:1.2; word-break:break-word; }
-  .asset-sub{ font-size:.8rem; color:#9bb6a6; }
-  .asset-chips{ display:flex; flex-wrap:wrap; gap:.4rem; }
 
   .asset-devices{ display:flex; flex-direction:column; gap:.3rem; font-size:.82rem; color:#9bb6a6; }
   .asset-devices .dev{ display:flex; align-items:center; gap:.45rem; }
