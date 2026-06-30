@@ -43,6 +43,10 @@ class User(db.Model, UserMixin):
     # outros dispositivos ("sair de todas as sessões").
     session_token = db.Column(db.String(32), nullable=True, default=_new_token)
 
+    # Bloqueio por tentativas de senha erradas.
+    failed_logins = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    locked_until = db.Column(db.DateTime, nullable=True)
+
     # Autenticação em dois fatores (TOTP / Google Authenticator)
     totp_secret = db.Column(db.String(64), nullable=True)
     is_2fa_enabled = db.Column(
@@ -56,6 +60,16 @@ class User(db.Model, UserMixin):
 
     def rotate_session_token(self) -> None:
         self.session_token = _new_token()
+
+    def is_locked(self) -> bool:
+        from datetime import datetime
+        return bool(self.locked_until and self.locked_until > datetime.now())
+
+    def lock_seconds_left(self) -> int:
+        from datetime import datetime
+        if not self.is_locked():
+            return 0
+        return int((self.locked_until - datetime.now()).total_seconds())
 
     @property
     def initials(self) -> str:

@@ -20,6 +20,9 @@ def _run_light_migrations():
         # Token de sessão p/ "sair de todas as sessões" (backfill aleatório nos já existentes).
         'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS session_token VARCHAR(32)',
         "UPDATE \"user\" SET session_token = md5(random()::text || id::text) WHERE session_token IS NULL",
+        # Bloqueio de conta por tentativas de senha erradas.
+        'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS failed_logins INTEGER NOT NULL DEFAULT 0',
+        'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP',
         'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS is_2fa_enabled BOOLEAN NOT NULL DEFAULT false',
         'ALTER TABLE stock_movement ADD COLUMN IF NOT EXISTS nf_filename VARCHAR(255)',
         'ALTER TABLE stock_movement ADD COLUMN IF NOT EXISTS nf_original_name VARCHAR(255)',
@@ -367,6 +370,26 @@ def create_app():
             return url_for(request.endpoint, **args)
 
         return {"avatar_url": avatar_url, "page_url": page_url}
+
+    # Cabeçalhos de segurança em toda resposta
+    if app.config.get("SECURITY_HEADERS", True):
+        csp = (
+            "default-src 'self'; "
+            "img-src 'self' data: https:; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://www.gstatic.com; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; "
+            "font-src 'self' data: https://cdn.jsdelivr.net; "
+            "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com wss://*.firebaseio.com; "
+            "frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
+        )
+
+        @app.after_request
+        def _security_headers(resp):
+            resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+            resp.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+            resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+            resp.headers.setdefault("Content-Security-Policy", csp)
+            return resp
 
     # Handlers de erro
     @app.errorhandler(403)

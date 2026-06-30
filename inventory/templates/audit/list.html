@@ -6,10 +6,12 @@
 {% set act_meta = {
   'create': ('Criou','success'), 'update': ('Alterou','info'),
   'delete': ('Excluiu','danger'), 'reveal': ('Revelou senha','warning'),
-  'export': ('Exportou','secondary'), 'login': ('Login','secondary') } %}
+  'export': ('Exportou','secondary'), 'login': ('Login','secondary'),
+  'login_fail': ('Falha de login','danger') } %}
 {% set act_icon = {
   'create':'bi-plus-circle','update':'bi-pencil','delete':'bi-trash',
-  'reveal':'bi-eye','export':'bi-download','login':'bi-box-arrow-in-right' } %}
+  'reveal':'bi-eye','export':'bi-download','login':'bi-box-arrow-in-right',
+  'login_fail':'bi-shield-x' } %}
 
 <div class="page-header">
   <h1 class="ph-title">

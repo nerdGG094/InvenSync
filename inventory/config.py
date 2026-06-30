@@ -42,6 +42,13 @@ class Config:
     # não conflitar com o "lembrar-me". Defina INACTIVITY_MINUTES no .env p/ ligar.
     INACTIVITY_MINUTES = int(os.environ.get("INACTIVITY_MINUTES", "0"))
 
+    # Cabeçalhos de segurança (CSP, X-Frame-Options, etc.). Desligue só p/ depurar.
+    SECURITY_HEADERS = os.environ.get("SECURITY_HEADERS", "1") in ("1", "true", "True")
+
+    # Bloqueio de conta após tentativas de senha erradas.
+    LOGIN_MAX_ATTEMPTS = int(os.environ.get("LOGIN_MAX_ATTEMPTS", "5"))
+    LOGIN_LOCKOUT_MINUTES = int(os.environ.get("LOGIN_LOCKOUT_MINUTES", "15"))
+
     # Recarrega templates alterados sem precisar reiniciar o servidor
     # (conveniente mesmo rodando em produção via waitress).
     TEMPLATES_AUTO_RELOAD = True

@@ -1,10 +1,12 @@
 
-from flask import Blueprint, render_template, redirect, url_for, flash, session
+from datetime import datetime, timedelta
+
+from flask import Blueprint, render_template, redirect, url_for, flash, session, current_app
 from flask_login import login_user, logout_user, current_user
 from ..forms.auth import LoginForm, TwoFactorForm
 from ..models.user import User
-from ..services import twofa
-from ..extensions import limiter
+from ..services import twofa, audit
+from ..extensions import limiter, db
 
 bp = Blueprint("auth", __name__)
 
@@ -24,17 +26,48 @@ def login():
     if form.validate_on_submit():
         email = form.email.data.strip().lower()
         user = User.query.filter_by(email=email).first()
+
+        # Conta bloqueada por tentativas? barra antes de checar a senha.
+        if user and user.is_locked():
+            mins = max(1, round(user.lock_seconds_left() / 60))
+            audit.record("login_fail", "user", user.id, f"Login bloqueado (conta travada) — {email}")
+            flash(f"Conta temporariamente bloqueada por excesso de tentativas. Tente em ~{mins} min.", "warning")
+            return render_template("login.html", form=form)
+
         if user and user.can_login and user.check_password(form.password.data):
             if not user.is_active:
                 flash("Usuário desativado. Procure um administrador.", "warning")
                 return render_template("login.html", form=form)
-            # Senha OK. Se o usuário tem 2FA ativo, exige o segundo fator antes de logar.
+            # Senha OK: zera contador de falhas.
+            if user.failed_logins or user.locked_until:
+                user.failed_logins = 0
+                user.locked_until = None
+                db.session.commit()
+            # Se o usuário tem 2FA ativo, exige o segundo fator antes de logar.
             if user.is_2fa_enabled and user.totp_secret:
                 session[PENDING_KEY] = user.id
                 return redirect(url_for("auth.login_2fa"))
             session.permanent = True
             login_user(user, remember=True)
+            audit.record("login", "user", user.id, f"Login de {user.name}")
             return redirect(_home_for(user))
+
+        # Falha de credencial: conta tentativa e bloqueia ao atingir o limite.
+        if user:
+            maxn = int(current_app.config.get("LOGIN_MAX_ATTEMPTS", 5) or 5)
+            lockmin = int(current_app.config.get("LOGIN_LOCKOUT_MINUTES", 15) or 15)
+            user.failed_logins = (user.failed_logins or 0) + 1
+            if user.failed_logins >= maxn:
+                user.locked_until = datetime.now() + timedelta(minutes=lockmin)
+                user.failed_logins = 0
+                audit.record("login_fail", "user", user.id,
+                             f"Conta bloqueada por {lockmin} min após {maxn} tentativas — {email}")
+            else:
+                audit.record("login_fail", "user", user.id,
+                             f"Senha incorreta ({user.failed_logins}/{maxn}) — {email}")
+            db.session.commit()
+        else:
+            audit.record("login_fail", None, None, f"Tentativa para e-mail inexistente: {email}")
         flash("Credenciais inválidas", "danger")
     return render_template("login.html", form=form)
 
@@ -58,6 +91,7 @@ def login_2fa():
             session.pop(PENDING_KEY, None)
             session.permanent = True
             login_user(user, remember=True)
+            audit.record("login", "user", user.id, f"Login de {user.name} (2FA)")
             return redirect(_home_for(user))
         flash("Código inválido. Tente novamente.", "danger")
     return render_template("login_2fa.html", form=form)
