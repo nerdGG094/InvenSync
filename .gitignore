@@ -22,6 +22,7 @@ ENV/
 instance/*.db
 instance/*.sqlite
 instance/*.sqlite3
+instance/alerts_wpp.txt
 !instance/.keep
 
 # === Uploads (fotos de perfil) ===
