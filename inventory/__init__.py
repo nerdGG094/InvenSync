@@ -234,6 +234,7 @@ def create_app():
     from .models.router import Router
     from .models.audit import AuditLog
     from .models.credential import Credential
+    from .models.credential_photo import CredentialPhoto
     from .models.license import License
     from .models.kb import KbArticle
     from .models.domain import Domain

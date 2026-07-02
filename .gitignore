@@ -39,6 +39,9 @@ inventory/static/uploads/tickets/*
 inventory/static/uploads/nf/*
 !inventory/static/uploads/nf/.keep
 
+# === Fotos das credenciais do Cofre (pasta PRIVADA, fora de static) ===
+inventory/uploads_private/
+
 # === Backups do banco (pg_dump) ===
 backups/
 

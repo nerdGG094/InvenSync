@@ -132,3 +132,48 @@ def test_anonymous_redirected_to_login(client):
     r = client.get("/credentials", follow_redirects=False)
     assert r.status_code in (301, 302)
     assert "/login" in r.headers.get("Location", "")
+
+
+# --------------------------------------------------------------------------- #
+# Fotos anexadas (upload em pasta privada + rota admin de visualização)
+# --------------------------------------------------------------------------- #
+import base64
+import io
+
+from inventory.models.credential_photo import CredentialPhoto
+
+# PNG 1x1 válido (assinatura \x89PNG...), o menor possível.
+_PNG_1x1 = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+)
+
+
+def test_photo_upload_view_and_delete(app, auth_client):
+    # 1) cria a credencial já com uma foto (multipart)
+    r = auth_client.post("/credentials/new", data={
+        "name": f"{MARK} Foto", "category": "sistema", "password": "x",
+        "sector": "", "photos": (io.BytesIO(_PNG_1x1), "print.png"),
+    }, content_type="multipart/form-data", follow_redirects=False)
+    assert r.status_code in (301, 302, 303)
+
+    with app.app_context():
+        c = Credential.query.filter_by(name=f"{MARK} Foto").first()
+        assert c is not None
+        assert len(c.photos) == 1
+        cid, pid = c.id, c.photos[0].id
+
+    # 2) a rota admin serve a imagem (assinatura PNG)
+    r = auth_client.get(f"/credentials/{cid}/photo/{pid}")
+    assert r.status_code == 200
+    assert r.data[:8] == b"\x89PNG\r\n\x1a\n"
+
+    # 3) exclusão remove o registro
+    r = auth_client.post(f"/credentials/{cid}/photo/{pid}/delete", follow_redirects=False)
+    assert r.status_code in (301, 302, 303)
+    with app.app_context():
+        assert CredentialPhoto.query.get(pid) is None
+
+
+def test_photo_route_blocks_common_user(common_client):
+    """A imagem privada não pode ser servida a usuário comum (gate admin)."""
+    assert common_client.get("/credentials/1/photo/1").status_code in (302, 403, 404)

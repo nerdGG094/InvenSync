@@ -59,6 +59,10 @@ class Config:
     ATTACH_FOLDER = os.path.join(BASE_DIR, "static", "uploads", "tickets")
     # Notas fiscais anexadas às entradas de estoque (XML/PDF)
     NF_FOLDER = os.path.join(BASE_DIR, "static", "uploads", "nf")
+    # Fotos das credenciais do Cofre — guardadas FORA da pasta estática (dados
+    # sensíveis); servidas apenas pela rota admin de /credentials, nunca por URL
+    # estática pública.
+    CRED_PHOTO_FOLDER = os.path.join(BASE_DIR, "uploads_private", "credentials")
 
     # Notificações por WhatsApp via CallMeBot (gratuito) — desligado até configurar no .env.
     # CALLMEBOT_RECIPIENTS: pares numero:apikey separados por vírgula.
