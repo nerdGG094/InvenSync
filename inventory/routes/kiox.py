@@ -4,7 +4,7 @@
 # copiada da pasta KioX para dentro do projeto. Acesso restrito a administradores.
 import os
 
-from flask import Blueprint, abort, current_app, send_file
+from flask import Blueprint, abort, current_app, send_file, make_response
 from flask_login import login_required, current_user
 
 bp = Blueprint("kiox", __name__)
@@ -25,4 +25,11 @@ def index():
     if not os.path.exists(path):
         abort(404)
     # Servido cru (sem Jinja) para não conflitar com o JS/CSS da página.
-    return send_file(path)
+    # no-cache: garante que TODA máquina receba a versão atual do mapa. Sem isto,
+    # um navegador podia rodar uma cópia antiga em cache (ex.: com a sessão
+    # Firebase anônima já sem permissão de leitura) e não exibir a frota.
+    resp = make_response(send_file(path))
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
