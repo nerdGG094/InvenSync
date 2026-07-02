@@ -229,3 +229,9 @@ html[data-theme="light"] .router-creds .secret { color: #173a28; }
 html[data-theme="light"] .sec-label { color: #2f5a41; }
 html[data-theme="light"] .cred-row .bi,
 html[data-theme="light"] .cl-row .bi { color: #2f6b46; }
+
+/* ----- Atalhos de sistemas (dashboard: KioX, CarregLogi) ----- */
+html[data-theme="light"] .sys-card { background: #ffffff !important; border-color: #e6ece8 !important; color: #1a2b22; }
+html[data-theme="light"] .sys-card:hover { box-shadow: 0 10px 24px rgba(0,0,0,.08); }
+html[data-theme="light"] .sys-name { color: #173a28; }
+html[data-theme="light"] .sys-sub { color: #5b6b62 !important; }
