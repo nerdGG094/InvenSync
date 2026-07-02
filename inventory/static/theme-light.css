@@ -235,3 +235,8 @@ html[data-theme="light"] .sys-card { background: #ffffff !important; border-colo
 html[data-theme="light"] .sys-card:hover { box-shadow: 0 10px 24px rgba(0,0,0,.08); }
 html[data-theme="light"] .sys-name { color: #173a28; }
 html[data-theme="light"] .sys-sub { color: #5b6b62 !important; }
+
+/* Modal do QR/KioX no tema claro */
+html[data-theme="light"] .kiox-modal { background: #ffffff; border-color: #e6ece8; }
+html[data-theme="light"] .kiox-modal hr { border-color: #e2e8e4; }
+html[data-theme="light"] .adb-cmd { background: #f1f6f3; border-color: #dbe5df; color: #173a28; }

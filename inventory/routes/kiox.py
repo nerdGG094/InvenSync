@@ -10,6 +10,7 @@ from flask_login import login_required, current_user
 bp = Blueprint("kiox", __name__)
 
 MAP_FILE = "RASTREIO-mapa.html"
+APK_FILE = "kiox.apk"
 
 
 @bp.before_request
@@ -33,3 +34,13 @@ def index():
     resp.headers["Pragma"] = "no-cache"
     resp.headers["Expires"] = "0"
     return resp
+
+
+@bp.route("/apk")
+def apk():
+    """Download do APK do KioX (para instalar manualmente ou via ADB)."""
+    path = os.path.join(current_app.root_path, "kiox", APK_FILE)
+    if not os.path.exists(path):
+        abort(404)
+    return send_file(path, as_attachment=True, download_name="app-release.apk",
+                     mimetype="application/vnd.android.package-archive")

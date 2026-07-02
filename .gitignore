@@ -42,6 +42,9 @@ inventory/static/uploads/nf/*
 # === Fotos das credenciais do Cofre (pasta PRIVADA, fora de static) ===
 inventory/uploads_private/
 
+# === APK do KioX (binário grande, copiado da pasta KioX; servido em /kiox/apk) ===
+inventory/kiox/*.apk
+
 # === Backups do banco (pg_dump) ===
 backups/
 

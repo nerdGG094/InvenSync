@@ -50,6 +50,23 @@
   .sys-sub { color:#8fb0a0; font-size:.75rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .sys-go { color:#46e08a; font-size:1.1rem; flex:0 0 auto; opacity:.75; transition:opacity .14s; }
   .sys-card:hover .sys-go { opacity:1; }
+
+  /* Modal do QR/KioX (fundo por classe p/ adaptar ao tema — ver theme-light.css) */
+  .kiox-modal { background:#15211a; border:1px solid #243024; }
+  .kiox-modal hr { border-color:#2a3a2f; opacity:1; }
+  .adb-wrap { position:relative; }
+  .adb-cmd { background:#0e1613; border:1px solid #243024; border-radius:10px; color:#cfe9d8;
+    font-size:.78rem; line-height:1.5; padding:.6rem 2.2rem .6rem .7rem; margin:0;
+    white-space:pre-wrap; word-break:break-all; }
+  .adb-copy { position:absolute; top:6px; right:6px; padding:.05rem .4rem; }
+  /* Botão de download do APK: texto escuro sobre o verde da marca (alto contraste;
+     a regra global "a{color:#00e676}" deixaria o texto verde-sobre-verde) */
+  .btn-kiox-dl { background:#00c853; border:1px solid #00c853; color:#06210f !important; font-weight:600; }
+  .btn-kiox-dl:hover, .btn-kiox-dl:focus { background:#00e676; border-color:#00e676; color:#06210f !important; }
+  .btn-kiox-dl i { color:#06210f !important; }
+  .kiox-steps .steps-title { font-weight:700; font-size:.9rem; margin-bottom:.5rem; }
+  .kiox-steps ol { margin-bottom:0; }
+  .kiox-steps li { margin-bottom:.4rem; }
 </style>
 {% endblock %}
 
@@ -93,20 +110,76 @@
 
 {# Modal com o QR de provisionamento do KioX (lido no início da config do celular) #}
 <div class="modal fade" id="kioxQrModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content" style="background:#15211a; border:1px solid #243024">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content kiox-modal">
       <div class="modal-header border-0">
         <h5 class="modal-title d-flex align-items-center gap-2"><i class="bi bi-qr-code text-success"></i> Provisionamento KioX</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body text-center">
         <p class="text-muted small mb-3">Escaneie este QR no início da configuração de um celular zerado.</p>
         <img src="{{ url_for('static', filename='logos/kiox-qr.png') }}" alt="QR de provisionamento KioX"
              style="max-width:100%; width:340px; background:#fff; padding:12px; border-radius:12px">
+
+        <hr class="my-3">
+
+        <div class="text-start kiox-steps">
+          <div class="steps-title"><i class="bi bi-list-check text-success"></i> Instalação manual (se o Play Protect bloquear)</div>
+          <ol class="ps-3 small">
+            <li class="mb-2">
+              <strong>Baixe o APK</strong>
+              <div class="mt-1">
+                <a href="{{ url_for('kiox.apk') }}" class="btn btn-kiox-dl btn-sm"><i class="bi bi-download"></i> Baixar app-release.apk</a>
+              </div>
+            </li>
+            <li class="mb-2">
+              <strong>Instale o adb</strong> (Linux):
+              <div class="adb-wrap mt-1">
+<pre class="adb-cmd" id="adbInstall">sudo apt install android-tools-adb   # Ubuntu/Debian
+# Fedora: sudo dnf install android-tools
+# Arch:   sudo pacman -S android-tools</pre>
+                <button class="btn btn-sm btn-outline-light adb-copy" type="button" data-copy-target="adbInstall" title="Copiar"><i class="bi bi-clipboard"></i></button>
+              </div>
+            </li>
+            <li class="mb-2">
+              <strong>Conecte o celular</strong> por USB com <strong>Depuração USB</strong> ligada e toque em <strong>Permitir</strong>.
+              Confira com <code>adb devices</code>.
+            </li>
+            <li class="mb-1">
+              <strong>Entre na pasta do APK e rode</strong> (uma linha por vez):
+              <div class="adb-wrap mt-1">
+<pre class="adb-cmd" id="adbCmd">cd ~/Downloads
+adb install -r app-release.apk
+adb shell dpm set-device-owner com.empresa.semhotspot/.HotspotDeviceAdminReceiver</pre>
+                <button class="btn btn-sm btn-outline-light adb-copy" type="button" data-copy-target="adbCmd" title="Copiar comandos"><i class="bi bi-clipboard"></i></button>
+              </div>
+            </li>
+          </ol>
+          <p class="text-muted small mt-1 mb-0">
+            <i class="bi bi-exclamation-triangle text-warning"></i>
+            O último comando só funciona com o celular <strong>zerado, sem nenhuma conta Google</strong> cadastrada.
+          </p>
+        </div>
       </div>
     </div>
   </div>
 </div>
+
+<script>
+  (function(){
+    document.querySelectorAll('.adb-copy[data-copy-target]').forEach(function(b){
+      b.addEventListener('click', function(){
+        var el = document.getElementById(b.getAttribute('data-copy-target'));
+        if (!el) return;
+        var txt = ((el.value !== undefined ? el.value : el.textContent) || '').trim();
+        var done = function(){ var ic=b.querySelector('i'); if(ic){ ic.classList.replace('bi-clipboard','bi-clipboard-check');
+          setTimeout(function(){ ic.classList.replace('bi-clipboard-check','bi-clipboard'); }, 1200); } };
+        if (navigator.clipboard) navigator.clipboard.writeText(txt).then(done).catch(done);
+        else done();
+      });
+    });
+  })();
+</script>
 
 {# ===================== KPIs ===================== #}
 <div class="row g-3">
