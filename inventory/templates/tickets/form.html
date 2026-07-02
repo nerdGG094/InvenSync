@@ -81,7 +81,8 @@
         {% if is_admin %}
         <div class="mt-3">
           {{ form.resolution.label(class="form-label fw-semibold") }}
-          {{ form.resolution(class="form-control", rows=2, placeholder="Preencha quando resolver") }}
+          {{ form.resolution(class="form-control", rows=2, placeholder="Se preencher, o chamado já entra como Resolvido") }}
+          <div class="form-text">Preencheu a resolução? O status vira <strong>Resolvido</strong> automaticamente.</div>
         </div>
         {% endif %}
 
@@ -104,6 +105,14 @@
     if (req) req.addEventListener('change', function(){
       const setor = UINFO[this.value];
       if (sec && setor) sec.value = setor;
+    });
+
+    // Preencheu a resolução ao abrir => marca o status como Resolvido (só quando
+    // ainda está no padrão "Aberto", para não sobrescrever uma escolha do admin).
+    const status = document.getElementById('status');
+    const resol = document.getElementById('resolution');
+    if (status && resol) resol.addEventListener('input', function(){
+      if (this.value.trim() && status.value === 'aberto') status.value = 'resolvido';
     });
   })();
 </script>

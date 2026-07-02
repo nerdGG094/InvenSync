@@ -276,6 +276,11 @@ def new():
             data["status"] = "aberto"
             data["assigned_to_id"] = None
             data["resolution"] = None
+        # Resolução já preenchida ao abrir => o chamado nasce RESOLVIDO (a menos
+        # que o admin tenha escolhido explicitamente outro status). O resolved_at
+        # é carimbado automaticamente pelo repositório.
+        if data.get("resolution") and data.get("status") == "aberto":
+            data["status"] = "resolvido"
         t = ticket_repo.create_ticket(opened_by_id=current_user.id, **data)
         # Notifica a equipe de TI por WhatsApp + e-mail (best-effort)
         _aberto = (f"Aberto por: {t.requester or current_user.name}"

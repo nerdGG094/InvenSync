@@ -94,6 +94,36 @@ def test_admin_creates_ticket_via_form(app, auth_client):
         assert t is not None and t.priority == "alta"
 
 
+def test_new_with_resolution_is_born_resolved(app, auth_client):
+    """Abrir já preenchendo a resolução (status no padrão) => nasce resolvido."""
+    r = auth_client.post("/tickets/new", data={
+        "title": f"{MARK} resolvido na abertura", "category": "software",
+        "priority": "media", "status": "aberto", "assigned_to_id": 0,
+        "requester": "", "resolution": "Reiniciei o serviço e voltou.",
+    }, follow_redirects=False)
+    assert r.status_code in (301, 302)
+    with app.app_context():
+        t = Ticket.query.filter_by(title=f"{MARK} resolvido na abertura").first()
+        assert t is not None
+        assert t.status == "resolvido"
+        assert t.resolved_at is not None
+        assert t.resolution
+
+
+def test_new_with_resolution_respects_explicit_status(app, auth_client):
+    """Se o admin escolhe outro status de propósito, a resolução não sobrescreve."""
+    r = auth_client.post("/tickets/new", data={
+        "title": f"{MARK} andamento explicito", "category": "software",
+        "priority": "media", "status": "em_andamento", "assigned_to_id": 0,
+        "requester": "", "resolution": "parcial",
+    }, follow_redirects=False)
+    assert r.status_code in (301, 302)
+    with app.app_context():
+        t = Ticket.query.filter_by(title=f"{MARK} andamento explicito").first()
+        assert t is not None and t.status == "em_andamento"
+        assert t.resolved_at is None
+
+
 def test_assume_assigns_and_advances(app, auth_client, admin_email):
     aid = _admin_id(app, admin_email)
     with app.app_context():
