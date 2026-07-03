@@ -7,7 +7,9 @@ from wtforms.validators import DataRequired, Length, Email, Optional, EqualTo
 class ProfileForm(FlaskForm):
     name = StringField("Nome", validators=[DataRequired(), Length(min=2, max=120)])
     email = StringField("E-mail", validators=[DataRequired(), Email(check_deliverability=False)])
-    sector = StringField("Setor", validators=[Optional(), Length(max=120)])
+    # Setor escolhido do cadastro de Departamentos (choices preenchidas na rota).
+    sector = SelectField("Setor", choices=[], validate_choice=False,
+                         validators=[Optional(), Length(max=120)])
     whatsapp = StringField("WhatsApp", validators=[Optional(), Length(max=30)])
     theme = SelectField("Tema da interface", choices=[("dark", "Escuro"), ("light", "Claro")],
                         default="dark")

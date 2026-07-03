@@ -240,3 +240,4 @@ html[data-theme="light"] .sys-sub { color: #5b6b62 !important; }
 html[data-theme="light"] .kiox-modal { background: #ffffff; border-color: #e6ece8; }
 html[data-theme="light"] .kiox-modal hr { border-color: #e2e8e4; }
 html[data-theme="light"] .adb-cmd { background: #f1f6f3; border-color: #dbe5df; color: #173a28; }
+html[data-theme="light"] .kiox-steps .nav-link { border-color: #dbe5df; }

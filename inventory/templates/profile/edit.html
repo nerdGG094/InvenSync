@@ -50,7 +50,7 @@
         <div class="row g-3 mt-1">
           <div class="col-12 col-md-6">
             {{ form.sector.label(class="form-label fw-semibold") }}
-            {{ form.sector(class="form-control" + (" is-invalid" if form.sector.errors else ""), placeholder="Ex.: Compras") }}
+            {{ form.sector(class="form-select" + (" is-invalid" if form.sector.errors else "")) }}
             {{ field_error(form.sector) }}
           </div>
           <div class="col-12 col-md-6">

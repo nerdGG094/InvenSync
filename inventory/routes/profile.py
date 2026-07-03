@@ -12,7 +12,7 @@ from werkzeug.utils import secure_filename
 from ..extensions import db
 from ..forms.profile import ProfileForm
 from ..models.user import User
-from ..services import twofa
+from ..services import twofa, people
 
 bp = Blueprint("profile", __name__)
 
@@ -40,6 +40,7 @@ def _save_avatar(file_storage) -> str:
 @login_required
 def edit():
     form = ProfileForm(obj=current_user)
+    form.sector.choices = people.department_choices(form.sector.data)  # inclui o setor atual
     if form.validate_on_submit():
         email = form.email.data.strip().lower()
         existing = User.query.filter_by(email=email).first()

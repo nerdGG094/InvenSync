@@ -67,6 +67,9 @@
   .kiox-steps .steps-title { font-weight:700; font-size:.9rem; margin-bottom:.5rem; }
   .kiox-steps ol { margin-bottom:0; }
   .kiox-steps li { margin-bottom:.4rem; }
+  .kiox-steps .nav-pills { gap:.35rem; }
+  .kiox-steps .nav-link { padding:.2rem .75rem; font-size:.82rem; color:inherit; border:1px solid #243024; }
+  .kiox-steps .nav-pills .nav-link.active { background:#00c853; color:#06210f; border-color:#00c853; font-weight:600; }
 </style>
 {% endblock %}
 
@@ -125,37 +128,78 @@
 
         <div class="text-start kiox-steps">
           <div class="steps-title"><i class="bi bi-list-check text-success"></i> Instalação manual (se o Play Protect bloquear)</div>
-          <ol class="ps-3 small">
-            <li class="mb-2">
-              <strong>Baixe o APK</strong>
-              <div class="mt-1">
-                <a href="{{ url_for('kiox.apk') }}" class="btn btn-kiox-dl btn-sm"><i class="bi bi-download"></i> Baixar app-release.apk</a>
-              </div>
+
+          <div class="mb-2">
+            <strong>1. Baixe o APK</strong>
+            <div class="mt-1">
+              <a href="{{ url_for('kiox.apk') }}" class="btn btn-kiox-dl btn-sm"><i class="bi bi-download"></i> Baixar app-release.apk</a>
+            </div>
+          </div>
+
+          <ul class="nav nav-pills mb-2" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#os-linux" type="button" role="tab"><i class="bi bi-terminal"></i> Linux</button>
             </li>
-            <li class="mb-2">
-              <strong>Instale o adb</strong> (Linux):
-              <div class="adb-wrap mt-1">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" data-bs-toggle="pill" data-bs-target="#os-win" type="button" role="tab"><i class="bi bi-windows"></i> Windows</button>
+            </li>
+          </ul>
+
+          <div class="tab-content">
+            <div class="tab-pane fade show active" id="os-linux" role="tabpanel">
+              <ol class="ps-3 small mb-0" start="2">
+                <li class="mb-2">
+                  <strong>Instale o adb</strong>:
+                  <div class="adb-wrap mt-1">
 <pre class="adb-cmd" id="adbInstall">sudo apt install android-tools-adb   # Ubuntu/Debian
 # Fedora: sudo dnf install android-tools
 # Arch:   sudo pacman -S android-tools</pre>
-                <button class="btn btn-sm btn-outline-light adb-copy" type="button" data-copy-target="adbInstall" title="Copiar"><i class="bi bi-clipboard"></i></button>
-              </div>
-            </li>
-            <li class="mb-2">
-              <strong>Conecte o celular</strong> por USB com <strong>Depuração USB</strong> ligada e toque em <strong>Permitir</strong>.
-              Confira com <code>adb devices</code>.
-            </li>
-            <li class="mb-1">
-              <strong>Entre na pasta do APK e rode</strong> (uma linha por vez):
-              <div class="adb-wrap mt-1">
+                    <button class="btn btn-sm btn-outline-light adb-copy" type="button" data-copy-target="adbInstall" title="Copiar"><i class="bi bi-clipboard"></i></button>
+                  </div>
+                </li>
+                <li class="mb-2">
+                  <strong>Conecte o celular</strong> por USB com <strong>Depuração USB</strong> ligada e toque em <strong>Permitir</strong>. Confira com <code>adb devices</code>.
+                </li>
+                <li class="mb-1">
+                  <strong>Entre na pasta do APK e rode</strong> (uma linha por vez):
+                  <div class="adb-wrap mt-1">
 <pre class="adb-cmd" id="adbCmd">cd ~/Downloads
 adb install -r app-release.apk
 adb shell dpm set-device-owner com.empresa.semhotspot/.HotspotDeviceAdminReceiver</pre>
-                <button class="btn btn-sm btn-outline-light adb-copy" type="button" data-copy-target="adbCmd" title="Copiar comandos"><i class="bi bi-clipboard"></i></button>
-              </div>
-            </li>
-          </ol>
-          <p class="text-muted small mt-1 mb-0">
+                    <button class="btn btn-sm btn-outline-light adb-copy" type="button" data-copy-target="adbCmd" title="Copiar comandos"><i class="bi bi-clipboard"></i></button>
+                  </div>
+                </li>
+              </ol>
+            </div>
+
+            <div class="tab-pane fade" id="os-win" role="tabpanel">
+              <ol class="ps-3 small mb-0" start="2">
+                <li class="mb-2">
+                  <strong>Instale o adb</strong> (platform-tools) no PowerShell:
+                  <div class="adb-wrap mt-1">
+<pre class="adb-cmd" id="adbInstallWin">winget install --id Google.PlatformTools -e</pre>
+                    <button class="btn btn-sm btn-outline-light adb-copy" type="button" data-copy-target="adbInstallWin" title="Copiar"><i class="bi bi-clipboard"></i></button>
+                  </div>
+                  <div class="text-muted" style="font-size:.72rem">Sem winget? Baixe o "SDK Platform Tools" do Google e extraia. Feche e reabra o terminal após instalar.</div>
+                </li>
+                <li class="mb-2">
+                  <strong>Conecte o celular</strong> por USB com <strong>Depuração USB</strong> ligada e toque em <strong>Permitir</strong>. Confira com <code>adb devices</code>.
+                </li>
+                <li class="mb-1">
+                  <strong>Abra o PowerShell na pasta do APK e rode</strong>:
+                  <div class="adb-wrap mt-1">
+<pre class="adb-cmd" id="adbCmdWin">cd $env:USERPROFILE\Downloads
+adb install -r app-release.apk
+adb shell dpm set-device-owner com.empresa.semhotspot/.HotspotDeviceAdminReceiver</pre>
+                    <button class="btn btn-sm btn-outline-light adb-copy" type="button" data-copy-target="adbCmdWin" title="Copiar comandos"><i class="bi bi-clipboard"></i></button>
+                  </div>
+                  <div class="text-muted" style="font-size:.72rem">Dica: no Explorer, digite <code>powershell</code> na barra de endereço da pasta pra abrir o terminal já nela.</div>
+                </li>
+              </ol>
+            </div>
+          </div>
+
+          <p class="text-muted small mt-2 mb-0">
             <i class="bi bi-exclamation-triangle text-warning"></i>
             O último comando só funciona com o celular <strong>zerado, sem nenhuma conta Google</strong> cadastrada.
           </p>
