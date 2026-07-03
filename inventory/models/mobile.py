@@ -15,7 +15,10 @@ class MobileDevice(db.Model):
     carrier = db.Column(db.String(40), nullable=True)          # operadora
     plan = db.Column(db.String(80), nullable=True)             # plano/pacote
 
-    assigned_employee = db.Column(db.String(150), nullable=True, index=True)  # funcionário
+    assigned_employee = db.Column(db.String(150), nullable=True, index=True)  # funcionário (texto, legado)
+    # Normalização (fase 1): vínculo ao cadastro de pessoas (1º funcionário; backfill por nome).
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
+    user = db.relationship("User")
     # Aparelho compartilhado: até 2 funcionários adicionais usam o mesmo celular.
     assigned_employee_2 = db.Column(db.String(150), nullable=True, index=True)
     assigned_employee_3 = db.Column(db.String(150), nullable=True, index=True)

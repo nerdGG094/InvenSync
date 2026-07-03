@@ -11,6 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from ..extensions import db
 from ..models.user import User
 from ..forms.colaborador import ColaboradorForm
+from ..services import people
 
 bp = Blueprint("colaboradores", __name__)
 
@@ -184,8 +185,10 @@ def edit(cid):
         if _name_taken(nome, ignore_id=person.id):
             flash("Já existe uma pessoa com esse nome.", "warning")
         else:
+            old_name = person.name
             person.name = nome
             person.sector = _clean(form.department.data)
+            person.department_id = people.department_id_for(form.department.data)
             person.whatsapp = _clean(form.whatsapp.data)
             # Protege a própria conta: não pode se desativar nem remover o
             # próprio acesso (senão se trancaria para fora do sistema).
@@ -201,6 +204,8 @@ def edit(cid):
                 flash(err, "warning")
                 return render_template("colaboradores/form.html", form=form, title="Editar Pessoa")
             try:
+                if nome != old_name:
+                    people.propagate_person_rename(old_name, nome)
                 db.session.commit()
                 flash("Pessoa atualizada!", "success")
                 return redirect(url_for("colaboradores.list_view"))

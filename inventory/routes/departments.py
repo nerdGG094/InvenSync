@@ -12,6 +12,7 @@ from ..extensions import db
 from ..models.department import Department
 from ..models.user import User
 from ..forms.department import DepartmentForm
+from ..services import people
 from ..services.pagination import paginate
 
 bp = Blueprint("departments", __name__)
@@ -95,11 +96,10 @@ def edit(did):
             try:
                 dep.name = nome
                 dep.is_active = bool(form.is_active.data)
-                # Renomeou o departamento? Atualiza os colaboradores que usam o
-                # nome antigo, para manter o vínculo consistente.
+                # Renomeou o departamento? Propaga o novo nome para Colaboradores
+                # E para todos os ativos/registros que guardam o setor por texto.
                 if nome != old_name:
-                    User.query.filter(db.func.lower(User.sector) == old_name.lower())\
-                        .update({"sector": nome}, synchronize_session=False)
+                    people.propagate_sector_rename(old_name, nome)
                 db.session.commit()
                 flash("Departamento atualizado!", "success")
                 return redirect(url_for("departments.list_view"))

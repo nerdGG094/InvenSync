@@ -35,7 +35,12 @@ class User(db.Model, UserMixin):
     is_active = db.Column(
         db.Boolean, nullable=False, default=True, server_default=db.text("true")
     )
-    sector = db.Column(db.String(120), nullable=True)   # departamento / setor
+    sector = db.Column(db.String(120), nullable=True)   # departamento / setor (texto, legado)
+    # Normalização (fase 1): vínculo ao cadastro de Departamentos. Preenchido por
+    # backfill/light-migration a partir de `sector`. `sector` segue como texto até
+    # a fase 2 (virar as leituras para cá).
+    department_id = db.Column(db.Integer, db.ForeignKey("department.id"), nullable=True, index=True)
+    department = db.relationship("Department")
     photo = db.Column(db.String(255), nullable=True)    # caminho da foto (avatar)
     theme = db.Column(db.String(10), nullable=False, default="dark",
                       server_default="dark")            # preferência de tema (dark|light)

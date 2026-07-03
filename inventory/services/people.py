@@ -70,6 +70,84 @@ def department_choices(current=None) -> list:
     return [("", "— Selecione —")] + [(n, n) for n in nomes]
 
 
+def user_id_for(name):
+    """id da pessoa no cadastro central a partir do nome (case-insensitive)."""
+    nome = (name or "").strip()
+    if not nome:
+        return None
+    u = User.query.filter(db.func.lower(User.name) == nome.lower()).first()
+    return u.id if u else None
+
+
+def department_id_for(name):
+    """id do Departamento a partir do nome (case-insensitive) — mantém a FK
+    `User.department_id` em dia ao salvar Colaborador/Perfil."""
+    nome = (name or "").strip()
+    if not nome:
+        return None
+    from ..models.department import Department
+    d = Department.query.filter(db.func.lower(Department.name) == nome.lower()).first()
+    return d.id if d else None
+
+
+def propagate_person_rename(old_name, new_name):
+    """Renomeou uma pessoa? Atualiza o nome em TODOS os registros que a
+    referenciam por texto (máquinas, celulares, chips, materiais, movimentações,
+    chamados). Mantém tudo consistente enquanto as colunas de texto existem.
+    Não faz commit — quem chama commita."""
+    old = (old_name or "").strip()
+    new = (new_name or "").strip()
+    if not old or not new or old.lower() == new.lower():
+        return
+    from ..models.chip import SimChip
+    from ..models.product import Product
+    from ..models.movement import StockMovement
+    from ..models.ticket import Ticket
+    low = old.lower()
+
+    def _ci(col):
+        return db.func.lower(db.func.btrim(col)) == low
+
+    Machine.query.filter(_ci(Machine.assigned_user)).update(
+        {Machine.assigned_user: new}, synchronize_session=False)
+    for col in (MobileDevice.assigned_employee, MobileDevice.assigned_employee_2,
+                MobileDevice.assigned_employee_3):
+        MobileDevice.query.filter(db.func.lower(db.func.btrim(col)) == low).update(
+            {col: new}, synchronize_session=False)
+    SimChip.query.filter(_ci(SimChip.assigned_employee)).update(
+        {SimChip.assigned_employee: new}, synchronize_session=False)
+    Product.query.filter(_ci(Product.responsible_user)).update(
+        {Product.responsible_user: new}, synchronize_session=False)
+    StockMovement.query.filter(_ci(StockMovement.responsible_user)).update(
+        {StockMovement.responsible_user: new}, synchronize_session=False)
+    Ticket.query.filter(_ci(Ticket.requester)).update(
+        {Ticket.requester: new}, synchronize_session=False)
+
+
+def propagate_sector_rename(old_name, new_name):
+    """Renomeou um departamento? Atualiza o setor (texto) em Colaboradores e em
+    todos os ativos/registros que guardam o nome do setor. Não faz commit."""
+    old = (old_name or "").strip()
+    new = (new_name or "").strip()
+    if not old or not new or old.lower() == new.lower():
+        return
+    from ..models.chip import SimChip
+    from ..models.product import Product
+    from ..models.movement import StockMovement
+    from ..models.ticket import Ticket
+    from ..models.credential import Credential
+    low = old.lower()
+    targets = [
+        (User, User.sector), (Machine, Machine.sector), (MobileDevice, MobileDevice.sector),
+        (SimChip, SimChip.sector), (Product, Product.responsible_sector),
+        (StockMovement, StockMovement.responsible_sector), (Ticket, Ticket.sector),
+        (Credential, Credential.sector),
+    ]
+    for model, col in targets:
+        model.query.filter(db.func.lower(db.func.btrim(col)) == low).update(
+            {col: new}, synchronize_session=False)
+
+
 def sector_for(name: str) -> str:
     """Setor/departamento de uma pessoa, a partir do cadastro (User) — fonte da
     verdade. Usado para preencher o setor automaticamente nos formulários quando

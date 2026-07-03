@@ -37,6 +37,7 @@ def _form_to_kwargs(form: MachineForm) -> dict:
         brand=s(form.brand.data),
         model=s(form.model.data),
         assigned_user=s(form.assigned_user.data),
+        user_id=people.user_id_for(form.assigned_user.data),   # mantém a FK em dia
         ip_address=s(form.ip_address.data),
         sector=sector,
         patrimony=s(form.patrimony.data),

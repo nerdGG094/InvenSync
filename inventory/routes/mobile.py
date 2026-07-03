@@ -51,6 +51,7 @@ def _to_kwargs(form: MobileForm) -> dict:
         imei=s(form.imei.data),
         serial_number=s(form.serial_number.data),
         assigned_employee=s(form.assigned_employee.data),
+        user_id=people.user_id_for(form.assigned_employee.data),   # mantém a FK em dia
         assigned_employee_2=emp2,
         assigned_employee_3=emp3,
         sector=sector,

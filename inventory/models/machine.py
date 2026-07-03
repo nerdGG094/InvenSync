@@ -14,7 +14,10 @@ class Machine(db.Model):
     name = db.Column(db.String(120), nullable=True)          # identificação/hostname
     brand = db.Column(db.String(120), nullable=True)         # marca (Dell, HP...)
     model = db.Column(db.String(150), nullable=True)         # modelo do PC/notebook/impressora
-    assigned_user = db.Column(db.String(150), nullable=True, index=True)  # usuário/responsável
+    assigned_user = db.Column(db.String(150), nullable=True, index=True)  # usuário/responsável (texto, legado)
+    # Normalização (fase 1): vínculo ao cadastro de pessoas (backfill por nome).
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
+    user = db.relationship("User")
     ip_address = db.Column(db.String(45), nullable=True, index=True)      # IP (IPv4/IPv6)
     sector = db.Column(db.String(120), nullable=True)        # setor/localização
     patrimony = db.Column(db.String(60), nullable=True, index=True)
