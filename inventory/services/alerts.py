@@ -68,14 +68,42 @@ def _stuck_tickets(hours: int):
             .all())
 
 
+def _stale_backup(app):
+    """(idade_horas, nome|None) se o último backup está velho demais; senão None.
+    Rede de segurança: mesmo com o agendador interno, avisa se algo travar."""
+    try:
+        import sys
+        root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        if root not in sys.path:
+            sys.path.insert(0, root)
+        import backup_db
+        limit = int(app.config.get("ALERTS_BACKUP_STALE_HOURS", 48) or 48)
+        items = backup_db.list_backups()
+        if not items:
+            return (None, None)  # nenhum backup existe — crítico
+        age = (datetime.now() - items[0]["mtime"]).total_seconds() / 3600.0
+        if age > limit:
+            return (age, items[0]["name"])
+        return None
+    except Exception:  # noqa: BLE001
+        return None
+
+
 # ---------------------------------------------------------------------------
 # Montagem do texto
 # ---------------------------------------------------------------------------
-def _render_body(low, lic, stuck, days, hours) -> str:
-    if not (low or lic or stuck):
+def _render_body(low, lic, stuck, days, hours, stale=None) -> str:
+    if not (low or lic or stuck or stale):
         return "Nenhuma pendência no momento. ✅"
 
     lines = []
+    if stale is not None:
+        age, nome = stale
+        if nome is None:
+            lines.append("🗄️ Backup: NENHUM backup encontrado! Verifique o agendador.")
+        else:
+            lines.append(f"🗄️ Backup atrasado: último há ~{int(age)}h ({nome}).")
+        lines.append("")
     if low:
         lines.append(f"📦 Estoque no/abaixo do mínimo ({len(low)}):")
         for p, est, mn in low[:25]:
@@ -119,8 +147,9 @@ def publish(app) -> int:
             low = _low_stock()
             lic = _expiring_licenses(days)
             stuck = _stuck_tickets(hours)
-            total = len(low) + len(lic) + len(stuck)
-            body = _render_body(low, lic, stuck, days, hours)
+            stale = _stale_backup(app)
+            total = len(low) + len(lic) + len(stuck) + (1 if stale is not None else 0)
+            body = _render_body(low, lic, stuck, days, hours, stale)
             level = "urgente" if total else "info"
 
             a = Announcement.query.filter_by(title=AUTO_TITLE).first()

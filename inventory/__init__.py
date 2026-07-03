@@ -43,6 +43,21 @@ def _run_light_migrations():
         'ALTER TABLE mobile_device ADD COLUMN IF NOT EXISTS label_applied BOOLEAN NOT NULL DEFAULT false',
         # KioX (app de rastreio) instalado no celular.
         'ALTER TABLE mobile_device ADD COLUMN IF NOT EXISTS kiox_installed BOOLEAN NOT NULL DEFAULT false',
+        # ===== Normalização (fase 1): colunas FK ADITIVAS + backfill por nome =====
+        # Colunas novas (todas NULL) — não quebram nada; as strings legadas seguem.
+        'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS department_id INTEGER REFERENCES department(id)',
+        'ALTER TABLE machine ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES "user"(id)',
+        'ALTER TABLE mobile_device ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES "user"(id)',
+        # Backfill idempotente (só onde ainda está NULL), casando por nome normalizado.
+        'UPDATE "user" u SET department_id = d.id FROM department d '
+        'WHERE u.department_id IS NULL AND u.sector IS NOT NULL '
+        "AND lower(btrim(u.sector)) = lower(btrim(d.name))",
+        'UPDATE machine m SET user_id = u.id FROM "user" u '
+        'WHERE m.user_id IS NULL AND m.assigned_user IS NOT NULL '
+        "AND lower(btrim(m.assigned_user)) = lower(btrim(u.name))",
+        'UPDATE mobile_device md SET user_id = u.id FROM "user" u '
+        'WHERE md.user_id IS NULL AND md.assigned_employee IS NOT NULL '
+        "AND lower(btrim(md.assigned_employee)) = lower(btrim(u.name))",
     ]
     for sql in stmts:
         try:
@@ -449,5 +464,13 @@ def create_app():
             alerts.start_scheduler(app)
         except Exception:  # noqa: BLE001
             app.logger.exception("Falha ao iniciar os alertas proativos")
+
+    # Backup automático do banco em segundo plano (agendador interno)
+    if app.config.get("BACKUP_SCHEDULER_ENABLED", True):
+        try:
+            from .services import backup_scheduler
+            backup_scheduler.start_scheduler(app)
+        except Exception:  # noqa: BLE001
+            app.logger.exception("Falha ao iniciar o agendador de backup")
 
     return app

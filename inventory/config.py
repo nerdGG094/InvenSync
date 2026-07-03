@@ -64,6 +64,12 @@ class Config:
     # estática pública.
     CRED_PHOTO_FOLDER = os.path.join(BASE_DIR, "uploads_private", "credentials")
 
+    # Backup automático do banco (agendador INTERNO; dispensa a Tarefa Agendada
+    # externa do Windows). Gera 1 backup/dia a partir de BACKUP_HOUR, com self-heal.
+    BACKUP_SCHEDULER_ENABLED = os.environ.get("BACKUP_SCHEDULER_ENABLED", "1") in ("1", "true", "True")
+    BACKUP_HOUR = int(os.environ.get("BACKUP_HOUR", "2"))          # hora do dia (0-23)
+    BACKUP_CHECK_SECONDS = int(os.environ.get("BACKUP_CHECK_SECONDS", "1800"))
+
     # Notificações por WhatsApp via CallMeBot (gratuito) — desligado até configurar no .env.
     # CALLMEBOT_RECIPIENTS: pares numero:apikey separados por vírgula.
     #   ex.: 5544999999999:123456,5544988888888:654321
