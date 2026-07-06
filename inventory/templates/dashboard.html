@@ -38,15 +38,15 @@
     background:#15211a; border:1px solid #243024; color:#9bb6a6; }
 
   /* Atalhos de sistemas (KioX, CarregLogi) */
-  .sys-card { display:flex; align-items:center; gap:.85rem; width:100%; text-align:left;
+  .sys-card { display:flex; align-items:center; gap:.85rem; width:100%; text-align:left; overflow:hidden;
     background:linear-gradient(160deg,#17231b,#131a16); border:1px solid #243024; border-radius:16px;
     padding:.8rem .9rem; color:#dceede; text-decoration:none; cursor:pointer;
     transition:transform .14s, border-color .14s, box-shadow .14s; }
   .sys-card:hover { transform:translateY(-3px); border-color:#2f6b46; box-shadow:0 10px 24px rgba(0,0,0,.28); }
-  .sys-logo { height:44px; width:auto; max-width:130px; object-fit:contain; flex:0 0 auto;
+  .sys-logo { height:40px; width:auto; max-width:96px; object-fit:contain; flex:0 0 auto;
     background:transparent; }
-  .sys-txt { flex:1; min-width:0; }
-  .sys-name { font-weight:700; color:#eafff0; line-height:1.15; }
+  .sys-txt { flex:1 1 auto; min-width:0; }
+  .sys-name { font-weight:700; color:#eafff0; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .sys-sub { color:#8fb0a0; font-size:.75rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .sys-go { color:#46e08a; font-size:1.1rem; flex:0 0 auto; opacity:.75; transition:opacity .14s; }
   .sys-card:hover .sys-go { opacity:1; }
@@ -89,7 +89,7 @@
 {# ===================== Sistemas / Atalhos ===================== #}
 <div class="sec-label"><i class="bi bi-grid-3x3-gap-fill"></i> Sistemas</div>
 <div class="row g-3 justify-content-center mb-4">
-  <div class="col-6 col-lg-3">
+  <div class="col-12 col-md-6 col-lg-3">
     <button type="button" class="sys-card" data-bs-toggle="modal" data-bs-target="#kioxQrModal">
       <img src="{{ url_for('static', filename='logos/kiox.png') }}" alt="KioX" class="sys-logo">
       <div class="sys-txt">
@@ -99,7 +99,7 @@
       <i class="bi bi-qr-code sys-go"></i>
     </button>
   </div>
-  <div class="col-6 col-lg-3">
+  <div class="col-12 col-md-6 col-lg-3">
     <a href="http://192.168.0.54" target="_blank" rel="noopener" class="sys-card">
       <img src="{{ url_for('static', filename='logos/carreglogi.svg') }}" alt="CarregLogi" class="sys-logo">
       <div class="sys-txt">

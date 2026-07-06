@@ -336,3 +336,55 @@ a.pchip:hover { filter: brightness(1.15); }
 .machine-actions, .phone-actions, .person-actions, .reg-actions, .router-actions {
   display: flex; gap: .35rem;
 }
+
+/* =====================================================================
+   Salvaguardas responsivas globais (mobile/tablet)
+   Evitam que elementos largos "saiam do lugar" e empurrem a página na
+   horizontal. Escopadas por breakpoint para não afetar o desktop.
+   ===================================================================== */
+img, svg, canvas, video { max-width: 100%; }
+pre, code { max-width: 100%; overflow-x: auto; }
+
+/* Cartões de número (KPIs / stat-cards): o conteúdo encolhe e o texto quebra
+   em vez de vazar quando a coluna fica estreita no celular. */
+.kpi, .kpi > div, .stat-card .card-body, .stat-card .card-body > div { min-width: 0; }
+.kpi .lbl, .stat-card .text-muted, .stat-card .card-body .h3, .kpi .val { overflow-wrap: anywhere; }
+
+/* Tablet e abaixo (menu já colapsado) */
+@media (max-width: 991.98px) {
+  body { overflow-x: hidden; }                 /* nada empurra a página na horizontal */
+  .row > [class*="col-"] { min-width: 0; }     /* colunas encolhem sem estourar o texto */
+  .table-card-tools { flex-wrap: wrap; }       /* filtros/busca quebram em vez de transbordar */
+  /* Abas (nav-tabs/pills) roláveis quando não couberem, sem estourar */
+  .nav-tabs, .nav-pills { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
+
+/* Celular / tablet pequeno */
+@media (max-width: 767.98px) {
+  main.container, main.container-fluid { padding-left: .8rem; padding-right: .8rem; }
+  .card-body { padding: 1rem .9rem; }
+  /* Filtros/busca ocupam a largura toda e empilham */
+  .table-card-tools form.d-flex { width: 100%; flex-wrap: wrap; }
+  .table-card-tools .form-select,
+  .table-card-tools .form-control,
+  .table-card-tools .input-group,
+  .table-card-tools .search-box { max-width: 100% !important; width: 100%; }
+  /* Modais com margem mínima (aproveitam a tela) */
+  .modal-dialog { margin: .5rem auto; }
+  /* Gráficos da dashboard cabem na viewport */
+  .ch-wrap { height: 240px !important; }
+  .ch-wrap.sm { height: 210px !important; }
+  /* Linhas de formulário com colunas lado a lado empilham por segurança */
+  .row.g-3 > [class*="col-"] { margin-bottom: .15rem; }
+}
+
+/* Celular */
+@media (max-width: 575.98px) {
+  /* 1 cartão por linha — evita cartões espremidos lado a lado */
+  .machine-grid, .phone-grid, .asset-grid, .people-grid, .cred-grid,
+  .dept-tabs { grid-template-columns: 1fr !important; }
+  /* Rodapés de cartão / grupos de ação quebram bem */
+  .machine-foot, .phone-foot, .person-foot, .reg-foot, .router-foot { flex-wrap: wrap; gap: .4rem; }
+  /* Botões de ação em grupo ocupam a linha (mais fáceis de tocar) */
+  .cred-foot, .machine-actions, .phone-actions { flex-wrap: wrap; }
+}
