@@ -4,20 +4,30 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>KioX - Rastreio mobile (mapa)</title>
+  <link rel="icon" type="image/png" href="data:image/png;base64,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" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
   <style>
     html, body { margin: 0; height: 100%; font-family: sans-serif; }
-    #topo { background:#0F1216; color:#fff; padding:10px 14px; font-size:15px; display:flex; align-items:center; gap:10px; }
+    #topo { background:#0F1216; color:#fff; padding:10px 14px; font-size:15px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
     #topo b { color:#4aa3ff; }
-    #sair { margin-left:auto; background:#1c2530; color:#cfe3ff; border:1px solid #2e3d4d; border-radius:6px; padding:5px 10px; cursor:pointer; font-size:13px; }
-    #mapa { width: 100%; height: calc(100% - 44px); }
+    #busca { margin-left:auto; background:#0d1117; color:#fff; border:1px solid #2e3d4d; border-radius:6px; padding:6px 10px; font-size:13px; width:180px; }
+    #ranking { background:#3a2330; color:#ffd0d0; border:1px solid #5a2e3d; border-radius:6px; padding:5px 12px; cursor:pointer; font-size:13px; font-weight:600; }
+    #sair { background:#1c2530; color:#cfe3ff; border:1px solid #2e3d4d; border-radius:6px; padding:5px 10px; cursor:pointer; font-size:13px; }
+    #mapa { width: 100%; height: calc(100% - 46px); }
     .info { font-size: 13px; line-height: 1.5; }
+    .info a.gmaps { display:inline-block; background:#1f6feb; color:#fff; text-decoration:none; padding:6px 12px; border-radius:6px; font-size:13px; }
     /* Rótulo do nome sobre o pino (sem a "caixinha" padrão do tooltip) */
     .rotulo-kiox { background:transparent; border:0; box-shadow:none; padding:0;
       color:#0F1216; font-weight:700; font-size:12px; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff; }
     .rotulo-kiox::before { display:none; }
+    /* Controles no mapa */
+    .acoes-ctrl { display:flex; flex-direction:column; gap:6px; }
+    .acoes-ctrl button { width:40px; height:40px; font-size:17px; background:#fff; border:2px solid rgba(0,0,0,.25); border-radius:8px; cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,.3); line-height:1; }
+    .acoes-ctrl button.ativo { background:#e53935; }
+    .legenda-ctrl { background:rgba(22,27,34,.92); color:#fff; padding:8px 12px; border-radius:8px; font-size:13px; line-height:1.7; box-shadow:0 1px 4px rgba(0,0,0,.4); }
+    .legenda-ctrl i { display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:7px; vertical-align:middle; border:2px solid #fff; }
     /* Tela de login */
     #login { position:fixed; inset:0; background:#0F1216; color:#fff; display:flex; align-items:center; justify-content:center; z-index:1000; }
     #login .box { background:#161b22; padding:28px 26px; border-radius:12px; width:300px; box-shadow:0 8px 30px rgba(0,0,0,.5); }
@@ -27,6 +37,17 @@
     #login button { width:100%; padding:11px; border:0; border-radius:7px; background:#1f6feb; color:#fff; font-size:15px; font-weight:600; cursor:pointer; }
     #login button:disabled { opacity:.6; cursor:default; }
     #erro { color:#ff6b6b; font-size:13px; min-height:18px; margin-top:8px; }
+    /* Modal do ranking de desligados */
+    #ranking-modal { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:1100; }
+    #ranking-modal .box { background:#161b22; color:#fff; border-radius:12px; width:min(620px,92vw); max-height:82vh; overflow:auto; box-shadow:0 8px 30px rgba(0,0,0,.6); }
+    #ranking-modal h2 { margin:0; padding:15px 18px; font-size:17px; border-bottom:1px solid #2e3d4d; display:flex; align-items:center; gap:10px; position:sticky; top:0; background:#161b22; }
+    #ranking-modal table { width:100%; border-collapse:collapse; font-size:14px; }
+    #ranking-modal th, #ranking-modal td { padding:9px 16px; text-align:left; border-bottom:1px solid #222c38; }
+    #ranking-modal th { color:#9fb0c0; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.03em; }
+    #ranking-modal .fechar { margin-left:auto; background:#1c2530; color:#cfe3ff; border:1px solid #2e3d4d; border-radius:6px; padding:5px 12px; cursor:pointer; font-size:13px; }
+    #ranking-modal .vazio { padding:26px 20px; color:#7CFC98; text-align:center; font-size:15px; }
+    #ranking-modal .tempo { color:#ff6b6b; font-weight:700; white-space:nowrap; }
+    #ranking-modal .bat-baixa { color:#e53935; font-weight:700; }
   </style>
 </head>
 <body>
@@ -43,9 +64,21 @@
   </div>
 
   <div id="topo">KioX — Rastreio mobile &nbsp; <span id="status">conectando...</span> &nbsp;•&nbsp; <b id="qtd">0</b> aparelho(s)
+    <input id="busca" type="text" placeholder="🔎 buscar aparelho..." />
+    <button id="ranking" type="button">🔴 Ranking desligados</button>
     <button id="sair" type="button">Sair</button>
   </div>
   <div id="mapa"></div>
+
+  <!-- Ranking de aparelhos desligados / sem sinal -->
+  <div id="ranking-modal">
+    <div class="box">
+      <h2>🔴 Aparelhos desligados / sem sinal
+        <button class="fechar" id="rankFechar" type="button">Fechar</button>
+      </h2>
+      <div id="rankConteudo"></div>
+    </div>
+  </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
@@ -71,19 +104,23 @@
     let mapa = null;
     let clusterGroup = null;
     let jaEnquadrou = false;
+    let enquadrarTimer = null;
+    let circuloPrecisao = null;
+    let filtroProblemas = false;
     const marcadores = {};
-    const ultimos = {};            // id -> último registro recebido
+    const todos = {};              // id(uid) -> registro cru do banco (todos os nós)
+    const ultimos = {};            // id -> registro MOSTRADO (após deduplica por androidId)
+    const enderecos = {};          // id -> endereço (cache do geocoding)
     let escutando = false;
+    let conectadoRTDB = false;     // conexão real com o servidor (não o login)
 
     // Minutos sem atualizar para considerar o aparelho COM PROBLEMA (pino vermelho).
-    // O app envia a cada 30 min; 90 min = ~3 ciclos perdidos, evita falso alarme.
     const LIMITE_MIN = 90;
 
     function fmtHora(ms) {
       if (!ms) return '—';
       try { return new Date(ms).toLocaleString('pt-BR'); } catch (e) { return String(ms); }
     }
-
     function fmtHaQuanto(ms) {
       if (!ms) return 'nunca';
       const min = Math.floor((Date.now() - ms) / 60000);
@@ -93,25 +130,23 @@
       if (h < 24) return 'há ' + h + ' h';
       return 'há ' + Math.floor(h / 24) + ' d';
     }
+    function estaOffline(d) {
+      return !d.hora || (Date.now() - d.hora) > LIMITE_MIN * 60000;
+    }
+    function nomeDe(d, id) {
+      return (d.nome && d.nome.trim()) ? d.nome.trim() : (d.modelo || id);
+    }
 
-    // Ícone do pino: um CELULAR colorido (azul = ok, vermelho = sem sinal),
-    // desenhado em SVG inline (sem depender de imagem externa).
+    // Ícone do pino: um CELULAR colorido (azul = ok, vermelho = sem sinal).
     function iconePino(offline) {
       const cor = offline ? '#e53935' : '#1f6feb';
       const svg =
-        '<svg width="28" height="28" viewBox="0 0 24 24" ' +
-        'style="filter:drop-shadow(0 1px 2px rgba(0,0,0,.55))">' +
+        '<svg width="28" height="28" viewBox="0 0 24 24" style="filter:drop-shadow(0 1px 2px rgba(0,0,0,.55))">' +
         '<rect x="5" y="1.5" width="14" height="21" rx="3" fill="' + cor + '" stroke="#fff" stroke-width="1.6"/>' +
         '<line x1="10" y1="4" x2="14" y2="4" stroke="#fff" stroke-width="1.3" stroke-linecap="round"/>' +
-        '<circle cx="12" cy="19.5" r="1.15" fill="#fff"/>' +
-        '</svg>';
-      return L.divIcon({
-        className: '',
-        html: svg,
-        iconSize: [28, 28], iconAnchor: [14, 14]
-      });
+        '<circle cx="12" cy="19.5" r="1.15" fill="#fff"/></svg>';
+      return L.divIcon({ className: '', html: svg, iconSize: [28, 28], iconAnchor: [14, 14] });
     }
-
     // Ícone do AGRUPAMENTO: nº de aparelhos; vermelho se algum estiver sem sinal.
     function iconeCluster(cluster) {
       const filhos = cluster.getAllChildMarkers();
@@ -137,21 +172,58 @@
         .catch((e) => { elErro.textContent = 'Falha no login: ' + e.message; })
         .finally(() => { btnEntrar.disabled = false; });
     });
-
     document.getElementById('sair').addEventListener('click', () => firebase.auth().signOut());
 
-    firebase.auth().onAuthStateChanged((user) => {
-      // So aceita login real (e-mail/senha do admin). Uma sessao ANONIMA antiga
-      // (de versoes anteriores do mapa) fica salva no navegador e nao tem mais
-      // permissao de leitura — descarta para nao "pular" o login mostrando 0.
-      if (user && user.isAnonymous) { firebase.auth().signOut(); return; }
-      if (user) {
-        elLogin.style.display = 'none';
-        iniciarMapa();
+    // Busca por nome/modelo: centraliza e abre o popup do aparelho encontrado.
+    document.getElementById('busca').addEventListener('keydown', (ev) => {
+      if (ev.key !== 'Enter') return;
+      const q = ev.target.value.trim().toLowerCase();
+      if (!q) return;
+      const id = Object.keys(ultimos).find((id) => {
+        const d = ultimos[id];
+        return nomeDe(d, id).toLowerCase().includes(q) || (d.modelo || '').toLowerCase().includes(q);
+      });
+      if (id && marcadores[id]) {
+        clusterGroup.zoomToShowLayer(marcadores[id], () => marcadores[id].openPopup());
       } else {
-        elLogin.style.display = 'flex';
-        status.textContent = 'desconectado';
+        alert('Aparelho não encontrado: ' + ev.target.value);
       }
+    });
+
+    // Ranking de desligados.
+    document.getElementById('ranking').addEventListener('click', abrirRanking);
+    document.getElementById('rankFechar').addEventListener('click', () => {
+      document.getElementById('ranking-modal').style.display = 'none';
+    });
+    document.getElementById('ranking-modal').addEventListener('click', (ev) => {
+      if (ev.target.id === 'ranking-modal') ev.target.style.display = 'none';
+    });
+    function abrirRanking() {
+      const lista = Object.keys(ultimos).map((id) => ({ id: id, d: ultimos[id], desde: ultimos[id].hora || 0 }))
+        .filter((x) => estaOffline(x.d)).sort((a, b) => a.desde - b.desde);
+      const cont = document.getElementById('rankConteudo');
+      if (!lista.length) {
+        cont.innerHTML = '<div class="vazio">✓ Nenhum aparelho desligado — todos enviando sinal.</div>';
+      } else {
+        let html = '<table><thead><tr><th>#</th><th>Aparelho</th><th>Desligado há</th><th>Bateria</th><th>Última vez</th></tr></thead><tbody>';
+        lista.forEach((x, i) => {
+          const bat = (x.d.bateria == null) ? '?' : (x.d.bateria + '%');
+          const batCls = (x.d.bateria != null && x.d.bateria <= 20) ? ' class="bat-baixa"' : '';
+          html += '<tr><td>' + (i + 1) + '</td>' +
+            '<td><b>' + nomeDe(x.d, x.id) + '</b><br><span style="color:#9fb0c0;font-size:12px">' + (x.d.modelo || '') + '</span></td>' +
+            '<td class="tempo">' + fmtHaQuanto(x.desde).replace('há ', '') + '</td>' +
+            '<td' + batCls + '>' + bat + '</td>' +
+            '<td>' + fmtHora(x.desde) + '</td></tr>';
+        });
+        cont.innerHTML = html + '</tbody></table>';
+      }
+      document.getElementById('ranking-modal').style.display = 'flex';
+    }
+
+    firebase.auth().onAuthStateChanged((user) => {
+      if (user && user.isAnonymous) { firebase.auth().signOut(); return; }
+      if (user) { elLogin.style.display = 'none'; iniciarMapa(); }
+      else { elLogin.style.display = 'flex'; status.textContent = 'desconectado'; }
     });
 
     function iniciarMapa() {
@@ -160,105 +232,206 @@
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19, attribution: '© OpenStreetMap'
         }).addTo(mapa);
-        // Agrupa aparelhos próximos; separa ao dar zoom / clicar (spiderfy no zoom máx).
         clusterGroup = L.markerClusterGroup({
-          iconCreateFunction: iconeCluster,
-          maxClusterRadius: 45,
-          showCoverageOnHover: false,
-          spiderfyOnMaxZoom: true
+          iconCreateFunction: iconeCluster, maxClusterRadius: 45,
+          showCoverageOnHover: false, spiderfyOnMaxZoom: true
         });
         mapa.addLayer(clusterGroup);
-        // Ao mover/dar zoom e ao (des)agrupar, reavalia quais nomes cabem sem sobrepor.
         mapa.on('zoomend moveend', declutter);
         clusterGroup.on('animationend', declutter);
+
+        // Botões de ação (centralizar, filtro só-problemas, exportar CSV).
+        const acoes = L.control({ position: 'topright' });
+        acoes.onAdd = function () {
+          const div = L.DomUtil.create('div', 'acoes-ctrl');
+          div.innerHTML =
+            '<button id="btnCentralizar" title="Centralizar na frota">🎯</button>' +
+            '<button id="btnFiltro" title="Mostrar só aparelhos com problema">🔴</button>' +
+            '<button id="btnCsv" title="Exportar planilha (CSV)">⬇️</button>';
+          L.DomEvent.disableClickPropagation(div);
+          return div;
+        };
+        acoes.addTo(mapa);
+        // Legenda.
+        const legenda = L.control({ position: 'bottomright' });
+        legenda.onAdd = function () {
+          const div = L.DomUtil.create('div', 'legenda-ctrl');
+          div.innerHTML = '<div><i style="background:#1f6feb"></i>OK (enviando)</div>' +
+                          '<div><i style="background:#e53935"></i>sem sinal +' + LIMITE_MIN + 'min</div>';
+          return div;
+        };
+        legenda.addTo(mapa);
+
+        document.getElementById('btnCentralizar').addEventListener('click', centralizarFrota);
+        document.getElementById('btnCsv').addEventListener('click', exportarCsv);
+        document.getElementById('btnFiltro').addEventListener('click', function () {
+          filtroProblemas = !filtroProblemas;
+          this.classList.toggle('ativo', filtroProblemas);
+          aplicarFiltro();
+        });
       }
-      if (!mapa._pintarTimer) {
-        mapa._pintarTimer = setInterval(pintar, 30000); // reavalia cores com o tempo
-      }
+      if (!mapa._pintarTimer) mapa._pintarTimer = setInterval(pintar, 30000);
       if (escutando) return;
       escutando = true;
       status.textContent = 'conectado';
-      firebase.database().ref('devices').on('value', (snap) => {
-        const dados = snap.val() || {};
-        const vistos = new Set();
-        let bounds = [];
-        Object.keys(dados).forEach((id) => {
-          const d = dados[id];
-          if (typeof d.lat !== 'number' || typeof d.lon !== 'number') return;
-          vistos.add(id);
-          ultimos[id] = d;
-          const nome = (d.nome && d.nome.trim()) ? d.nome.trim() : (d.modelo || id);
-          if (marcadores[id]) {
-            const m = marcadores[id];
-            const ll = m.getLatLng();
-            if (ll.lat !== d.lat || ll.lng !== d.lon) {
-              // Posição mudou: reposiciona no cluster certo.
-              clusterGroup.removeLayer(m);
-              m.setLatLng([d.lat, d.lon]);
-              clusterGroup.addLayer(m);
-            }
-            m.setTooltipContent(nome);
-          } else {
-            marcadores[id] = L.marker([d.lat, d.lon], { icon: iconePino(false) })
-              .bindPopup('', { maxWidth: 280 })
-              .bindTooltip(nome, { permanent: true, direction: 'top', offset: [0, -16], className: 'rotulo-kiox' });
-            marcadores[id].options.offline = false;
-            clusterGroup.addLayer(marcadores[id]);
-          }
-          bounds.push([d.lat, d.lon]);
-        });
-        // remove aparelhos que sumiram do banco
-        Object.keys(marcadores).forEach((id) => {
-          if (!vistos.has(id)) {
-            clusterGroup.removeLayer(marcadores[id]);
-            delete marcadores[id]; delete ultimos[id];
-          }
-        });
-        pintar();
-        // Enquadra a frota só na 1ª carga (não fica "pulando" a cada atualização).
-        if (!jaEnquadrou && bounds.length) {
-          mapa.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
-          jaEnquadrou = true;
+      // Estado REAL da conexão com o servidor (não do login). Sem isto, uma queda
+      // momentânea do WebSocket do Firebase faz o mapa "piscar" para 0 aparelhos.
+      firebase.database().ref('.info/connected').on('value', (s) => {
+        conectadoRTDB = (s.val() === true);
+        if (!conectadoRTDB) {
+          status.innerHTML = '<span style="color:#ffb84a">reconectando ao servidor…</span>';
         }
-      }, (err) => { status.textContent = 'sem permissão de leitura: ' + err.message; });
+      });
+      const refDevices = firebase.database().ref('devices');
+      const onErroLeitura = (err) => { status.textContent = 'sem permissão de leitura: ' + err.message; };
+      // Listeners POR FILHO: o Firebase envia só o registro que MUDA (~1 KB), em vez do
+      // nó inteiro (~50 KB) a cada atualização de qualquer aparelho. Economiza muito
+      // download com a frota grande (evita estourar a cota do plano free).
+      refDevices.on('child_added', (s) => { todos[s.key] = s.val(); recalcular(); }, onErroLeitura);
+      refDevices.on('child_changed', (s) => { todos[s.key] = s.val(); recalcular(); }, onErroLeitura);
+      refDevices.on('child_removed', (s) => { delete todos[s.key]; recalcular(); });
     }
 
-    // Recolore pinos e clusters pelo tempo desde a última atualização (azul = ok,
-    // vermelho = sem sinal) e reescreve os popups. Roda no evento e a cada 30s.
+    // Reconstrói os marcadores a partir de `todos` (todos os registros do banco),
+    // deduplicando por androidId: só o registro MAIS RECENTE de cada aparelho físico.
+    // Roda localmente a cada evento — não gera download (o dado já veio no evento).
+    function recalcular() {
+      const melhorPorAndroid = {};
+      const idsMostrar = [];
+      Object.keys(todos).forEach((id) => {
+        const d = todos[id];
+        if (!d || typeof d.lat !== 'number' || typeof d.lon !== 'number') return;
+        const aid = d.androidId;
+        if (!aid) { idsMostrar.push(id); return; }
+        const ant = melhorPorAndroid[aid];
+        if (ant == null || (d.hora || 0) > (todos[ant].hora || 0)) melhorPorAndroid[aid] = id;
+      });
+      Object.keys(melhorPorAndroid).forEach((aid) => idsMostrar.push(melhorPorAndroid[aid]));
+      const vistos = new Set();
+      let bounds = [];
+      idsMostrar.forEach((id) => {
+        const d = todos[id];
+        vistos.add(id);
+        ultimos[id] = d;
+        const nome = nomeDe(d, id);
+        if (marcadores[id]) {
+          const m = marcadores[id];
+          const ll = m.getLatLng();
+          if (ll.lat !== d.lat || ll.lng !== d.lon) {
+            enderecos[id] = null;   // mudou de lugar: re-busca o endereço
+            clusterGroup.removeLayer(m);
+            m.setLatLng([d.lat, d.lon]);
+            clusterGroup.addLayer(m);
+          }
+          m.setTooltipContent(nome);
+        } else {
+          const m = L.marker([d.lat, d.lon], { icon: iconePino(false) })
+            .bindPopup('', { maxWidth: 300 })
+            .bindTooltip(nome, { permanent: true, direction: 'top', offset: [0, -16], className: 'rotulo-kiox' });
+          m.options.offline = false;
+          m.on('popupopen', () => onPopupOpen(id));
+          m.on('popupclose', onPopupClose);
+          marcadores[id] = m;
+          clusterGroup.addLayer(m);
+        }
+        bounds.push([d.lat, d.lon]);
+      });
+      Object.keys(marcadores).forEach((id) => {
+        if (!vistos.has(id)) {
+          clusterGroup.removeLayer(marcadores[id]);
+          delete marcadores[id]; delete ultimos[id]; delete enderecos[id];
+        }
+      });
+      pintar();
+      // Enquadra a frota só na 1ª carga, com debounce: espera os child_added iniciais
+      // pararem de chegar (~600ms) para enquadrar TODOS, não só o primeiro.
+      if (!jaEnquadrou && bounds.length) {
+        clearTimeout(enquadrarTimer);
+        enquadrarTimer = setTimeout(() => {
+          const pts = Object.keys(marcadores).map((id) => marcadores[id].getLatLng());
+          if (pts.length) { mapa.fitBounds(L.latLngBounds(pts), { padding: [40, 40], maxZoom: 16 }); jaEnquadrou = true; }
+        }, 600);
+      }
+    }
+
+    // Monta o conteúdo do popup de um aparelho (usa o endereço em cache, se houver).
+    function popupHtml(id) {
+      const d = ultimos[id]; if (!d) return '';
+      const offline = estaOffline(d);
+      const aviso = offline ? '<br><b style="color:#e53935">⚠ SEM SINAL ' + fmtHaQuanto(d.hora) + '</b>' : '';
+      const bat = (d.bateria == null) ? '?' : (d.bateria + '%');
+      const batStyle = (d.bateria != null && d.bateria <= 20) ? 'color:#e53935;font-weight:700' : '';
+      const gmaps = 'https://www.google.com/maps?q=' + d.lat + ',' + d.lon;
+      // Botão remover SEMPRE (azul ou vermelho) — útil p/ limpar duplicatas. Aviso:
+      // se o aparelho ainda estiver ativo, ele reaparece no próximo envio.
+      const btnRemover = '<button onclick="removerDevice(\'' + id + '\')" style="background:#e53935;color:#fff;border:0;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:13px">Remover do mapa</button>';
+      return '<div class="info"><b>' + nomeDe(d, id) + '</b>' + aviso + '<br>' +
+        'Modelo: ' + (d.modelo || '?') + '<br>' +
+        '🔋 Bateria: <span style="' + batStyle + '">' + bat + '</span><br>' +
+        'Precisão: ' + (d.precisao_m ? Math.round(d.precisao_m) + ' m' : '?') + '<br>' +
+        'Versão: ' + (d.versao || '?') + '<br>' +
+        'Atualizado: ' + fmtHora(d.hora) + ' (' + fmtHaQuanto(d.hora) + ')<br>' +
+        'ID: <code style="font-size:11px;color:#9fb0c0">' + id.slice(0, 14) + '…</code><br>' +
+        '📍 ' + (enderecos[id] || '<i>buscando endereço…</i>') +
+        '<div style="margin-top:9px;display:flex;gap:6px;flex-wrap:wrap">' +
+        '<a class="gmaps" href="' + gmaps + '" target="_blank" rel="noopener">Abrir no Google Maps</a>' +
+        btnRemover + '</div></div>';
+    }
+
+    // Geocoding reverso (OpenStreetMap/Nominatim) — só sob demanda, ao abrir o popup.
+    function buscarEndereco(id) {
+      const d = ultimos[id]; if (!d || enderecos[id]) return;
+      enderecos[id] = '<i>buscando endereço…</i>';
+      fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&lat=' + d.lat + '&lon=' + d.lon,
+            { headers: { 'Accept-Language': 'pt-BR' } })
+        .then((r) => r.json())
+        .then((j) => {
+          const a = j.address || {};
+          const rua = a.road || a.pedestrian || a.cycleway || '';
+          const num = a.house_number ? ', ' + a.house_number : '';
+          const bairro = a.suburb || a.neighbourhood || a.quarter || '';
+          const cidade = a.city || a.town || a.village || a.municipality || '';
+          const uf = a.state || '';
+          const partes = [(rua ? rua + num : ''), bairro, cidade, uf].filter(Boolean);
+          enderecos[id] = partes.length ? partes.join(' · ')
+            : (j.display_name || 'endereço indisponível');
+          if (marcadores[id] && marcadores[id].isPopupOpen()) marcadores[id].setPopupContent(popupHtml(id));
+        })
+        .catch(() => {
+          enderecos[id] = 'endereço indisponível';
+          if (marcadores[id] && marcadores[id].isPopupOpen()) marcadores[id].setPopupContent(popupHtml(id));
+        });
+    }
+
+    function onPopupOpen(id) {
+      const d = ultimos[id]; if (!d) return;
+      marcadores[id].setPopupContent(popupHtml(id));
+      buscarEndereco(id);
+      if (circuloPrecisao) { mapa.removeLayer(circuloPrecisao); circuloPrecisao = null; }
+      if (d.precisao_m) {
+        circuloPrecisao = L.circle([d.lat, d.lon], {
+          radius: d.precisao_m, color: '#1f6feb', weight: 1, fillColor: '#1f6feb', fillOpacity: 0.1
+        }).addTo(mapa);
+      }
+    }
+    function onPopupClose() {
+      if (circuloPrecisao) { mapa.removeLayer(circuloPrecisao); circuloPrecisao = null; }
+    }
+
+    // Recolore pinos/clusters pelo tempo sem sinal e reescreve os popups.
     function pintar() {
-      const limiteMs = LIMITE_MIN * 60000;
       let problemas = 0, total = 0;
       Object.keys(marcadores).forEach((id) => {
         const d = ultimos[id]; if (!d) return;
         total++;
-        const offline = !d.hora || (Date.now() - d.hora) > limiteMs;
+        const offline = estaOffline(d);
         if (offline) problemas++;
         const m = marcadores[id];
-        if (m.options.offline !== offline) {
-          m.options.offline = offline;
-          m.setIcon(iconePino(offline));
-        }
-        const nome = (d.nome && d.nome.trim()) ? d.nome.trim() : (d.modelo || id);
-        const aviso = offline
-          ? '<br><b style="color:#e53935">⚠ SEM SINAL ' + fmtHaQuanto(d.hora) + '</b>'
-          : '';
-        // Botão de remover só nos aparelhos sem sinal (fantasmas: formatados/desativados).
-        const btnRemover = offline
-          ? '<br><button onclick="removerDevice(\'' + id + '\')" ' +
-            'style="margin-top:8px;padding:6px 12px;border:0;border-radius:6px;' +
-            'background:#e53935;color:#fff;cursor:pointer;font-size:13px">Remover do mapa</button>'
-          : '';
-        m.setPopupContent(
-          '<div class="info"><b>' + nome + '</b>' + aviso + '<br>' +
-          'Modelo: ' + (d.modelo || '?') + '<br>' +
-          'Bateria: ' + (d.bateria ?? '?') + '%<br>' +
-          'Precisão: ' + (d.precisao_m ? Math.round(d.precisao_m) + ' m' : '?') + '<br>' +
-          'Versão: ' + (d.versao || '?') + '<br>' +
-          'Atualizado: ' + fmtHora(d.hora) + ' (' + fmtHaQuanto(d.hora) + ')' +
-          btnRemover + '</div>'
-        );
+        if (m.options.offline !== offline) { m.options.offline = offline; m.setIcon(iconePino(offline)); }
+        m.setPopupContent(popupHtml(id));
       });
       if (clusterGroup) clusterGroup.refreshClusters();
+      aplicarFiltro();
       qtdEl.textContent = total;
       if (total > 0) {
         status.innerHTML = problemas > 0
@@ -268,13 +441,10 @@
       setTimeout(declutter, 0);
     }
 
-    // Esconde os nomes (rótulos) que se sobreporiam, priorizando os SEM sinal. Ao dar
-    // zoom os pontos se afastam e mais nomes reaparecem. Não altera os pinos, só a
-    // visibilidade dos rótulos. Roda a cada zoom/move/(des)agrupamento/atualização.
+    // Esconde nomes que se sobreporiam, priorizando os SEM sinal.
     function declutter() {
       if (!mapa || !clusterGroup) return;
       const ocupados = [];
-      // Sem sinal primeiro: o rótulo do aparelho problemático tem prioridade.
       const ids = Object.keys(marcadores).sort((a, b) =>
         (marcadores[b].options.offline ? 1 : 0) - (marcadores[a].options.offline ? 1 : 0));
       ids.forEach((id) => {
@@ -282,25 +452,60 @@
         const tt = m.getTooltip();
         const el = tt && tt.getElement();
         if (!el) return;
-        if (clusterGroup.getVisibleParent(m) !== m) return; // agrupado: o cluster o representa
+        if (clusterGroup.getVisibleParent(m) !== m) return;
         const p = mapa.latLngToContainerPoint(m.getLatLng());
         const w = el.offsetWidth || 60, h = el.offsetHeight || 16;
         const r = { x: p.x - w / 2, y: p.y - 26 - h, w: w, h: h };
-        const colide = ocupados.some((o) =>
-          r.x < o.x + o.w && r.x + r.w > o.x && r.y < o.y + o.h && r.y + r.h > o.y);
+        const colide = ocupados.some((o) => r.x < o.x + o.w && r.x + r.w > o.x && r.y < o.y + o.h && r.y + r.h > o.y);
         if (colide) { el.style.display = 'none'; }
         else { el.style.display = ''; ocupados.push(r); }
       });
     }
 
-    // Remove um aparelho "fantasma" do banco (ex.: formatado/desativado). Só o admin
-    // tem permissão (ver regras). O listener on('value') tira o pino sozinho depois.
+    // Filtro "só com problema": mantém no mapa só os aparelhos sem sinal.
+    function aplicarFiltro() {
+      if (!clusterGroup) return;
+      Object.keys(marcadores).forEach((id) => {
+        const m = marcadores[id];
+        const mostrar = !filtroProblemas || m.options.offline;
+        const tem = clusterGroup.hasLayer(m);
+        if (mostrar && !tem) clusterGroup.addLayer(m);
+        else if (!mostrar && tem) clusterGroup.removeLayer(m);
+      });
+    }
+
+    function centralizarFrota() {
+      const pts = [];
+      Object.keys(marcadores).forEach((id) => { if (clusterGroup.hasLayer(marcadores[id])) pts.push(marcadores[id].getLatLng()); });
+      if (pts.length) mapa.fitBounds(L.latLngBounds(pts), { padding: [40, 40], maxZoom: 16 });
+    }
+
+    // Exporta a frota atual em CSV (abre no Excel).
+    function exportarCsv() {
+      const linhas = [['Nome', 'Modelo', 'Status', 'Bateria_%', 'Latitude', 'Longitude', 'Precisao_m', 'Versao', 'Ultima_atualizacao']];
+      Object.keys(ultimos).forEach((id) => {
+        const d = ultimos[id];
+        linhas.push([
+          nomeDe(d, id), d.modelo || '', estaOffline(d) ? 'SEM SINAL' : 'OK',
+          (d.bateria == null ? '' : d.bateria), d.lat, d.lon,
+          (d.precisao_m ? Math.round(d.precisao_m) : ''), d.versao || '',
+          d.hora ? new Date(d.hora).toLocaleString('pt-BR') : ''
+        ]);
+      });
+      const csv = linhas.map((l) => l.map((c) => '"' + String(c).replace(/"/g, '""') + '"').join(';')).join('\r\n');
+      const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'frota-kiox.csv';
+      document.body.appendChild(a); a.click(); a.remove();
+    }
+
+    // Remove um aparelho "fantasma" do banco (formatado/desativado). Só o admin.
     function removerDevice(id) {
       const d = ultimos[id] || {};
-      const nome = (d.nome && d.nome.trim()) ? d.nome.trim() : (d.modelo || id);
-      if (!confirm('Remover "' + nome + '" do mapa?\n\nIsso apaga o registro no banco. Se o aparelho voltar a enviar, ele reaparece.')) return;
+      if (!confirm('Remover "' + nomeDe(d, id) + '" do mapa?\n\nIsso apaga o registro no banco. Se o aparelho voltar a enviar, ele reaparece.')) return;
       firebase.database().ref('devices/' + id).remove()
-        .then(() => { if (marcadores[id]) { marcadores[id].closePopup(); } })
+        .then(() => { if (marcadores[id]) marcadores[id].closePopup(); })
         .catch((e) => alert('Falha ao remover: ' + e.message));
     }
   </script>

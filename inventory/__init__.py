@@ -405,7 +405,7 @@ def create_app():
         csp = (
             "default-src 'self'; "
             "img-src 'self' data: https:; "
-            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://www.gstatic.com; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://www.gstatic.com https://*.firebaseio.com; "
             "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; "
             "font-src 'self' data: https://cdn.jsdelivr.net; "
             "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com wss://*.firebaseio.com; "
