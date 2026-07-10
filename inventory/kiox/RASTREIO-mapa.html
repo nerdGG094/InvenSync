@@ -138,13 +138,17 @@
     }
 
     // Ícone do pino: um CELULAR colorido (azul = ok, vermelho = sem sinal).
-    function iconePino(offline) {
+    // Com um RAIO amarelo por cima quando está na tomada (carregando).
+    function iconePino(offline, carregando) {
       const cor = offline ? '#e53935' : '#1f6feb';
+      const raio = carregando
+        ? '<path d="M12.8 5 L9.5 12 L11.6 12 L11.2 17.5 L14.5 10 L12.3 10 Z" fill="#ffd400" stroke="#4a3b00" stroke-width="0.5" stroke-linejoin="round"/>'
+        : '';
       const svg =
         '<svg width="28" height="28" viewBox="0 0 24 24" style="filter:drop-shadow(0 1px 2px rgba(0,0,0,.55))">' +
         '<rect x="5" y="1.5" width="14" height="21" rx="3" fill="' + cor + '" stroke="#fff" stroke-width="1.6"/>' +
         '<line x1="10" y1="4" x2="14" y2="4" stroke="#fff" stroke-width="1.3" stroke-linecap="round"/>' +
-        '<circle cx="12" cy="19.5" r="1.15" fill="#fff"/></svg>';
+        '<circle cx="12" cy="19.5" r="1.15" fill="#fff"/>' + raio + '</svg>';
       return L.divIcon({ className: '', html: svg, iconSize: [28, 28], iconAnchor: [14, 14] });
     }
     // Ícone do AGRUPAMENTO: nº de aparelhos; vermelho se algum estiver sem sinal.
@@ -212,7 +216,7 @@
           html += '<tr><td>' + (i + 1) + '</td>' +
             '<td><b>' + nomeDe(x.d, x.id) + '</b><br><span style="color:#9fb0c0;font-size:12px">' + (x.d.modelo || '') + '</span></td>' +
             '<td class="tempo">' + fmtHaQuanto(x.desde).replace('há ', '') + '</td>' +
-            '<td' + batCls + '>' + bat + '</td>' +
+            '<td' + batCls + '>' + bat + (x.d.carregando ? ' ⚡' : '') + '</td>' +
             '<td>' + fmtHora(x.desde) + '</td></tr>';
         });
         cont.innerHTML = html + '</tbody></table>';
@@ -257,7 +261,8 @@
         legenda.onAdd = function () {
           const div = L.DomUtil.create('div', 'legenda-ctrl');
           div.innerHTML = '<div><i style="background:#1f6feb"></i>OK (enviando)</div>' +
-                          '<div><i style="background:#e53935"></i>sem sinal +' + LIMITE_MIN + 'min</div>';
+                          '<div><i style="background:#e53935"></i>sem sinal +' + LIMITE_MIN + 'min</div>' +
+                          '<div><span style="color:#ffd400;font-weight:700;margin-right:7px">⚡</span>na tomada</div>';
           return div;
         };
         legenda.addTo(mapa);
@@ -325,10 +330,11 @@
           }
           m.setTooltipContent(nome);
         } else {
-          const m = L.marker([d.lat, d.lon], { icon: iconePino(false) })
+          const m = L.marker([d.lat, d.lon], { icon: iconePino(false, !!d.carregando) })
             .bindPopup('', { maxWidth: 300 })
             .bindTooltip(nome, { permanent: true, direction: 'top', offset: [0, -16], className: 'rotulo-kiox' });
           m.options.offline = false;
+          m.options.carregando = !!d.carregando;
           m.on('popupopen', () => onPopupOpen(id));
           m.on('popupclose', onPopupClose);
           marcadores[id] = m;
@@ -367,7 +373,9 @@
       const btnRemover = '<button onclick="removerDevice(\'' + id + '\')" style="background:#e53935;color:#fff;border:0;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:13px">Remover do mapa</button>';
       return '<div class="info"><b>' + nomeDe(d, id) + '</b>' + aviso + '<br>' +
         'Modelo: ' + (d.modelo || '?') + '<br>' +
-        '🔋 Bateria: <span style="' + batStyle + '">' + bat + '</span><br>' +
+        '🔋 Bateria: <span style="' + batStyle + '">' + bat + '</span>' +
+        (d.carregando ? ' <span style="color:#2ea043;font-weight:600">⚡ na tomada</span>'
+                      : ' <span style="color:#9fb0c0">(na bateria)</span>') + '<br>' +
         'Precisão: ' + (d.precisao_m ? Math.round(d.precisao_m) + ' m' : '?') + '<br>' +
         'Versão: ' + (d.versao || '?') + '<br>' +
         'Atualizado: ' + fmtHora(d.hora) + ' (' + fmtHaQuanto(d.hora) + ')<br>' +
@@ -426,8 +434,12 @@
         total++;
         const offline = estaOffline(d);
         if (offline) problemas++;
+        const carr = !!d.carregando;
         const m = marcadores[id];
-        if (m.options.offline !== offline) { m.options.offline = offline; m.setIcon(iconePino(offline)); }
+        if (m.options.offline !== offline || m.options.carregando !== carr) {
+          m.options.offline = offline; m.options.carregando = carr;
+          m.setIcon(iconePino(offline, carr));
+        }
         m.setPopupContent(popupHtml(id));
       });
       if (clusterGroup) clusterGroup.refreshClusters();
@@ -482,12 +494,12 @@
 
     // Exporta a frota atual em CSV (abre no Excel).
     function exportarCsv() {
-      const linhas = [['Nome', 'Modelo', 'Status', 'Bateria_%', 'Latitude', 'Longitude', 'Precisao_m', 'Versao', 'Ultima_atualizacao']];
+      const linhas = [['Nome', 'Modelo', 'Status', 'Bateria_%', 'Na_tomada', 'Latitude', 'Longitude', 'Precisao_m', 'Versao', 'Ultima_atualizacao']];
       Object.keys(ultimos).forEach((id) => {
         const d = ultimos[id];
         linhas.push([
           nomeDe(d, id), d.modelo || '', estaOffline(d) ? 'SEM SINAL' : 'OK',
-          (d.bateria == null ? '' : d.bateria), d.lat, d.lon,
+          (d.bateria == null ? '' : d.bateria), (d.carregando ? 'Sim' : 'Nao'), d.lat, d.lon,
           (d.precisao_m ? Math.round(d.precisao_m) : ''), d.versao || '',
           d.hora ? new Date(d.hora).toLocaleString('pt-BR') : ''
         ]);
