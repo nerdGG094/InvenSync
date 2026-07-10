@@ -9,9 +9,11 @@ Também é importável pelo app (rota admin "Backups"):
 
 Configuração (via .env):
     DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD   (já usados pelo app)
-    BACKUP_DIR    pasta de destino (default: <projeto>/backups)
-    BACKUP_KEEP   quantos backups manter (default: 30)
-    PG_DUMP       caminho do pg_dump.exe (default: autodetecta o PostgreSQL instalado)
+    BACKUP_DIR         pasta de destino (default: <projeto>/backups)
+    BACKUP_MIRROR_DIR  2º destino redundante/offsite (outro disco, pasta ou
+                       compartilhamento de rede, ex.: \\NAS\backups). Vazio = off.
+    BACKUP_KEEP        quantos backups manter em cada destino (default: 30)
+    PG_DUMP            caminho do pg_dump.exe (default: autodetecta o PostgreSQL)
 
 Pensado para ser chamado por uma Tarefa Agendada do Windows (diária).
 """
@@ -81,6 +83,36 @@ def _rotate():
             pass
 
 
+def _mirror_dir():
+    """2º destino do backup (BACKUP_MIRROR_DIR): outro disco, pasta ou
+    compartilhamento de rede (ex.: \\\\NAS\\backups). Vazio = desligado."""
+    d = (os.environ.get("BACKUP_MIRROR_DIR") or "").strip()
+    return Path(d) if d else None
+
+
+def _mirror(out: Path):
+    """Copia o dump para o destino redundante e aplica a mesma rotação.
+    Best-effort: se o destino estiver fora/indisponível, NÃO derruba o backup
+    principal — apenas sinaliza a falha na mensagem de retorno."""
+    md = _mirror_dir()
+    if not md:
+        return None
+    try:
+        import shutil
+        md.mkdir(parents=True, exist_ok=True)
+        dst = md / out.name
+        shutil.copy2(out, dst)
+        files = sorted(md.glob("*.dump"), key=lambda p: p.stat().st_mtime, reverse=True)
+        for old in files[_keep():]:
+            try:
+                old.unlink()
+            except OSError:
+                pass
+        return dst
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def run_backup(timestamp: str = None):
     """Gera um backup. Retorna (ok: bool, mensagem: str, caminho|None)."""
     host = os.environ.get("DB_HOST", "127.0.0.1")
@@ -114,7 +146,10 @@ def run_backup(timestamp: str = None):
 
     _rotate()
     size = out.stat().st_size if out.exists() else 0
-    return True, f"Backup gerado: {out.name} ({size/1024/1024:.1f} MB)", str(out)
+    msg = f"Backup gerado: {out.name} ({size/1024/1024:.1f} MB)"
+    if _mirror_dir():
+        msg += " · espelhado" if _mirror(out) else " · ESPELHO FALHOU (confira BACKUP_MIRROR_DIR)"
+    return True, msg, str(out)
 
 
 if __name__ == "__main__":
