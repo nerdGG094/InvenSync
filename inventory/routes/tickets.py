@@ -324,14 +324,10 @@ def comment(tid):
         new_status = form.new_status.data if current_user.is_admin else None
         ticket_repo.add_comment(t, body=body, author_id=current_user.id,
                                 new_status=new_status or None)
-        # Notificações por WhatsApp + e-mail (best-effort)
+        # Respostas/andamentos: SEM WhatsApp (economiza a cota do CallMeBot).
+        # O WhatsApp fica só na ABERTURA do chamado; aqui mantemos só o e-mail.
         if current_user.is_admin:
             _st = STATUS_LABELS.get(t.status, t.status)
-            whatsapp.notify_user(
-                t.opened_by,
-                f"🔔 *Chamado {t.code}* atualizado por {current_user.name}:\n{body}\n"
-                f"Status: {_st}"
-            )
             mailer.notify_user(
                 t.opened_by,
                 f"[InvenSync] Chamado {t.code} atualizado — {t.title}",
@@ -339,9 +335,6 @@ def comment(tid):
                 f"Status: {_st}\n\n{body}"
             )
         else:
-            whatsapp.notify_ti(
-                f"💬 *{t.requester or current_user.name}* respondeu no chamado {t.code}:\n{body}"
-            )
             mailer.notify_ti(
                 f"[InvenSync] Resposta no chamado {t.code} — {t.title}",
                 f"{t.requester or current_user.name} respondeu no chamado {t.code}:\n\n{body}"
@@ -367,10 +360,7 @@ def assume(tid):
         author_id=current_user.id, new_status=new_status,
     )
     audit.record("update", "ticket", t.id, f"Assumiu o chamado {t.code}")
-    whatsapp.notify_user(
-        t.opened_by,
-        f"👤 *Chamado {t.code}* foi assumido por {current_user.name} e está em atendimento."
-    )
+    # Sem WhatsApp aqui — o CallMeBot fica só na abertura do chamado.
     flash(f"Você assumiu o chamado {t.code}.", "success")
     return redirect(request.referrer or url_for("tickets.list_view"))
 
