@@ -10,29 +10,11 @@ Agrupa os produtos em colunas conforme o saldo atual versus o estoque mínimo:
 """
 from flask import Blueprint, render_template
 from flask_login import login_required
-from sqlalchemy import func, case
 
-from ..extensions import db
 from ..models.product import Product
-from ..models.movement import StockMovement
+from ..repositories import product_repo
 
 bp = Blueprint("kanban", __name__)
-
-
-def _stock_map():
-    """Calcula o saldo de todos os produtos em uma única query (Entradas - Saídas)."""
-    signed_qty = func.sum(
-        case(
-            (StockMovement.movement_type == "IN", StockMovement.quantity),
-            else_=-StockMovement.quantity,
-        )
-    )
-    rows = (
-        db.session.query(StockMovement.product_id, signed_qty)
-        .group_by(StockMovement.product_id)
-        .all()
-    )
-    return {pid: int(qty or 0) for pid, qty in rows}
 
 
 def _classify(stock: int, minimo: int) -> str:
@@ -49,7 +31,7 @@ def _classify(stock: int, minimo: int) -> str:
 @login_required
 def board():
     products = Product.query.order_by(Product.name.asc()).all()
-    stock_by_id = _stock_map()
+    stock_by_id = product_repo.stock_map()
 
     columns = {
         "out":  {"key": "out",  "title": "Sem estoque",      "icon": "x-octagon",          "accent": "danger",  "cards": []},

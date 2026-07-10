@@ -5,7 +5,7 @@ from flask import Blueprint, render_template
 from flask_login import login_required
 from sqlalchemy import func, case
 
-from ..repositories.product_repo import list_products, current_stock
+from ..repositories.product_repo import list_products, stock_lookup
 from ..services.inventory_service import low_stock_products
 from ..extensions import db
 from ..models.movement import StockMovement
@@ -39,6 +39,7 @@ def _safe_count(model):
 def index():
     # ===== Produtos / Estoque geral =====
     products = list_products() or []
+    current_stock = stock_lookup()   # saldo de todos numa única query (sem N+1)
     total_items = sum(max(current_stock(p) or 0, 0) for p in products)
     low = low_stock_products(products) or []
 

@@ -36,12 +36,13 @@ _lock = threading.Lock()
 # ---------------------------------------------------------------------------
 def _low_stock():
     """[(produto, estoque_atual, minimo)] para itens no/abaixo do mínimo."""
+    smap = product_repo.stock_map()   # saldo de todos numa query (sem N+1)
     out = []
     for p in Product.query.all():
         mn = int(p.min_stock or 0)
         if mn <= 0:
             continue
-        est = product_repo.current_stock(p)
+        est = smap.get(p.id, 0)
         if est <= mn:
             out.append((p, est, mn))
     out.sort(key=lambda x: (x[1] - x[2]))  # mais críticos primeiro

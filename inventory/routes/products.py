@@ -138,12 +138,15 @@ def list_view():
     q = request.args.get("q", "")
     items = product_repo.list_products(q)
 
+    # Saldo de todos os produtos numa única query (evita N+1).
+    stock_fn = product_repo.stock_lookup()
+
     # Totais para os cartões-resumo (refletem o filtro de busca atual).
     total_qty = 0
     total_value = 0.0
     low_count = 0
     for p in items:
-        est = product_repo.current_stock(p)
+        est = stock_fn(p)
         total_qty += est
         total_value += est * float(p.price or 0)
         if est <= (p.min_stock or 0):
@@ -155,7 +158,7 @@ def list_view():
     return render_template(
         "products/list.html",
         items=items, q=q, pag=pag,
-        current_stock=product_repo.current_stock,
+        current_stock=stock_fn,
         total_qty=total_qty,
         total_value=total_value,
         low_count=low_count,

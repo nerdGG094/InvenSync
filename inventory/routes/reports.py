@@ -7,7 +7,7 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy import or_
 from io import StringIO
 import csv
-from ..repositories.product_repo import list_products, current_stock
+from ..repositories.product_repo import list_products, stock_lookup
 from ..models.product import Product
 from ..models.movement import StockMovement
 
@@ -65,7 +65,7 @@ def _saida_unit_value(m):
 @login_required
 def stock():
     products = list_products()
-    return render_template("reports/stock.html", products=products, current_stock=current_stock)
+    return render_template("reports/stock.html", products=products, current_stock=stock_lookup())
 
 @bp.route("/saidas")
 @login_required
@@ -128,6 +128,7 @@ def export_products():
         "Localização", "Nº Patrimônio", "Nº Série", "Compatibilidade",
         "Validade", "Estoque Atual", "Mínimo", "Preço", "Criado em",
     ])
+    cs = stock_lookup()
     for p in list_products():
         cw.writerow([
             p.sku, p.name,
@@ -137,7 +138,7 @@ def export_products():
             p.location or "", p.patrimony or "", p.serial_number or "",
             (p.compatibility or "").replace("\n", " ").strip(),
             p.expiry_date.strftime("%Y-%m-%d") if p.expiry_date else "",
-            current_stock(p),
+            cs(p),
             p.min_stock or 0,
             f"{p.price:.2f}",
             p.created_at.strftime("%Y-%m-%d %H:%M") if p.created_at else "",

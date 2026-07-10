@@ -7,10 +7,34 @@ os nomes que aparecem nos ativos (Máquinas / Celulares) ainda não cadastrados.
 Usado para padronizar o combobox de responsável + setor automático em Chamados,
 Celulares, Movimentações, Materiais e Máquinas.
 """
+import time
+
+from flask import current_app
+
 from ..extensions import db
 from ..models.machine import Machine
 from ..models.mobile import MobileDevice
 from ..models.user import User
+
+# Cache de curta duração do mapa nome->setor. Ele é reconstruído por 3 varreduras
+# (Máquinas, Celulares, Pessoas) e era refeito a CADA render de formulário — caro
+# em telas com vários selects. TTL curto + invalidação ao mexer em Colaboradores.
+# Desligado sob TESTING para os testes sempre verem o estado atual do banco.
+_MAP_CACHE = {"data": None, "ts": 0.0}
+_MAP_TTL = 60.0  # segundos
+
+
+def invalidate_people_cache(*_args, **_kwargs):
+    """Zera o cache do mapa de pessoas."""
+    _MAP_CACHE["data"] = None
+
+
+# Invalida o cache automaticamente sempre que uma pessoa/ativo muda (ORM),
+# cobrindo Colaboradores, Perfil, Máquinas e Celulares sem fiar em cada rota.
+from sqlalchemy import event as _event  # noqa: E402
+for _model in (User, Machine, MobileDevice):
+    for _evt in ("after_insert", "after_update", "after_delete"):
+        _event.listen(_model, _evt, invalidate_people_cache)
 
 
 def users_sector_map() -> dict:
@@ -20,6 +44,11 @@ def users_sector_map() -> dict:
     desde o último boot). Por cima, o cadastro central de pessoas ativas — a
     fonte da verdade, que inclui quem não tem ativo nem login.
     """
+    if (_MAP_CACHE["data"] is not None
+            and (time.monotonic() - _MAP_CACHE["ts"]) < _MAP_TTL
+            and not current_app.config.get("TESTING")):
+        return _MAP_CACHE["data"]
+
     info = {}
 
     # Compatibilidade: nomes que já estão nos ativos. Só lemos as duas colunas
@@ -39,6 +68,8 @@ def users_sector_map() -> dict:
         if nome:
             info[nome] = (sector or "").strip() or info.get(nome, "")
 
+    _MAP_CACHE["data"] = info
+    _MAP_CACHE["ts"] = time.monotonic()
     return info
 
 

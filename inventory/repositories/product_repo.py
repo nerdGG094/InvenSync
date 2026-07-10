@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from sqlalchemy import or_
+from sqlalchemy import or_, func, case
 from ..extensions import db
 from ..models.product import Product
 
@@ -113,6 +113,9 @@ def current_stock(p: Product) -> int:
     """
     Retorna o saldo (Entradas - Saídas) do produto.
     Usa somente o relacionamento p.movements (sem importar Movement).
+
+    ATENÇÃO: em LISTAGENS use stock_map()/stock_lookup() — chamar isto produto
+    a produto gera N+1 (um SELECT de movimentações por produto).
     """
     inbound = 0
     outbound = 0
@@ -125,3 +128,25 @@ def current_stock(p: Product) -> int:
             outbound += int(m.quantity or 0)
 
     return int(inbound - outbound)
+
+
+def stock_map(product_ids=None) -> dict:
+    """Saldo (Entradas - Saídas) de todos os produtos em UMA query agregada.
+    Evita o N+1 de chamar current_stock() produto a produto. -> {product_id: saldo}."""
+    from ..models.movement import StockMovement
+    signed = func.sum(case(
+        (StockMovement.movement_type == "IN", StockMovement.quantity),
+        else_=-StockMovement.quantity,
+    ))
+    q = db.session.query(StockMovement.product_id, signed)
+    if product_ids is not None:
+        q = q.filter(StockMovement.product_id.in_(list(product_ids)))
+    rows = q.group_by(StockMovement.product_id).all()
+    return {pid: int(qty or 0) for pid, qty in rows}
+
+
+def stock_lookup(product_ids=None):
+    """Função f(product) -> saldo, respaldada por UMA query agregada. Drop-in
+    para `current_stock` em listagens/templates, sem N+1."""
+    smap = stock_map(product_ids)
+    return lambda p: smap.get(p.id, 0)
