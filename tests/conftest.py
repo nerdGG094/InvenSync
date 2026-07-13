@@ -72,6 +72,12 @@ def admin_email(app):
 
 
 @pytest.fixture
+def admin_password():
+    """Senha em texto do admin de teste (para fluxos que re-autenticam)."""
+    return ADMIN_PASS
+
+
+@pytest.fixture
 def auth_client(client, admin_email):
     r = client.post("/login", data={"email": admin_email, "password": ADMIN_PASS},
                     follow_redirects=False)

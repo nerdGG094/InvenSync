@@ -49,6 +49,10 @@ class Config:
     # navega depois de ativar. Desligue com FORCE_ADMIN_2FA=0 se precisar.
     FORCE_ADMIN_2FA = os.environ.get("FORCE_ADMIN_2FA", "1") in ("1", "true", "True")
 
+    # Cofre: minutos que a re-autenticação (senha do próprio usuário) vale antes
+    # de pedir de novo para revelar/copiar uma senha. 0 = pede toda vez.
+    VAULT_REAUTH_MINUTES = int(os.environ.get("VAULT_REAUTH_MINUTES", "5"))
+
     # Bloqueio de conta após tentativas de senha erradas.
     LOGIN_MAX_ATTEMPTS = int(os.environ.get("LOGIN_MAX_ATTEMPTS", "5"))
     LOGIN_LOCKOUT_MINUTES = int(os.environ.get("LOGIN_LOCKOUT_MINUTES", "15"))

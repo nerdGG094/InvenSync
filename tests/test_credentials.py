@@ -99,11 +99,25 @@ def test_update_changes_password_when_provided(app):
 # --------------------------------------------------------------------------- #
 # Rotas
 # --------------------------------------------------------------------------- #
-def test_reveal_returns_plaintext(app, auth_client):
+def test_reveal_requires_reauth(app, auth_client):
+    """Sem re-autenticação recente, /reveal responde 401 need_reauth."""
+    with app.app_context():
+        c = credential_repo.create_credential(name=f"{MARK} NoReauth", category="email",
+                                              password="segredo123")
+        cid = c.id
+    r = auth_client.get(f"/credentials/{cid}/reveal")
+    assert r.status_code == 401 and r.get_json().get("need_reauth")
+
+
+def test_reveal_returns_plaintext(app, auth_client, admin_password):
     with app.app_context():
         c = credential_repo.create_credential(name=f"{MARK} Reveal", category="email",
                                               password="visivel123")
         cid = c.id
+    # senha errada não abre a janela
+    assert auth_client.post("/credentials/reauth", data={"password": "errada"}).status_code == 401
+    # re-autentica com a senha correta e revela
+    assert auth_client.post("/credentials/reauth", data={"password": admin_password}).status_code == 200
     r = auth_client.get(f"/credentials/{cid}/reveal")
     assert r.status_code == 200
     assert r.get_json()["password"] == "visivel123"

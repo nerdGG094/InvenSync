@@ -1,9 +1,10 @@
 # inventory/routes/credentials.py
 import os
 import time
+from datetime import datetime
 
 from flask import (Blueprint, render_template, request, redirect, url_for, flash,
-                   abort, jsonify, current_app, send_from_directory)
+                   abort, jsonify, current_app, send_from_directory, session)
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
@@ -159,9 +160,34 @@ def photo_delete(cid, pid):
     return redirect(url_for("credentials.edit", cid=cid))
 
 
+def _reauth_ok() -> bool:
+    """A re-autenticação (senha do usuário) ainda está dentro da janela?"""
+    ts = session.get("vault_reauth_at")
+    if not ts:
+        return False
+    mins = current_app.config.get("VAULT_REAUTH_MINUTES", 5)
+    try:
+        return (datetime.now().timestamp() - float(ts)) < mins * 60
+    except (TypeError, ValueError):
+        return False
+
+
+@bp.route("/reauth", methods=["POST"])
+def reauth():
+    """Confirma a senha do próprio usuário e abre a janela de revelação."""
+    pwd = request.form.get("password") or ""
+    if current_user.check_password(pwd):
+        session["vault_reauth_at"] = datetime.now().timestamp()
+        return jsonify(ok=True)
+    return jsonify(ok=False), 401
+
+
 @bp.route("/<int:cid>/reveal")
 def reveal(cid):
-    """Retorna a senha em texto e registra na auditoria quem revelou."""
+    """Retorna a senha em texto e registra na auditoria quem revelou.
+    Exige re-autenticação recente (senha do próprio usuário)."""
+    if not _reauth_ok():
+        return jsonify(need_reauth=True), 401
     c = credential_repo.get_credential(cid)
     audit.record("reveal", "credential", c.id, f"Revelou senha de '{c.name}'")
     return jsonify(password=crypto.decrypt(c.password))
