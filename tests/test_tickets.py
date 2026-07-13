@@ -65,6 +65,25 @@ def test_status_resolved_sets_and_clears_resolved_at(app, admin_email):
         assert t.resolved_at is None
 
 
+def test_sla_overdue_by_priority(app, admin_email):
+    """SLA por prioridade: urgente (4h) estoura antes de baixa (120h)."""
+    from datetime import datetime, timedelta
+    aid = _admin_id(app, admin_email)
+    with app.app_context():
+        t1 = ticket_repo.create_ticket(opened_by_id=aid, title=f"{MARK} sla urgente",
+                                       category="outro", priority="urgente", status="aberto")
+        t2 = ticket_repo.create_ticket(opened_by_id=aid, title=f"{MARK} sla baixa",
+                                       category="outro", priority="baixa", status="aberto")
+        t1.created_at = datetime.now() - timedelta(hours=10)
+        t2.created_at = datetime.now() - timedelta(hours=10)
+        db.session.commit()
+        assert t1.sla_overdue is True      # 10h > 4h
+        assert t2.sla_overdue is False     # 10h < 120h
+        # chamado fechado nunca conta como atrasado
+        ticket_repo.update_ticket(t1, status="resolvido")
+        assert t1.sla_overdue is False
+
+
 def test_add_comment_records_status_transition(app, admin_email):
     aid = _admin_id(app, admin_email)
     with app.app_context():

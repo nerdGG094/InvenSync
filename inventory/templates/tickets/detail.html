@@ -48,6 +48,12 @@
       <div class="d-flex flex-wrap gap-2 mb-3">
         <span class="badge bg-secondary-subtle text-secondary-emphasis"><i class="bi bi-tag me-1"></i>{{ cat_lbl.get(t.category, t.category) }}</span>
         <span class="badge bg-{{ pm[1] }}-subtle text-{{ pm[1] }}-emphasis"><i class="bi bi-flag me-1"></i>{{ pm[0] }}</span>
+        {% if t.is_open %}
+        <span class="badge {{ 'bg-danger-subtle text-danger' if t.sla_overdue else 'bg-secondary-subtle text-secondary-emphasis' }}"
+              title="Prazo do SLA: {{ t.sla_hours }}h após a abertura{% if t.sla_due_at %} · vence {{ t.sla_due_at.strftime('%d/%m/%Y %H:%M') }}{% endif %}">
+          <i class="bi bi-{{ 'alarm' if t.sla_overdue else 'hourglass-split' }} me-1"></i>{{ t.sla_label }}
+        </span>
+        {% endif %}
       </div>
       {% if t.description %}<p class="mb-0" style="white-space:pre-wrap">{{ t.description }}</p>{% else %}<p class="contact-muted mb-0">Sem descrição.</p>{% endif %}
 

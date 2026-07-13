@@ -95,6 +95,16 @@
       </div></div>
     </a>
   </div>
+  {% if is_admin and overdue_total %}
+  <div class="col-6 col-lg-3">
+    <a href="{{ url_for('tickets.list_view', sla='late', period='todos') }}" class="text-decoration-none">
+      <div class="card stat-card h-100" style="border-left-color:#dc3545"><div class="card-body d-flex align-items-center justify-content-between">
+        <div><div class="text-muted small">Atrasados (SLA)</div><div class="h3 mb-0 number text-danger">{{ overdue_total }}</div></div>
+        <i class="bi bi-alarm fs-2 text-danger"></i>
+      </div></div>
+    </a>
+  </div>
+  {% endif %}
 </div>
 
 <div class="table-card p-3 mb-3">
@@ -102,6 +112,7 @@
     <input type="hidden" name="q" value="{{ q }}">
     <input type="hidden" name="status" value="{{ status }}">
     <input type="hidden" name="priority" value="{{ priority }}">
+    <input type="hidden" name="sla" value="{{ sla }}">
 
     <!-- Período (padrão: hoje) -->
     <div class="btn-group tk-period" role="group" aria-label="Período">
@@ -131,6 +142,7 @@
     <input type="hidden" name="period" value="{{ period }}">
     <input type="hidden" name="from" value="{{ date_from }}">
     <input type="hidden" name="to" value="{{ date_to }}">
+    <input type="hidden" name="sla" value="{{ sla }}">
     <div class="input-group search-box">
       <span class="input-group-text"><i class="bi bi-search"></i></span>
       <input class="form-control" type="search" placeholder="Código, título, solicitante..." name="q" value="{{ q }}">
@@ -153,7 +165,9 @@
     <i class="bi bi-funnel"></i>
     {% set plbl = {'hoje':'Hoje','7':'Últimos 7 dias','30':'Últimos 30 dias','todos':'Todos os períodos','custom':'Período personalizado'} %}
     {{ plbl.get(period, 'Hoje') }} · <strong>{{ items|length }}</strong> chamado(s)
-    {% if period != 'todos' and not status %}<span class="ms-1">· <i class="bi bi-pin-angle"></i> pendentes sempre visíveis</span>{% endif %}
+    {% if sla == 'late' %}· <span class="badge bg-danger-subtle text-danger"><i class="bi bi-alarm"></i> só atrasados (SLA)</span>
+      <a href="{{ url_for('tickets.list_view', period='todos') }}" class="ms-1">limpar</a>
+    {% elif period != 'todos' and not status %}<span class="ms-1">· <i class="bi bi-pin-angle"></i> pendentes sempre visíveis</span>{% endif %}
   </span>
 </div>
 
@@ -167,10 +181,10 @@
       <div class="d-flex align-items-start justify-content-between gap-2">
         <span class="tk-code">{{ t.code }}</span>
         <div class="d-flex gap-1 flex-shrink-0">
-          {% if t.is_open and t.age_label %}
-            <span class="badge {{ 'bg-danger-subtle text-danger' if t.is_stuck(48) else 'bg-secondary-subtle text-secondary-emphasis' }}"
-                  title="{{ 'Parado' if t.is_stuck(48) else 'Aberto' }} há {{ t.age_label }}">
-              <i class="bi bi-hourglass-split me-1"></i>{{ t.age_label }}
+          {% if t.is_open and t.sla_label %}
+            <span class="badge {{ 'bg-danger-subtle text-danger' if t.sla_overdue else 'bg-secondary-subtle text-secondary-emphasis' }}"
+                  title="{{ 'Prazo do SLA estourado' if t.sla_overdue else 'Dentro do SLA (prazo ' ~ t.sla_hours ~ 'h)' }} · aberto há {{ t.age_label }}">
+              <i class="bi bi-{{ 'alarm' if t.sla_overdue else 'hourglass-split' }} me-1"></i>{{ t.sla_label }}
             </span>
           {% endif %}
           <span class="badge bg-{{ pm[1] }}-subtle text-{{ pm[1] }}-emphasis"><i class="bi bi-flag me-1"></i>{{ pm[0] }}</span>

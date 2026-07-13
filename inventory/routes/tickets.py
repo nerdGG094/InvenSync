@@ -63,6 +63,7 @@ def list_view():
     q = (request.args.get("q") or "").strip()
     status = (request.args.get("status") or "").strip()
     priority = (request.args.get("priority") or "").strip()
+    sla = (request.args.get("sla") or "").strip()   # 'late' = só os que estouraram o SLA
     period = (request.args.get("period") or "hoje").strip()
     date_from_s = (request.args.get("from") or "").strip()
     date_to_s = (request.args.get("to") or "").strip()
@@ -111,9 +112,18 @@ def list_view():
         "cancelado": counts.get("cancelado", 0),
         "total": sum(counts.values()),
     }
+
+    # SLA: total de atrasados (sobre os abertos do escopo) + filtro opcional.
+    open_q = Ticket.query.filter(Ticket.status.in_(("aberto", "em_andamento")))
+    if not current_user.is_admin:
+        open_q = open_q.filter(Ticket.opened_by_id == current_user.id)
+    overdue_total = sum(1 for t in open_q.all() if t.sla_overdue)
+    if sla == "late":
+        items = [t for t in items if t.sla_overdue]
+
     return render_template("tickets/list.html", items=items, q=q, status=status,
-                           priority=priority, period=period, date_from=date_from_s,
-                           date_to=date_to_s, totals=totals,
+                           priority=priority, sla=sla, period=period, date_from=date_from_s,
+                           date_to=date_to_s, totals=totals, overdue_total=overdue_total,
                            is_admin=current_user.is_admin)
 
 
@@ -166,16 +176,13 @@ def dashboard():
     counts["total"] = len(all_tickets)
     counts["abertos_total"] = counts["aberto"] + counts["em_andamento"]
 
-    # SLA simples por prioridade (horas até considerar "atrasado")
-    sla_hours = {"urgente": 4, "alta": 24, "media": 48, "baixa": 120}
+    # SLA por prioridade — centralizado no modelo (Ticket.sla_*).
     now = datetime.now()
     overdue = []
     for t in all_tickets:
-        if t.status in open_statuses and t.created_at:
-            limite = sla_hours.get(t.priority, 48)
+        if t.sla_overdue:
             idade_h = (now - t.created_at).total_seconds() / 3600.0
-            if idade_h > limite:
-                overdue.append((t, idade_h, limite))
+            overdue.append((t, idade_h, t.sla_hours))
     overdue.sort(key=lambda x: x[1] - x[2], reverse=True)
 
     # Tempo médio de resolução (horas) dos resolvidos

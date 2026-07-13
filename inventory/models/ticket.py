@@ -1,6 +1,10 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from ..extensions import db
+
+# SLA por prioridade: horas desde a abertura até o prazo de resolução.
+# Ajuste conforme a política da TI (também dá para ler de config no futuro).
+SLA_HOURS = {"urgente": 4, "alta": 24, "media": 48, "baixa": 120}
 
 
 class Ticket(db.Model):
@@ -60,6 +64,45 @@ class Ticket(db.Model):
         """Chamado em aberto parado há mais de `hours` horas."""
         h = self.age_hours
         return bool(self.is_open and h is not None and h >= hours)
+
+    # ===== SLA (prazo por prioridade) =====
+    @property
+    def sla_hours(self) -> int:
+        return SLA_HOURS.get(self.priority, 48)
+
+    @property
+    def sla_due_at(self):
+        """Momento-limite do SLA (abertura + horas da prioridade)."""
+        if not self.created_at:
+            return None
+        return self.created_at + timedelta(hours=self.sla_hours)
+
+    @property
+    def sla_overdue(self) -> bool:
+        """Aberto/em andamento e já passou do prazo do SLA."""
+        return bool(self.is_open and self.sla_due_at and datetime.now() > self.sla_due_at)
+
+    @property
+    def sla_left_hours(self):
+        """Horas até o prazo (negativo = estourado). None se fechado/sem data."""
+        if not self.is_open or not self.sla_due_at:
+            return None
+        return (self.sla_due_at - datetime.now()).total_seconds() / 3600.0
+
+    @property
+    def sla_label(self) -> str:
+        """Rótulo curto para o badge de SLA."""
+        h = self.sla_left_hours
+        if h is None:
+            return ""
+        if h < 0:
+            over = int(-h)
+            return f"SLA estourado há {over}h" if over >= 1 else "SLA estourado"
+        if h < 1:
+            return "SLA < 1h"
+        if h < 24:
+            return f"SLA {int(h)}h"
+        return f"SLA {int(h // 24)}d"
 
     def __repr__(self) -> str:
         return f"<Ticket {self.code} status={self.status!r} title={self.title!r}>"
