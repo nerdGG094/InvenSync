@@ -58,6 +58,16 @@ def _run_light_migrations():
         'UPDATE mobile_device md SET user_id = u.id FROM "user" u '
         'WHERE md.user_id IS NULL AND md.assigned_employee IS NOT NULL '
         "AND lower(btrim(md.assigned_employee)) = lower(btrim(u.name))",
+        # ===== Métricas de chamados: 1ª resposta da TI + avaliação do solicitante =====
+        'ALTER TABLE ticket ADD COLUMN IF NOT EXISTS first_response_at TIMESTAMP',
+        'ALTER TABLE ticket ADD COLUMN IF NOT EXISTS rating INTEGER',
+        'ALTER TABLE ticket ADD COLUMN IF NOT EXISTS rated_at TIMESTAMP',
+        # Backfill da 1ª resposta: menor comentário de autor diferente de quem abriu.
+        'UPDATE ticket t SET first_response_at = sub.first_at FROM ('
+        '  SELECT tc.ticket_id, MIN(tc.created_at) AS first_at FROM ticket_comment tc'
+        '  JOIN ticket tk ON tk.id = tc.ticket_id'
+        '  WHERE tc.author_id IS DISTINCT FROM tk.opened_by_id GROUP BY tc.ticket_id'
+        ') sub WHERE t.id = sub.ticket_id AND t.first_response_at IS NULL',
     ]
     for sql in stmts:
         try:
@@ -258,6 +268,7 @@ def create_app():
     from .models.department import Department
     from .models.chip import SimChip
     from .models.announcement import Announcement
+    from .models.error_log import ErrorLog
 
     # Cria tabelas e semente inicial
     with app.app_context():
@@ -337,6 +348,7 @@ def create_app():
     from .routes.announcements import bp as announcements_bp  # ⬅️ NOVO: central de avisos (mural)
     from .routes.kiox import bp as kiox_bp  # ⬅️ NOVO: Kiox — mapa de rastreio (admin)
     from .routes.search import bp as search_bp  # ⬅️ NOVO: busca global (Ctrl+K)
+    from .routes.errors import bp as errors_bp  # ⬅️ NOVO: log central de erros (admin)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -371,6 +383,7 @@ def create_app():
     app.register_blueprint(announcements_bp, url_prefix="/avisos")  # ⬅️ NOVO: central de avisos (mural)
     app.register_blueprint(kiox_bp, url_prefix="/kiox")  # ⬅️ NOVO: Kiox — mapa de rastreio (submódulo de Admin)
     app.register_blueprint(search_bp, url_prefix="/busca")  # ⬅️ NOVO: busca global (Ctrl+K)
+    app.register_blueprint(errors_bp, url_prefix="/errors")  # ⬅️ NOVO: log de erros (admin)
 
     # ===== Controle de acesso por módulo =====
     # Usuários comuns (não-admin) só acessam Chamados e o próprio Perfil.
@@ -459,6 +472,20 @@ def create_app():
     def too_many_requests(e):
         flash("Muitas tentativas em pouco tempo. Aguarde um instante e tente novamente.", "warning")
         return redirect(url_for("auth.login"))
+
+    # Log central de erros: captura exceções NÃO tratadas das requisições (5xx).
+    from flask import got_request_exception
+    from werkzeug.exceptions import HTTPException
+
+    def _log_request_exception(sender, exception, **extra):
+        if isinstance(exception, HTTPException) and (exception.code or 500) < 500:
+            return  # 4xx não é erro de servidor
+        from .services import errorlog
+        errorlog.record("request", exc=exception)
+
+    # weak=False: o receiver é uma função local; sem isto o blinker o coleta (GC)
+    # e o sinal fica sem receivers.
+    got_request_exception.connect(_log_request_exception, app, weak=False)
 
     # PWA: service worker servido da raiz (escopo "/") para controlar todo o app
     @app.route("/sw.js", endpoint="service_worker")

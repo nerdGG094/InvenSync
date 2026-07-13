@@ -255,8 +255,13 @@ def start_scheduler(app):
             try:
                 publish(app)                 # atualiza o aviso (sem WhatsApp)
                 send_digest_if_window(app)   # WhatsApp só nas horas-alvo
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception as e:  # noqa: BLE001
+                try:
+                    with app.app_context():
+                        from . import errorlog
+                        errorlog.record("alerts", exc=e)
+                except Exception:  # noqa: BLE001
+                    pass
             time.sleep(check)
 
     threading.Thread(target=loop, daemon=True, name="alerts").start()

@@ -75,8 +75,13 @@ def start_scheduler(app):
         while True:
             try:
                 maybe_backup(app)
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception as e:  # noqa: BLE001
+                try:
+                    with app.app_context():
+                        from . import errorlog
+                        errorlog.record("backup", exc=e)
+                except Exception:  # noqa: BLE001
+                    pass
             time.sleep(interval)
 
     threading.Thread(target=loop, daemon=True, name="db-backup").start()

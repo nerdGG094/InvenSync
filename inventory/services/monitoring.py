@@ -178,8 +178,13 @@ def start_scheduler(app):
         while True:
             try:
                 check_all(app)
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception as e:  # noqa: BLE001
+                try:
+                    with app.app_context():
+                        from . import errorlog
+                        errorlog.record("monitoring", exc=e)
+                except Exception:  # noqa: BLE001
+                    pass
             time.sleep(interval)
 
     threading.Thread(target=loop, daemon=True, name="uptime-monitor").start()

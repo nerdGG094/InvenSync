@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Log de erros{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-bug"></i></span>
+    Log de erros
+    <span class="badge bg-danger-subtle text-danger-emphasis ph-count">{{ total }}</span>
+  </h1>
+  {% if items %}
+  <form method="post" action="{{ url_for('errors.clear') }}" onsubmit="return confirm('Limpar todo o log de erros?');">
+    <button class="btn btn-outline-danger"><i class="bi bi-trash"></i> Limpar log</button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="alert alert-info d-flex align-items-center gap-2 py-2">
+  <i class="bi bi-info-circle"></i>
+  <span class="small">Exceções não tratadas das requisições e falhas dos serviços de fundo. Clique numa linha para ver o rastreamento.</span>
+</div>
+
+{% if items %}
+<div class="table-card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead><tr>
+        <th>Quando</th><th>Nível</th><th>Origem</th><th>Mensagem</th><th>Requisição</th>
+      </tr></thead>
+      <tbody>
+        {% for e in items %}
+        <tr data-bs-toggle="collapse" data-bs-target="#tb-{{ e.id }}" role="button" style="cursor:pointer">
+          <td class="text-nowrap small">{{ e.created_at.strftime('%d/%m %H:%M:%S') if e.created_at else '' }}</td>
+          <td><span class="badge bg-{{ 'danger' if e.level == 'error' else 'warning' }}-subtle text-{{ 'danger' if e.level == 'error' else 'warning' }}-emphasis">{{ e.level }}</span></td>
+          <td class="small">{{ e.source or '—' }}</td>
+          <td class="small" style="max-width:420px"><div class="text-truncate">{{ e.message or '—' }}</div></td>
+          <td class="small text-nowrap">{% if e.path %}<code>{{ e.method }} {{ e.path }}</code>{% else %}—{% endif %}
+            {% if e.user %}<span class="text-muted">· {{ e.user.name }}</span>{% endif %}</td>
+        </tr>
+        {% if e.traceback %}
+        <tr class="collapse" id="tb-{{ e.id }}"><td colspan="5" class="p-0">
+          <pre class="mb-0 p-3 small" style="background:#0e1613; color:#ffb3b3; white-space:pre-wrap; word-break:break-word; max-height:340px; overflow:auto">{{ e.traceback }}</pre>
+        </td></tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="table-card"><div class="empty-state"><i class="bi bi-check2-circle"></i>
+  Nenhum erro registrado. 🎉
+</div></div>
+{% endif %}
+{% endblock %}
