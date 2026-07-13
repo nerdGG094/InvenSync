@@ -270,6 +270,7 @@ def create_app():
     from .models.announcement import Announcement
     from .models.error_log import ErrorLog
     from .models.asset_signature import AssetSignature
+    from .models.asset_termo import AssetTermo
 
     # Cria tabelas e semente inicial
     with app.app_context():

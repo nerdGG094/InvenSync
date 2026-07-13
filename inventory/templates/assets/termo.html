@@ -33,6 +33,7 @@
     body { background:#fff; padding:0; }
     .sheet { box-shadow:none; max-width:none; padding:24px 28px; }
     .toolbar { display:none; }
+    .no-print { display:none !important; }
     .sig-canvas { display:none !important; }
     .sig-img { display:block !important; border:0; }
   }
@@ -41,7 +42,7 @@
 <body>
   <div class="toolbar">
     <a href="javascript:history.back()" class="btn">← Voltar</a>
-    <button class="btn" onclick="clearSig()">✕ Limpar assinatura</button>
+    <button class="btn" onclick="clearSig('colab')">✕ Limpar</button>
     <button class="btn" onclick="saveSig()">💾 Salvar assinatura</button>
     <button class="btn primary" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
   </div>
@@ -117,19 +118,27 @@
         <div class="sig-line">{{ a.name }}<br><span class="sub">Colaborador(a){% if signed_at %} — assinado em {{ signed_at.strftime('%d/%m/%Y') }}{% else %} — assine no quadro acima{% endif %}</span></div>
       </div>
       <div class="sig-block">
-        <div class="sig-blank"></div>
-        <div class="sig-line">_______________________<br><span class="sub">Responsável de TI</span></div>
+        <canvas id="tiCanvas" class="sig-canvas"></canvas>
+        <img class="sig-img" id="tiImg" alt="Assinatura do TI">
+        <div class="sig-line">Responsável de TI
+          <div class="no-print" style="margin-top:6px; display:flex; gap:6px; justify-content:center;">
+            <button type="button" class="btn" style="padding:4px 10px; font-size:12px;" onclick="clearSig('ti')">✕ Limpar</button>
+            <button type="button" class="btn" style="padding:4px 10px; font-size:12px;" onclick="saveTiSig()">💾 Salvar assinatura do TI</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
-    // Assinatura no canvas (dedo no tablet ou mouse). Sem auto-print: assine/
-    // carregue a assinatura salva e então clique em Imprimir/Salvar PDF.
-    (function(){
-      const c = document.getElementById('sigCanvas');
-      if (!c) return;
-      const img = document.getElementById('sigImg');
+    // Assinatura no canvas (dedo no tablet ou mouse). Dois quadros: colaborador e
+    // Responsável de TI (este é único e reaproveitado em todos os termos).
+    const CSRF = "{{ csrf_token() }}";
+
+    function makePad(canvasId, imgId, saved){
+      const c = document.getElementById(canvasId);
+      if (!c) return null;
+      const img = document.getElementById(imgId);
       const ctx = c.getContext('2d');
       // Resolução física = tamanho renderizado × DPR (assinatura nítida).
       const rect = c.getBoundingClientRect();
@@ -144,12 +153,10 @@
       // setar no beforeprint costuma sair em branco (decodifica tarde demais).
       function syncImg(){ try { img.src = c.toDataURL('image/png'); } catch(_){} }
 
-      // Carrega a assinatura salva (se houver) no canvas + imagem de impressão.
-      const SAVED = {{ (saved_signature or '')|tojson }};
-      if (SAVED) {
+      if (saved) {
         const im = new Image();
-        im.onload = function(){ ctx.drawImage(im, 0, 0, CSSW, CSSH); img.src = SAVED; };
-        im.src = SAVED;
+        im.onload = function(){ ctx.drawImage(im, 0, 0, CSSW, CSSH); img.src = saved; };
+        im.src = saved;
       }
 
       let drawing = false, last = null;
@@ -159,23 +166,37 @@
       function endStroke(){ if (drawing){ drawing = false; syncImg(); } }
       c.addEventListener('pointerup', endStroke);
       c.addEventListener('pointercancel', endStroke);
-
-      window.clearSig = function(){ ctx.clearRect(0, 0, c.width, c.height); img.removeAttribute('src'); };
       window.addEventListener('beforeprint', syncImg);
 
-      window.saveSig = async function(){
+      async function save(url, okMsg){
         try {
           const body = new URLSearchParams(); body.append('signature', c.toDataURL('image/png'));
-          const r = await fetch("{{ url_for('assets.save_signature', name=a.name) }}", {
-            method: 'POST',
-            headers: { 'X-CSRFToken': "{{ csrf_token() }}", 'Content-Type': 'application/x-www-form-urlencoded' },
+          const r = await fetch(url, { method: 'POST',
+            headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
             body: body });
           const j = await r.json();
-          if (j.ok){ syncImg(); alert('Assinatura salva! Ao reabrir o termo desta pessoa ela já estará aqui.'); }
+          if (j.ok){ syncImg(); alert(okMsg); }
           else { alert('Não foi possível salvar (assinatura vazia/inválida).'); }
         } catch(e){ alert('Erro ao salvar a assinatura.'); }
-      };
-    })();
+      }
+      function clear(){ ctx.clearRect(0, 0, c.width, c.height); img.removeAttribute('src'); }
+      return { save, clear };
+    }
+
+    const PADS = {
+      colab: makePad('sigCanvas', 'sigImg', {{ (saved_signature or '')|tojson }}),
+      ti:    makePad('tiCanvas', 'tiImg', {{ (ti_signature or '')|tojson }}),
+    };
+
+    window.clearSig = function(which){ if (PADS[which]) PADS[which].clear(); };
+    window.saveSig = function(){
+      if (PADS.colab) PADS.colab.save("{{ url_for('assets.save_signature', name=a.name) }}",
+        'Assinatura salva! Um comprovante de entrega foi registrado e ela reaparecerá ao reabrir o termo.');
+    };
+    window.saveTiSig = function(){
+      if (PADS.ti) PADS.ti.save("{{ url_for('assets.save_ti_signature') }}",
+        'Assinatura do TI salva! Ela será usada em todos os termos.');
+    };
   </script>
 </body>
 </html>

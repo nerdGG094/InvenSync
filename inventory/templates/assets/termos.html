@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Termos — {{ name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-file-earmark-check"></i></span>
+    Termos assinados — {{ name }}
+    <span class="badge bg-secondary-subtle text-secondary-emphasis ph-count">{{ termos|length }}</span>
+  </h1>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('assets.detail', name=name) }}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Voltar</a>
+    <a href="{{ url_for('assets.termo', name=name) }}" target="_blank" class="btn btn-primary btn-sm"><i class="bi bi-pencil-square"></i> Novo termo</a>
+  </div>
+</div>
+
+{% if termos %}
+{% for t in termos %}
+<div class="table-card p-3 mb-3">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+    <div>
+      <span class="badge bg-success-subtle text-success-emphasis"><i class="bi bi-calendar-check me-1"></i>{{ t.signed_at.strftime('%d/%m/%Y %H:%M') if t.signed_at else '—' }}</span>
+      {% if t.sector %}<span class="badge bg-secondary-subtle text-secondary-emphasis">{{ t.sector }}</span>{% endif %}
+      <span class="badge bg-info-subtle text-info-emphasis">{{ t.itens|length }} equipamento(s)</span>
+    </div>
+    {% if t.signature %}<img src="{{ t.signature }}" alt="Assinatura" style="height:56px; background:#fff; border-radius:6px; padding:2px;">{% endif %}
+  </div>
+  {% if t.itens %}
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0">
+      <thead><tr><th>Tipo</th><th>Equipamento</th><th>Patrimônio</th><th>Identificador</th></tr></thead>
+      <tbody>
+        {% for it in t.itens %}
+        <tr>
+          <td><span class="badge bg-secondary-subtle text-secondary-emphasis">{{ it.tipo }}</span></td>
+          <td>{{ it.equip }}</td>
+          <td class="small">{{ it.pat or '—' }}</td>
+          <td class="font-monospace small">{{ it.ident or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}<p class="contact-muted mb-0">Sem equipamentos registrados neste termo.</p>{% endif %}
+</div>
+{% endfor %}
+{% else %}
+<div class="empty-state">
+  <i class="bi bi-file-earmark-x"></i>
+  <p>Nenhum termo assinado ainda para {{ name }}.</p>
+  <a href="{{ url_for('assets.termo', name=name) }}" target="_blank" class="btn btn-primary btn-sm">Gerar e assinar o primeiro termo</a>
+</div>
+{% endif %}
+{% endblock %}

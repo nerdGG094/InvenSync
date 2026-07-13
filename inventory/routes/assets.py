@@ -1,4 +1,5 @@
 # inventory/routes/assets.py
+import json
 from datetime import datetime
 
 from flask import Blueprint, render_template, request, abort, jsonify
@@ -6,12 +7,35 @@ from flask_login import login_required, current_user
 
 from ..extensions import db
 from ..models.asset_signature import AssetSignature
+from ..models.asset_termo import AssetTermo
 from ..services import assets, audit
 from ..services.exports import xlsx_response
+
+# Chave reservada para a assinatura (única) do Responsável de TI — reutilizada
+# em todos os termos, já que quem entrega os equipamentos é sempre a TI.
+TI_KEY = "__ti_responsavel__"
 
 
 def _sig_key(name: str) -> str:
     return (name or "").strip().lower()
+
+
+def _termo_itens(data: dict) -> list:
+    """Congela os equipamentos de uma pessoa numa lista simples (p/ o comprovante)."""
+    itens = []
+    for m in data["machines"]:
+        itens.append({
+            "tipo": KIND_LBL.get(m.kind, m.kind),
+            "equip": f"{m.brand or ''} {m.model or ''}".strip() or "—",
+            "pat": m.patrimony or "", "ident": m.ip_address or m.serial_number or "",
+        })
+    for d in data["mobiles"]:
+        itens.append({
+            "tipo": "Celular",
+            "equip": f"{d.brand or ''} {d.model or ''}".strip() or "—",
+            "pat": d.patrimony or "", "ident": d.phone_number or d.imei or "",
+        })
+    return itens
 
 _MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho",
           "agosto", "setembro", "outubro", "novembro", "dezembro"]
@@ -120,18 +144,14 @@ def termo(name):
     now = datetime.now()
     data_extenso = f"{now.day} de {_MESES[now.month - 1]} de {now.year}"
     sig = AssetSignature.query.filter_by(person_key=_sig_key(name)).first()
+    ti_sig = AssetSignature.query.filter_by(person_key=TI_KEY).first()
     return render_template("assets/termo.html", a=data, data_extenso=data_extenso,
                            saved_signature=(sig.data_url if sig else ""),
-                           signed_at=(sig.signed_at if sig else None))
+                           signed_at=(sig.signed_at if sig else None),
+                           ti_signature=(ti_sig.data_url if ti_sig else ""))
 
 
-@bp.route("/<path:name>/signature", methods=["POST"])
-def save_signature(name):
-    """Salva/atualiza a assinatura do colaborador (data URL do canvas)."""
-    data_url = (request.form.get("signature") or "").strip()
-    if not data_url.startswith("data:image/") or len(data_url) > 2_000_000:
-        return jsonify(ok=False, error="assinatura inválida"), 400
-    key = _sig_key(name)
+def _upsert_signature(key: str, name: str, data_url: str) -> AssetSignature:
     sig = AssetSignature.query.filter_by(person_key=key).first()
     if sig is None:
         sig = AssetSignature(person_key=key, person_name=name, data_url=data_url)
@@ -139,6 +159,56 @@ def save_signature(name):
     else:
         sig.data_url = data_url
         sig.person_name = name
+    return sig
+
+
+@bp.route("/<path:name>/signature", methods=["POST"])
+def save_signature(name):
+    """Salva a assinatura do colaborador e registra um comprovante de entrega
+    (congela os equipamentos + a assinatura naquele momento)."""
+    data_url = (request.form.get("signature") or "").strip()
+    if not data_url.startswith("data:image/") or len(data_url) > 2_000_000:
+        return jsonify(ok=False, error="assinatura inválida"), 400
+    key = _sig_key(name)
+    _upsert_signature(key, name, data_url)
+
+    # Comprovante de entrega — evita duplicar se nada mudou desde o último.
+    data = assets.assets_for(name)
+    itens = _termo_itens(data)
+    itens_json = json.dumps(itens, ensure_ascii=False)
+    last = (AssetTermo.query.filter_by(person_key=key)
+            .order_by(AssetTermo.signed_at.desc(), AssetTermo.id.desc()).first())
+    if not (last and last.equipamentos == itens_json and last.signature == data_url):
+        db.session.add(AssetTermo(person_key=key, person_name=name,
+                                  sector=data.get("sector") or None,
+                                  equipamentos=itens_json, signature=data_url))
     db.session.commit()
     audit.record("update", "asset_signature", None, f"Assinou o termo de {name}")
     return jsonify(ok=True)
+
+
+@bp.route("/ti-signature", methods=["POST"])
+def save_ti_signature():
+    """Salva/atualiza a assinatura (única) do Responsável de TI, reutilizada em
+    todos os termos."""
+    data_url = (request.form.get("signature") or "").strip()
+    if not data_url.startswith("data:image/") or len(data_url) > 2_000_000:
+        return jsonify(ok=False, error="assinatura inválida"), 400
+    _upsert_signature(TI_KEY, "Responsável de TI", data_url)
+    db.session.commit()
+    audit.record("update", "asset_signature", None, "Atualizou a assinatura do Responsável de TI")
+    return jsonify(ok=True)
+
+
+@bp.route("/<path:name>/termos")
+def termos_history(name):
+    """Histórico de termos/comprovantes assinados por uma pessoa."""
+    key = _sig_key(name)
+    termos = (AssetTermo.query.filter_by(person_key=key)
+              .order_by(AssetTermo.signed_at.desc(), AssetTermo.id.desc()).all())
+    for t in termos:
+        try:
+            t.itens = json.loads(t.equipamentos or "[]")
+        except (ValueError, TypeError):
+            t.itens = []
+    return render_template("assets/termos.html", name=name, termos=termos)

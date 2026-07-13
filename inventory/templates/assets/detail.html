@@ -11,6 +11,7 @@
   </h1>
   <div class="d-flex gap-2">
     <a href="{{ url_for('assets.list_view') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Voltar</a>
+    <a href="{{ url_for('assets.termos_history', name=a.name) }}" class="btn btn-outline-light btn-sm"><i class="bi bi-file-earmark-check"></i> Termos assinados</a>
     <a href="{{ url_for('assets.termo', name=a.name) }}" target="_blank" class="btn btn-primary btn-sm"><i class="bi bi-file-earmark-text"></i> Gerar Termo</a>
   </div>
 </div>
