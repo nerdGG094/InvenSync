@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Reconciliar ativos{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-link-45deg"></i></span>
+    Reconciliar ativos
+    <span class="badge bg-warning text-dark ph-count">{{ orfaos|length }}</span>
+  </h1>
+  <a href="{{ url_for('colaboradores.list_view') }}" class="btn btn-outline-light"><i class="bi bi-arrow-left"></i> Voltar</a>
+</div>
+
+<div class="alert alert-info d-flex align-items-center gap-2 py-2">
+  <i class="bi bi-info-circle"></i>
+  <span class="small">Nomes que aparecem em <strong>máquinas/celulares</strong> mas <strong>não estão no cadastro</strong> de pessoas.
+    Para cada um: <strong>crie a pessoa</strong> ou <strong>vincule</strong> a uma já cadastrada — os ativos passam a apontar para o cadastro (e o nome é padronizado).</span>
+</div>
+
+{% if orfaos %}
+<div class="table-card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead><tr>
+        <th>Nome no ativo</th>
+        <th class="text-center">Ativos</th>
+        <th style="min-width:340px">Ação</th>
+      </tr></thead>
+      <tbody>
+        {% for nome, c in orfaos %}
+        <tr>
+          <td class="fw-semibold">{{ nome }}</td>
+          <td class="text-center">
+            {% if c.machines %}<span class="pchip"><i class="bi bi-pc-display"></i> {{ c.machines }}</span>{% endif %}
+            {% if c.mobiles %}<span class="pchip"><i class="bi bi-phone"></i> {{ c.mobiles }}</span>{% endif %}
+          </td>
+          <td>
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+              <form method="post" onsubmit="return confirm('Criar a pessoa “{{ nome }}” e vincular os ativos?');">
+                <input type="hidden" name="acao" value="criar">
+                <input type="hidden" name="nome" value="{{ nome }}">
+                <button class="btn btn-sm btn-success"><i class="bi bi-person-plus"></i> Criar pessoa</button>
+              </form>
+              <span class="text-muted small">ou</span>
+              <form method="post" class="d-flex gap-1">
+                <input type="hidden" name="acao" value="vincular">
+                <input type="hidden" name="nome" value="{{ nome }}">
+                <select name="user_id" class="form-select form-select-sm" style="max-width:220px" required>
+                  <option value="">Vincular a…</option>
+                  {% for p in pessoas %}<option value="{{ p.id }}">{{ p.name }}{% if p.sector %} · {{ p.sector }}{% endif %}</option>{% endfor %}
+                </select>
+                <button class="btn btn-sm btn-outline-light" title="Vincular"><i class="bi bi-link"></i></button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="table-card"><div class="empty-state"><i class="bi bi-check2-circle"></i>
+  Tudo reconciliado — nenhum ativo com nome fora do cadastro. 🎉
+</div></div>
+{% endif %}
+{% endblock %}

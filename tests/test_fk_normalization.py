@@ -58,6 +58,39 @@ def test_department_rename_propagates_to_sectors(app):
         assert db.session.get(Machine, mid).sector == f"{MARK}NOVO"
 
 
+def test_reconciliar_cria_pessoa_e_vincula(app, auth_client):
+    """Órfão -> criar pessoa: cria o User e vincula o ativo (user_id)."""
+    with app.app_context():
+        m = Machine(model=f"{MARK}-orf", assigned_user=f"{MARK} Orfao")   # sem user_id
+        db.session.add(m)
+        db.session.commit()
+        mid = m.id
+    r = auth_client.post("/colaboradores/reconciliar",
+                         data={"acao": "criar", "nome": f"{MARK} Orfao"}, follow_redirects=False)
+    assert r.status_code in (301, 302, 303)
+    with app.app_context():
+        u = User.query.filter_by(name=f"{MARK} Orfao").first()
+        assert u is not None
+        assert db.session.get(Machine, mid).user_id == u.id
+
+
+def test_reconciliar_vincula_existente(app, auth_client):
+    """Órfão -> vincular a existente: aponta user_id e padroniza o nome."""
+    with app.app_context():
+        alvo = User(name=f"{MARK} Alvo", is_active=True)
+        m = Machine(model=f"{MARK}-fonte", assigned_user=f"{MARK} Fonte")
+        db.session.add_all([alvo, m])
+        db.session.commit()
+        aid, mid = alvo.id, m.id
+    r = auth_client.post("/colaboradores/reconciliar",
+                         data={"acao": "vincular", "nome": f"{MARK} Fonte", "user_id": aid},
+                         follow_redirects=False)
+    assert r.status_code in (301, 302, 303)
+    with app.app_context():
+        m = db.session.get(Machine, mid)
+        assert m.user_id == aid and m.assigned_user == f"{MARK} Alvo"
+
+
 def test_machine_write_populates_user_id(app, auth_client):
     """Salvar máquina pelo formulário preenche machine.user_id a partir do nome."""
     with app.app_context():

@@ -34,6 +34,11 @@
     <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ items|length }}</span>
   </h1>
   <div class="d-flex gap-2">
+    {% if orfaos_count %}
+    <a href="{{ url_for('colaboradores.reconciliar') }}" class="btn btn-outline-warning" title="Ativos com nome sem vínculo no cadastro">
+      <i class="bi bi-link-45deg"></i> Reconciliar <span class="badge bg-warning text-dark">{{ orfaos_count }}</span>
+    </a>
+    {% endif %}
     <a href="{{ url_for('colaboradores.export', q=q) }}" class="btn btn-outline-light"><i class="bi bi-file-earmark-excel"></i> Excel</a>
     <a href="{{ url_for('colaboradores.new') }}" class="btn btn-primary">
       <i class="bi bi-plus-circle"></i> Nova Pessoa

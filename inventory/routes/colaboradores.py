@@ -117,7 +117,8 @@ def list_view():
     grupos = [{"name": s or None, "items": grupos_map[s]} for s in ordem]
 
     return render_template("colaboradores/list.html", items=items, q=q,
-                           grupos=grupos, asset_counts=_asset_counts())
+                           grupos=grupos, asset_counts=_asset_counts(),
+                           orfaos_count=len(_orphan_asset_names()))
 
 
 @bp.route("/export")
@@ -140,6 +141,74 @@ def export():
             p.whatsapp or "",
         ])
     return xlsx_response("Colaboradores", headers, rows, filename="colaboradores")
+
+
+def _orphan_asset_names() -> dict:
+    """Nomes em ativos SEM vínculo (user_id nulo) que não existem no cadastro.
+    -> { nome_original: {'machines': n, 'mobiles': n} }."""
+    from ..models.machine import Machine
+    from ..models.mobile import MobileDevice
+    out = {}
+    for m in Machine.query.filter(Machine.user_id.is_(None),
+                                  Machine.assigned_user.isnot(None)).all():
+        nm = (m.assigned_user or "").strip()
+        if nm:
+            out.setdefault(nm, {"machines": 0, "mobiles": 0})["machines"] += 1
+    for d in MobileDevice.query.filter(MobileDevice.user_id.is_(None),
+                                       MobileDevice.assigned_employee.isnot(None)).all():
+        nm = (d.assigned_employee or "").strip()
+        if nm:
+            out.setdefault(nm, {"machines": 0, "mobiles": 0})["mobiles"] += 1
+    return out
+
+
+def _link_assets(nome_antigo: str, target: User):
+    """Vincula (user_id) e normaliza o nome nos ativos que usam `nome_antigo`."""
+    from ..models.machine import Machine
+    from ..models.mobile import MobileDevice
+    low = nome_antigo.strip().lower()
+    Machine.query.filter(db.func.lower(db.func.btrim(Machine.assigned_user)) == low).update(
+        {Machine.user_id: target.id, Machine.assigned_user: target.name}, synchronize_session=False)
+    MobileDevice.query.filter(db.func.lower(db.func.btrim(MobileDevice.assigned_employee)) == low).update(
+        {MobileDevice.user_id: target.id, MobileDevice.assigned_employee: target.name}, synchronize_session=False)
+
+
+@bp.route("/reconciliar", methods=["GET", "POST"])
+def reconciliar():
+    """Fecha a cobertura da normalização: para cada nome de ativo sem vínculo,
+    permite CRIAR a pessoa ou VINCULAR a uma existente (renomeando o ativo)."""
+    if request.method == "POST":
+        acao = request.form.get("acao")
+        nome = (request.form.get("nome") or "").strip()
+        if not nome:
+            flash("Nome inválido.", "warning")
+            return redirect(url_for("colaboradores.reconciliar"))
+        if acao == "criar":
+            target = User.query.filter(db.func.lower(User.name) == nome.lower()).first()
+            if target is None:
+                target = User(name=nome, is_active=True, is_admin=False, can_login=False)
+                db.session.add(target)
+                db.session.flush()   # garante o id para vincular
+            _link_assets(nome, target)
+            db.session.commit()
+            people.invalidate_people_cache()
+            flash(f"Pessoa “{nome}” criada e ativos vinculados.", "success")
+        elif acao == "vincular":
+            target = db.session.get(User, request.form.get("user_id", type=int))
+            if not target:
+                flash("Selecione uma pessoa para vincular.", "warning")
+                return redirect(url_for("colaboradores.reconciliar"))
+            _link_assets(nome, target)
+            db.session.commit()
+            people.invalidate_people_cache()
+            flash(f"Ativos de “{nome}” vinculados a {target.name}.", "success")
+        return redirect(url_for("colaboradores.reconciliar"))
+
+    orfaos = _orphan_asset_names()
+    pessoas = User.query.filter_by(is_active=True).order_by(User.name).all()
+    return render_template("colaboradores/reconciliar.html",
+                           orfaos=sorted(orfaos.items(), key=lambda kv: kv[0].lower()),
+                           pessoas=pessoas)
 
 
 @bp.route("/new", methods=["GET", "POST"])
@@ -174,7 +243,7 @@ def new():
 
 @bp.route("/<int:cid>/edit", methods=["GET", "POST"])
 def edit(cid):
-    person = User.query.get_or_404(cid)
+    person = db.get_or_404(User, cid)
     form = ColaboradorForm(obj=person)
     form.department.choices = _dept_choices(person.sector)
     if request.method == "GET":
@@ -217,7 +286,7 @@ def edit(cid):
 
 @bp.route("/<int:cid>/toggle-active", methods=["POST"])
 def toggle_active(cid):
-    person = User.query.get_or_404(cid)
+    person = db.get_or_404(User, cid)
     if person.id == current_user.id:
         flash("Você não pode desativar a si mesmo.", "warning")
         return redirect(url_for("colaboradores.list_view"))
@@ -230,7 +299,7 @@ def toggle_active(cid):
 @bp.route("/<int:cid>/reset-2fa", methods=["POST"])
 def reset_2fa(cid):
     """Desativa o 2FA de uma pessoa (resgate quando perde o autenticador)."""
-    person = User.query.get_or_404(cid)
+    person = db.get_or_404(User, cid)
     if not person.is_2fa_enabled and not person.totp_secret:
         flash(f"“{person.name}” não tem 2FA ativo.", "info")
         return redirect(url_for("colaboradores.list_view"))
@@ -243,7 +312,7 @@ def reset_2fa(cid):
 
 @bp.route("/<int:cid>/delete", methods=["POST"])
 def delete(cid):
-    person = User.query.get_or_404(cid)
+    person = db.get_or_404(User, cid)
     if person.id == current_user.id:
         flash("Você não pode excluir a si mesmo.", "warning")
         return redirect(url_for("colaboradores.list_view"))
