@@ -10,6 +10,7 @@ from flask import (
 from flask_login import login_required
 from werkzeug.utils import secure_filename
 from sqlalchemy.orm import joinedload
+from ..extensions import db
 from sqlalchemy import or_, func, case, select
 
 from ..repositories import movement_repo
@@ -197,7 +198,7 @@ def list_and_new():
 @login_required
 def nf(mid):
     """Abre/baixa a nota fiscal anexada a uma entrada."""
-    m = StockMovement.query.get_or_404(mid)
+    m = db.get_or_404(StockMovement, mid)
     if not m.nf_filename:
         abort(404)
     return send_from_directory(

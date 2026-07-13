@@ -35,7 +35,7 @@ def list_mobiles(search: Optional[str] = None, status: Optional[str] = None) -> 
 
 
 def get_mobile(mid: int) -> MobileDevice:
-    return MobileDevice.query.get_or_404(mid)
+    return db.get_or_404(MobileDevice, mid)
 
 
 def create_mobile(**kwargs) -> MobileDevice:

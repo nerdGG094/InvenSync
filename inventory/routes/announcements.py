@@ -64,7 +64,7 @@ def new():
 @bp.route("/<int:aid>/edit", methods=["GET", "POST"])
 def edit(aid):
     _admin_only()
-    a = Announcement.query.get_or_404(aid)
+    a = db.get_or_404(Announcement, aid)
     form = AnnouncementForm(obj=a)
     if form.validate_on_submit():
         a.title = form.title.data.strip()
@@ -83,7 +83,7 @@ def edit(aid):
 @bp.route("/<int:aid>/toggle-active", methods=["POST"])
 def toggle_active(aid):
     _admin_only()
-    a = Announcement.query.get_or_404(aid)
+    a = db.get_or_404(Announcement, aid)
     a.is_active = not bool(a.is_active)
     db.session.commit()
     flash(f"Aviso {'publicado' if a.is_active else 'despublicado'}.", "success")
@@ -93,7 +93,7 @@ def toggle_active(aid):
 @bp.route("/<int:aid>/toggle-pin", methods=["POST"])
 def toggle_pin(aid):
     _admin_only()
-    a = Announcement.query.get_or_404(aid)
+    a = db.get_or_404(Announcement, aid)
     a.is_pinned = not bool(a.is_pinned)
     db.session.commit()
     flash(f"Aviso {'fixado' if a.is_pinned else 'desafixado'}.", "success")
@@ -118,7 +118,7 @@ def run_alerts():
 @bp.route("/<int:aid>/delete", methods=["POST"])
 def delete(aid):
     _admin_only()
-    a = Announcement.query.get_or_404(aid)
+    a = db.get_or_404(Announcement, aid)
     audit.record("delete", "announcement", a.id, f"Excluiu aviso: {a.title}")
     db.session.delete(a)
     db.session.commit()

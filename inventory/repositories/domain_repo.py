@@ -42,7 +42,7 @@ def expiring_within(days: int = 60) -> List[Domain]:
 
 
 def get_domain(did: int) -> Domain:
-    return Domain.query.get_or_404(did)
+    return db.get_or_404(Domain, did)
 
 
 def create_domain(**kwargs) -> Domain:

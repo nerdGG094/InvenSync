@@ -32,7 +32,7 @@ def list_machines(search: Optional[str] = None, kind: Optional[str] = None) -> L
 
 
 def get_machine(mid: int) -> Machine:
-    return Machine.query.get_or_404(mid)
+    return db.get_or_404(Machine, mid)
 
 
 def create_machine(**kwargs) -> Machine:

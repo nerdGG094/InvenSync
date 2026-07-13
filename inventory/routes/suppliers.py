@@ -1,6 +1,7 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
+from ..extensions import db
 from ..repositories import supplier_repo
 from ..forms.catalog import SupplierForm
 from ..models.supplier import Supplier
@@ -36,7 +37,7 @@ def new():
 @bp.route("/<int:sid>/edit", methods=["GET","POST"])
 @login_required
 def edit(sid):
-    s = Supplier.query.get_or_404(sid)
+    s = db.get_or_404(Supplier, sid)
     form = SupplierForm(obj=s)
     if form.validate_on_submit():
         try:
@@ -55,7 +56,7 @@ def edit(sid):
 @bp.route("/<int:sid>/delete", methods=["POST"])
 @login_required
 def delete(sid):
-    s = Supplier.query.get_or_404(sid)
+    s = db.get_or_404(Supplier, sid)
     try:
         supplier_repo.delete_supplier(s)
         flash("Fornecedor excluído.", "success")

@@ -171,7 +171,7 @@ def test_photo_upload_view_and_delete(app, auth_client):
     r = auth_client.post(f"/credentials/{cid}/photo/{pid}/delete", follow_redirects=False)
     assert r.status_code in (301, 302, 303)
     with app.app_context():
-        assert CredentialPhoto.query.get(pid) is None
+        assert db.session.get(CredentialPhoto, pid) is None
 
 
 def test_photo_route_blocks_common_user(common_client):

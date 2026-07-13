@@ -82,7 +82,7 @@ def new():
 
 @bp.route("/<int:hid>/edit", methods=["GET", "POST"])
 def edit(hid):
-    h = MonitoredHost.query.get_or_404(hid)
+    h = db.get_or_404(MonitoredHost, hid)
     if request.method == "POST":
         data = _form_kwargs()
         if not data["label"] or not data["host"]:
@@ -100,7 +100,7 @@ def edit(hid):
 
 @bp.route("/<int:hid>/delete", methods=["POST"])
 def delete(hid):
-    h = MonitoredHost.query.get_or_404(hid)
+    h = db.get_or_404(MonitoredHost, hid)
     label = h.label
     db.session.delete(h)
     db.session.commit()
@@ -111,7 +111,7 @@ def delete(hid):
 
 @bp.route("/<int:hid>/toggle", methods=["POST"])
 def toggle(hid):
-    h = MonitoredHost.query.get_or_404(hid)
+    h = db.get_or_404(MonitoredHost, hid)
     h.enabled = not h.enabled
     if not h.enabled:
         h.last_status = "unknown"

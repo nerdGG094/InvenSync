@@ -33,7 +33,7 @@ def list_maintenances(search: Optional[str] = None,
 
 
 def get_maintenance(mid: int) -> MachineMaintenance:
-    return MachineMaintenance.query.get_or_404(mid)
+    return db.get_or_404(MachineMaintenance, mid)
 
 
 def create_maintenance(**kwargs) -> MachineMaintenance:

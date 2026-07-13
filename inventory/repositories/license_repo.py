@@ -33,7 +33,7 @@ def expiring_within(days: int = 30) -> List[License]:
 
 
 def get_license(lid: int) -> License:
-    return License.query.get_or_404(lid)
+    return db.get_or_404(License, lid)
 
 
 def create_license(**kwargs) -> License:

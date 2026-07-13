@@ -80,7 +80,7 @@ def login_2fa():
     uid = session.get(PENDING_KEY)
     if not uid:
         return redirect(url_for("auth.login"))
-    user = User.query.get(uid)
+    user = db.session.get(User, uid)
     if not user or not user.is_active or not user.is_2fa_enabled or not user.totp_secret:
         session.pop(PENDING_KEY, None)
         return redirect(url_for("auth.login"))

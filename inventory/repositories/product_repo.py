@@ -65,7 +65,7 @@ def list_products(
 
 
 def get_product(pid: int) -> Product:
-    return Product.query.get_or_404(pid)
+    return db.get_or_404(Product, pid)
 
 
 # -----------------------------

@@ -25,7 +25,7 @@ def list_credentials(search: Optional[str] = None, category: Optional[str] = Non
 
 
 def get_credential(cid: int) -> Credential:
-    return Credential.query.get_or_404(cid)
+    return db.get_or_404(Credential, cid)
 
 
 def create_credential(**kwargs) -> Credential:

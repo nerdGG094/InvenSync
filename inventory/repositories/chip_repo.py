@@ -30,7 +30,7 @@ def list_chips(search: Optional[str] = None, usage: Optional[str] = None) -> Lis
 
 
 def get_chip(cid: int) -> SimChip:
-    return SimChip.query.get_or_404(cid)
+    return db.get_or_404(SimChip, cid)
 
 
 def create_chip(**kwargs) -> SimChip:

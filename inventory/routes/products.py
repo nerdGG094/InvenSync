@@ -32,7 +32,7 @@ def _slug_prefix(text: str, fallback: str = "ITM") -> str:
 def _sku_prefix(category_id, item_type) -> str:
     """Prefixo do SKU: pela categoria (melhor p/ TI) ou, na falta, pelo tipo."""
     if category_id:
-        c = Category.query.get(int(category_id))
+        c = db.session.get(Category, int(category_id))
         if c:
             return _slug_prefix(c.name)
     return TYPE_PREFIX.get(item_type or "product", "ITM")
@@ -209,7 +209,7 @@ def new():
 @bp.route("/<int:pid>/edit", methods=["GET", "POST"])
 @login_required
 def edit(pid):
-    p = Product.query.get_or_404(pid)
+    p = db.get_or_404(Product, pid)
 
     # Para garantir que as choices existam ANTES de processar os dados do objeto:
     form = ProductForm()
@@ -244,7 +244,7 @@ def edit(pid):
 @bp.route("/<int:pid>/delete", methods=["POST"])
 @login_required
 def delete(pid):
-    p = Product.query.get_or_404(pid)
+    p = db.get_or_404(Product, pid)
     try:
         product_repo.delete_product(p)
         flash("Material excluído.", "success")

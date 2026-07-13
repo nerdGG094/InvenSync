@@ -85,7 +85,7 @@ def new():
 
 @bp.route("/<int:did>/edit", methods=["GET", "POST"])
 def edit(did):
-    dep = Department.query.get_or_404(did)
+    dep = db.get_or_404(Department, did)
     old_name = dep.name
     form = DepartmentForm(obj=dep)
     if form.validate_on_submit():
@@ -111,7 +111,7 @@ def edit(did):
 
 @bp.route("/<int:did>/toggle-active", methods=["POST"])
 def toggle_active(did):
-    dep = Department.query.get_or_404(did)
+    dep = db.get_or_404(Department, did)
     dep.is_active = not bool(dep.is_active)
     db.session.commit()
     flash(f"“{dep.name}” {'ativado' if dep.is_active else 'inativado'}.", "success")
@@ -120,7 +120,7 @@ def toggle_active(did):
 
 @bp.route("/<int:did>/delete", methods=["POST"])
 def delete(did):
-    dep = Department.query.get_or_404(did)
+    dep = db.get_or_404(Department, did)
     em_uso = _sector_count(dep.name)
     if em_uso:
         flash(f"Não é possível excluir: {em_uso} colaborador(es) usam “{dep.name}”. "

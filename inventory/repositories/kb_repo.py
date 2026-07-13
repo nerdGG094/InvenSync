@@ -24,7 +24,7 @@ def list_articles(search: Optional[str] = None, category: Optional[str] = None) 
 
 
 def get_article(aid: int) -> KbArticle:
-    return KbArticle.query.get_or_404(aid)
+    return db.get_or_404(KbArticle, aid)
 
 
 def create_article(created_by_id=None, **kwargs) -> KbArticle:

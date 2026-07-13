@@ -292,7 +292,7 @@ def create_app():
         try:
             raw = str(user_id)
             uid, _, tok = raw.partition(":")
-            u = User.query.get(int(uid))
+            u = db.session.get(User, int(uid))
             if u is None:
                 return None
             # Se o id traz token (formato novo), precisa bater com o atual.
@@ -383,6 +383,26 @@ def create_app():
             return
         # Bloqueia o resto: manda para a tela inicial do perfil comum (avisos)
         return redirect(url_for("announcements.list_view"))
+
+    # ===== 2FA obrigatório para administradores =====
+    # Admin sem verificação em duas etapas é levado à configuração e só navega
+    # depois de ativar (libera apenas as rotas de 2FA, logout, auth e estáticos).
+    _2FA_ALLOWED = ("profile.twofa_setup", "profile.twofa_enable", "profile.twofa_qr",
+                    "static", "service_worker", "health.health")
+
+    @app.before_request
+    def _force_admin_2fa():
+        if app.config.get("TESTING") or not app.config.get("FORCE_ADMIN_2FA", True):
+            return
+        u = current_user
+        if (not u.is_authenticated or not getattr(u, "is_admin", False)
+                or getattr(u, "is_2fa_enabled", False)):
+            return
+        ep = request.endpoint or ""
+        if ep in _2FA_ALLOWED or ep.startswith("auth."):
+            return
+        flash("Como administrador, ative a verificação em duas etapas (2FA) para continuar.", "warning")
+        return redirect(url_for("profile.twofa_setup"))
 
     # Disponibiliza helper de avatar nos templates
     @app.context_processor

@@ -45,6 +45,10 @@ class Config:
     # Cabeçalhos de segurança (CSP, X-Frame-Options, etc.). Desligue só p/ depurar.
     SECURITY_HEADERS = os.environ.get("SECURITY_HEADERS", "1") in ("1", "true", "True")
 
+    # Exige 2FA dos administradores: admin sem 2FA é levado à configuração e só
+    # navega depois de ativar. Desligue com FORCE_ADMIN_2FA=0 se precisar.
+    FORCE_ADMIN_2FA = os.environ.get("FORCE_ADMIN_2FA", "1") in ("1", "true", "True")
+
     # Bloqueio de conta após tentativas de senha erradas.
     LOGIN_MAX_ATTEMPTS = int(os.environ.get("LOGIN_MAX_ATTEMPTS", "5"))
     LOGIN_LOCKOUT_MINUTES = int(os.environ.get("LOGIN_LOCKOUT_MINUTES", "15"))

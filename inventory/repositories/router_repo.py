@@ -34,7 +34,7 @@ def list_routers(search: Optional[str] = None, status: Optional[str] = None) -> 
 
 
 def get_router(rid: int) -> Router:
-    return Router.query.get_or_404(rid)
+    return db.get_or_404(Router, rid)
 
 
 def create_router(**kwargs) -> Router:

@@ -1,6 +1,7 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
+from ..extensions import db
 from ..repositories import category_repo
 from ..forms.catalog import CategoryForm
 from ..models.category import Category
@@ -31,7 +32,7 @@ def new():
 @bp.route("/<int:cid>/edit", methods=["GET","POST"])
 @login_required
 def edit(cid):
-    c = Category.query.get_or_404(cid)
+    c = db.get_or_404(Category, cid)
     form = CategoryForm(obj=c)
     if form.validate_on_submit():
         try:
@@ -44,7 +45,7 @@ def edit(cid):
 @bp.route("/<int:cid>/delete", methods=["POST"])
 @login_required
 def delete(cid):
-    c = Category.query.get_or_404(cid)
+    c = db.get_or_404(Category, cid)
     try:
         category_repo.delete_category(c)
         flash("Categoria excluída.", "success")

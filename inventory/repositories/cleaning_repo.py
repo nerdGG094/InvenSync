@@ -31,7 +31,7 @@ def list_cleanings(search: Optional[str] = None,
 
 
 def get_cleaning(cid: int) -> MachineCleaning:
-    return MachineCleaning.query.get_or_404(cid)
+    return db.get_or_404(MachineCleaning, cid)
 
 
 def create_cleaning(**kwargs) -> MachineCleaning:
