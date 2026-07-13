@@ -318,6 +318,16 @@ def detail(tid):
                            is_admin=current_user.is_admin)
 
 
+def _notify_requester_resolved(t):
+    """E-mail para o solicitante quando o chamado é RESOLVIDO — fecha o ciclo."""
+    corpo = f"Seu chamado {t.code} — {t.title} foi marcado como RESOLVIDO."
+    if t.resolution:
+        corpo += f"\n\nResolução: {t.resolution.strip()}"
+    corpo += "\n\nSe o problema persistir, responda no chamado que reabrimos."
+    mailer.notify_user(t.opened_by,
+                       f"[InvenSync] Chamado {t.code} resolvido — {t.title}", corpo)
+
+
 @bp.route("/<int:tid>/comment", methods=["POST"])
 @login_required
 def comment(tid):
@@ -329,18 +339,22 @@ def comment(tid):
         body = form.body.data.strip()
         # Usuário comum não muda status (só a equipe de TI)
         new_status = form.new_status.data if current_user.is_admin else None
+        was_resolved = (t.status == "resolvido")
         ticket_repo.add_comment(t, body=body, author_id=current_user.id,
                                 new_status=new_status or None)
         # Respostas/andamentos: SEM WhatsApp (economiza a cota do CallMeBot).
         # O WhatsApp fica só na ABERTURA do chamado; aqui mantemos só o e-mail.
         if current_user.is_admin:
-            _st = STATUS_LABELS.get(t.status, t.status)
-            mailer.notify_user(
-                t.opened_by,
-                f"[InvenSync] Chamado {t.code} atualizado — {t.title}",
-                f"{t.code} — {t.title}\nAtualizado por {current_user.name}.\n"
-                f"Status: {_st}\n\n{body}"
-            )
+            if t.status == "resolvido" and not was_resolved:
+                _notify_requester_resolved(t)     # fecha o ciclo pra quem abriu
+            else:
+                _st = STATUS_LABELS.get(t.status, t.status)
+                mailer.notify_user(
+                    t.opened_by,
+                    f"[InvenSync] Chamado {t.code} atualizado — {t.title}",
+                    f"{t.code} — {t.title}\nAtualizado por {current_user.name}.\n"
+                    f"Status: {_st}\n\n{body}"
+                )
         else:
             mailer.notify_ti(
                 f"[InvenSync] Resposta no chamado {t.code} — {t.title}",
@@ -460,7 +474,10 @@ def edit(tid):
         form.assigned_to_id.data = t.assigned_to_id or 0
         form.requester.data = t.requester or ""
     if form.validate_on_submit():
+        was_resolved = (t.status == "resolvido")
         ticket_repo.update_ticket(t, **_to_kwargs(form))
+        if t.status == "resolvido" and not was_resolved:
+            _notify_requester_resolved(t)     # avisa o solicitante da resolução
         flash("Chamado atualizado!", "success")
         return redirect(url_for("tickets.detail", tid=t.id))
     return render_template("tickets/form.html", form=form, title=f"Editar {t.code}",
