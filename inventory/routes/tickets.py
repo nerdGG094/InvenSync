@@ -193,6 +193,13 @@ def dashboard():
     ]
     avg_resolution_h = round(sum(durations) / len(durations), 1) if durations else None
 
+    # Tempo médio de 1ª resposta (horas) e satisfação (CSAT, média das notas 1-5)
+    frs = [t.first_response_hours for t in all_tickets if t.first_response_hours is not None]
+    avg_first_response_h = round(sum(frs) / len(frs), 1) if frs else None
+    ratings = [t.rating for t in all_tickets if t.rating]
+    csat = round(sum(ratings) / len(ratings), 1) if ratings else None
+    csat_count = len(ratings)
+
     # Distribuições (entre abertos/em andamento)
     by_category, by_priority, by_assignee = {}, {}, {}
     for t in all_tickets:
@@ -229,6 +236,8 @@ def dashboard():
         overdue=overdue[:15],
         overdue_count=len(overdue),
         avg_resolution_h=avg_resolution_h,
+        avg_first_response_h=avg_first_response_h,
+        csat=csat, csat_count=csat_count,
         cat_data=cat_data,
         prio_data=prio_data,
         assignee_data=assignee_data,
@@ -340,6 +349,9 @@ def comment(tid):
         # Usuário comum não muda status (só a equipe de TI)
         new_status = form.new_status.data if current_user.is_admin else None
         was_resolved = (t.status == "resolvido")
+        # 1ª resposta da TI — para a métrica de tempo de resposta.
+        if current_user.is_admin and t.first_response_at is None:
+            t.first_response_at = datetime.now()
         ticket_repo.add_comment(t, body=body, author_id=current_user.id,
                                 new_status=new_status or None)
         # Respostas/andamentos: SEM WhatsApp (economiza a cota do CallMeBot).
@@ -376,6 +388,8 @@ def assume(tid):
     # Atribui a mim e, se ainda estava só aberto, passa para "em andamento".
     t.assigned_to_id = current_user.id
     new_status = "em_andamento" if t.status == "aberto" else None
+    if t.first_response_at is None:      # assumir conta como 1ª resposta da TI
+        t.first_response_at = datetime.now()
     ticket_repo.add_comment(
         t, body=f"Chamado assumido por {current_user.name}.",
         author_id=current_user.id, new_status=new_status,
@@ -384,6 +398,31 @@ def assume(tid):
     # Sem WhatsApp aqui — o CallMeBot fica só na abertura do chamado.
     flash(f"Você assumiu o chamado {t.code}.", "success")
     return redirect(request.referrer or url_for("tickets.list_view"))
+
+
+@bp.route("/<int:tid>/rate", methods=["POST"])
+@login_required
+def rate(tid):
+    """Avaliação de satisfação — só quem abriu, e só com o chamado resolvido."""
+    t = ticket_repo.get_ticket(tid)
+    if t.opened_by_id != current_user.id:
+        abort(403)
+    if t.status != "resolvido":
+        flash("Só é possível avaliar chamados resolvidos.", "warning")
+        return redirect(url_for("tickets.detail", tid=t.id))
+    try:
+        nota = int(request.form.get("rating") or 0)
+    except ValueError:
+        nota = 0
+    if not (1 <= nota <= 5):
+        flash("Escolha uma nota de 1 a 5.", "warning")
+        return redirect(url_for("tickets.detail", tid=t.id))
+    t.rating = nota
+    t.rated_at = datetime.now()
+    db.session.commit()
+    audit.record("update", "ticket", t.id, f"Avaliou o chamado {t.code}: {nota}/5")
+    flash("Obrigado pela avaliação!", "success")
+    return redirect(url_for("tickets.detail", tid=t.id))
 
 
 ALLOWED_ATTACH_EXT = {

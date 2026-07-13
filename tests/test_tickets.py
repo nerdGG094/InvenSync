@@ -84,6 +84,26 @@ def test_sla_overdue_by_priority(app, admin_email):
         assert t1.sla_overdue is False
 
 
+def test_first_response_and_rating(app, auth_client, admin_email):
+    """1ª resposta é carimbada no 1º comentário da TI; solicitante avalia ao resolver."""
+    aid = _admin_id(app, admin_email)
+    with app.app_context():
+        t = ticket_repo.create_ticket(opened_by_id=aid, title=f"{MARK} fr-rating",
+                                      category="outro", priority="media", status="aberto")
+        tid = t.id
+    # comentário da TI -> carimba first_response_at
+    auth_client.post(f"/tickets/{tid}/comment", data={"body": "olhando", "new_status": ""})
+    with app.app_context():
+        assert db.session.get(Ticket, tid).first_response_at is not None
+    # resolve e o solicitante (o próprio admin de teste) avalia
+    auth_client.post(f"/tickets/{tid}/comment", data={"body": "feito", "new_status": "resolvido"})
+    r = auth_client.post(f"/tickets/{tid}/rate", data={"rating": "5"})
+    assert r.status_code in (301, 302, 303)
+    with app.app_context():
+        t = db.session.get(Ticket, tid)
+        assert t.rating == 5 and t.status == "resolvido"
+
+
 def test_add_comment_records_status_transition(app, admin_email):
     aid = _admin_id(app, admin_email)
     with app.app_context():

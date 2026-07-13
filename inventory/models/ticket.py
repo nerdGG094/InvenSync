@@ -32,6 +32,9 @@ class Ticket(db.Model):
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
     resolved_at = db.Column(db.DateTime, nullable=True)
     resolution = db.Column(db.Text, nullable=True)             # o que foi feito
+    first_response_at = db.Column(db.DateTime, nullable=True)  # 1ª resposta/ação da TI
+    rating = db.Column(db.Integer, nullable=True)              # avaliação do solicitante (1-5)
+    rated_at = db.Column(db.DateTime, nullable=True)
 
     opened_by = db.relationship("User", foreign_keys=[opened_by_id])
     assigned_to = db.relationship("User", foreign_keys=[assigned_to_id])
@@ -64,6 +67,13 @@ class Ticket(db.Model):
         """Chamado em aberto parado há mais de `hours` horas."""
         h = self.age_hours
         return bool(self.is_open and h is not None and h >= hours)
+
+    @property
+    def first_response_hours(self):
+        """Horas entre a abertura e a 1ª resposta da TI (None se ainda não houve)."""
+        if not (self.created_at and self.first_response_at):
+            return None
+        return (self.first_response_at - self.created_at).total_seconds() / 3600.0
 
     # ===== SLA (prazo por prioridade) =====
     @property
