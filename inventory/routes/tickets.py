@@ -349,6 +349,10 @@ def comment(tid):
         # Usuário comum não muda status (só a equipe de TI)
         new_status = form.new_status.data if current_user.is_admin else None
         was_resolved = (t.status == "resolvido")
+        # Solicitante respondendo num chamado JÁ resolvido? Reabre automaticamente.
+        reopened = (not current_user.is_admin) and was_resolved
+        if reopened:
+            new_status = "em_andamento"
         # 1ª resposta da TI — para a métrica de tempo de resposta.
         if current_user.is_admin and t.first_response_at is None:
             t.first_response_at = datetime.now()
@@ -368,11 +372,13 @@ def comment(tid):
                     f"Status: {_st}\n\n{body}"
                 )
         else:
+            _acao = "REABRIU" if reopened else "respondeu"
             mailer.notify_ti(
-                f"[InvenSync] Resposta no chamado {t.code} — {t.title}",
-                f"{t.requester or current_user.name} respondeu no chamado {t.code}:\n\n{body}"
+                f"[InvenSync] {'Chamado REABERTO' if reopened else 'Resposta'} — {t.code} {t.title}",
+                f"{t.requester or current_user.name} {_acao} o chamado {t.code}:\n\n{body}"
             )
-        flash("Andamento adicionado.", "success")
+        flash("Chamado reaberto — a equipe de TI foi avisada." if reopened
+              else "Andamento adicionado.", "success")
     else:
         flash("Escreva o andamento antes de enviar.", "warning")
     return redirect(url_for("tickets.detail", tid=t.id))

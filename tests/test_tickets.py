@@ -203,6 +203,20 @@ def test_common_user_can_open_own_ticket(app, common_client):
         assert t.assigned_to_id is None
 
 
+def test_requester_reply_reopens_resolved(app, common_client, common_email):
+    """Solicitante respondendo num chamado resolvido reabre automaticamente."""
+    cid = _common_id(app, common_email)
+    with app.app_context():
+        t = ticket_repo.create_ticket(opened_by_id=cid, title=f"{MARK} reopen",
+                                      category="outro", priority="media", status="aberto")
+        ticket_repo.update_ticket(t, status="resolvido")
+        tid = t.id
+    r = common_client.post(f"/tickets/{tid}/comment", data={"body": "ainda com problema"})
+    assert r.status_code in (301, 302, 303)
+    with app.app_context():
+        assert db.session.get(Ticket, tid).status == "em_andamento"
+
+
 def test_common_user_blocked_from_others_ticket(app, common_client, admin_email):
     aid = _admin_id(app, admin_email)
     with app.app_context():
