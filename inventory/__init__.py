@@ -269,6 +269,7 @@ def create_app():
     from .models.chip import SimChip
     from .models.announcement import Announcement
     from .models.error_log import ErrorLog
+    from .models.asset_signature import AssetSignature
 
     # Cria tabelas e semente inicial
     with app.app_context():

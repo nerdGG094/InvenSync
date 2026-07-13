@@ -1,11 +1,17 @@
 # inventory/routes/assets.py
 from datetime import datetime
 
-from flask import Blueprint, render_template, request, abort
+from flask import Blueprint, render_template, request, abort, jsonify
 from flask_login import login_required, current_user
 
+from ..extensions import db
+from ..models.asset_signature import AssetSignature
 from ..services import assets, audit
 from ..services.exports import xlsx_response
+
+
+def _sig_key(name: str) -> str:
+    return (name or "").strip().lower()
 
 _MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho",
           "agosto", "setembro", "outubro", "novembro", "dezembro"]
@@ -113,4 +119,26 @@ def termo(name):
         abort(404)
     now = datetime.now()
     data_extenso = f"{now.day} de {_MESES[now.month - 1]} de {now.year}"
-    return render_template("assets/termo.html", a=data, data_extenso=data_extenso)
+    sig = AssetSignature.query.filter_by(person_key=_sig_key(name)).first()
+    return render_template("assets/termo.html", a=data, data_extenso=data_extenso,
+                           saved_signature=(sig.data_url if sig else ""),
+                           signed_at=(sig.signed_at if sig else None))
+
+
+@bp.route("/<path:name>/signature", methods=["POST"])
+def save_signature(name):
+    """Salva/atualiza a assinatura do colaborador (data URL do canvas)."""
+    data_url = (request.form.get("signature") or "").strip()
+    if not data_url.startswith("data:image/") or len(data_url) > 2_000_000:
+        return jsonify(ok=False, error="assinatura inválida"), 400
+    key = _sig_key(name)
+    sig = AssetSignature.query.filter_by(person_key=key).first()
+    if sig is None:
+        sig = AssetSignature(person_key=key, person_name=name, data_url=data_url)
+        db.session.add(sig)
+    else:
+        sig.data_url = data_url
+        sig.person_name = name
+    db.session.commit()
+    audit.record("update", "asset_signature", None, f"Assinou o termo de {name}")
+    return jsonify(ok=True)

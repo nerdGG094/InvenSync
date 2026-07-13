@@ -42,6 +42,7 @@
   <div class="toolbar">
     <a href="javascript:history.back()" class="btn">← Voltar</a>
     <button class="btn" onclick="clearSig()">✕ Limpar assinatura</button>
+    <button class="btn" onclick="saveSig()">💾 Salvar assinatura</button>
     <button class="btn primary" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
   </div>
 
@@ -113,7 +114,7 @@
       <div class="sig-block">
         <canvas id="sigCanvas" class="sig-canvas"></canvas>
         <img class="sig-img" id="sigImg" alt="Assinatura">
-        <div class="sig-line">{{ a.name }}<br><span class="sub">Colaborador(a) — assine no quadro acima</span></div>
+        <div class="sig-line">{{ a.name }}<br><span class="sub">Colaborador(a){% if signed_at %} — assinado em {{ signed_at.strftime('%d/%m/%Y') }}{% else %} — assine no quadro acima{% endif %}</span></div>
       </div>
       <div class="sig-block">
         <div class="sig-blank"></div>
@@ -123,31 +124,57 @@
   </div>
 
   <script>
-    // Assinatura no canvas (dedo no tablet ou mouse). Sem auto-print: assine e
-    // então clique em Imprimir/Salvar PDF.
+    // Assinatura no canvas (dedo no tablet ou mouse). Sem auto-print: assine/
+    // carregue a assinatura salva e então clique em Imprimir/Salvar PDF.
     (function(){
       const c = document.getElementById('sigCanvas');
       if (!c) return;
+      const img = document.getElementById('sigImg');
       const ctx = c.getContext('2d');
       // Resolução física = tamanho renderizado × DPR (assinatura nítida).
       const rect = c.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
-      c.width = Math.round(rect.width * dpr);
-      c.height = Math.round(rect.height * dpr);
+      const CSSW = rect.width, CSSH = rect.height;
+      c.width = Math.round(CSSW * dpr);
+      c.height = Math.round(CSSH * dpr);
       ctx.scale(dpr, dpr);
       ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.strokeStyle = '#111';
+
+      // Mantém a <img> (usada na impressão) sempre com a assinatura atual —
+      // setar no beforeprint costuma sair em branco (decodifica tarde demais).
+      function syncImg(){ try { img.src = c.toDataURL('image/png'); } catch(_){} }
+
+      // Carrega a assinatura salva (se houver) no canvas + imagem de impressão.
+      const SAVED = {{ (saved_signature or '')|tojson }};
+      if (SAVED) {
+        const im = new Image();
+        im.onload = function(){ ctx.drawImage(im, 0, 0, CSSW, CSSH); img.src = SAVED; };
+        im.src = SAVED;
+      }
+
       let drawing = false, last = null;
       function pos(e){ const r = c.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
       c.addEventListener('pointerdown', function(e){ drawing = true; last = pos(e); try { c.setPointerCapture(e.pointerId); } catch(_){} });
       c.addEventListener('pointermove', function(e){ if (!drawing) return; const p = pos(e); ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke(); last = p; });
-      c.addEventListener('pointerup', function(){ drawing = false; });
-      c.addEventListener('pointercancel', function(){ drawing = false; });
-      window.clearSig = function(){ ctx.clearRect(0, 0, c.width, c.height); };
-      // Garante a assinatura na impressão/PDF (canvas -> imagem).
-      window.addEventListener('beforeprint', function(){
-        const img = document.getElementById('sigImg');
-        if (img) img.src = c.toDataURL('image/png');
-      });
+      function endStroke(){ if (drawing){ drawing = false; syncImg(); } }
+      c.addEventListener('pointerup', endStroke);
+      c.addEventListener('pointercancel', endStroke);
+
+      window.clearSig = function(){ ctx.clearRect(0, 0, c.width, c.height); img.removeAttribute('src'); };
+      window.addEventListener('beforeprint', syncImg);
+
+      window.saveSig = async function(){
+        try {
+          const body = new URLSearchParams(); body.append('signature', c.toDataURL('image/png'));
+          const r = await fetch("{{ url_for('assets.save_signature', name=a.name) }}", {
+            method: 'POST',
+            headers: { 'X-CSRFToken': "{{ csrf_token() }}", 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body });
+          const j = await r.json();
+          if (j.ok){ syncImg(); alert('Assinatura salva! Ao reabrir o termo desta pessoa ela já estará aqui.'); }
+          else { alert('Não foi possível salvar (assinatura vazia/inválida).'); }
+        } catch(e){ alert('Erro ao salvar a assinatura.'); }
+      };
     })();
   </script>
 </body>
