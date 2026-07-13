@@ -21,19 +21,27 @@
   th, td { border:1px solid #999; padding:6px 8px; text-align:left; }
   th { background:#e8f3ec; }
   .terms { font-size:12px; line-height:1.6; text-align:justify; margin-top:14px; }
-  .sign { margin-top:60px; display:flex; gap:50px; }
-  .sign div { flex:1; text-align:center; border-top:1px solid #333; padding-top:6px; font-size:12.5px; }
+  .sign { margin-top:48px; display:flex; gap:50px; align-items:flex-end; }
+  .sig-block { flex:1; text-align:center; }
+  .sig-canvas { width:100%; max-width:320px; height:92px; border:1px dashed #aaa; border-radius:6px;
+    background:#fff; touch-action:none; cursor:crosshair; display:block; margin:0 auto; }
+  .sig-img { width:100%; max-width:320px; height:92px; object-fit:contain; display:none; margin:0 auto; }
+  .sig-blank { height:92px; }
+  .sig-line { border-top:1px solid #333; padding-top:6px; font-size:12.5px; margin-top:2px; }
   .city { margin-top:36px; font-size:13px; text-align:right; }
   @media print {
     body { background:#fff; padding:0; }
     .sheet { box-shadow:none; max-width:none; padding:24px 28px; }
     .toolbar { display:none; }
+    .sig-canvas { display:none !important; }
+    .sig-img { display:block !important; border:0; }
   }
 </style>
 </head>
 <body>
   <div class="toolbar">
     <a href="javascript:history.back()" class="btn">← Voltar</a>
+    <button class="btn" onclick="clearSig()">✕ Limpar assinatura</button>
     <button class="btn primary" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
   </div>
 
@@ -102,14 +110,45 @@
     <div class="city">{{ a.sector and '' }}Jaboticabal, {{ data_extenso }}.</div>
 
     <div class="sign">
-      <div>{{ a.name }}<br><span class="sub">Colaborador(a)</span></div>
-      <div>_______________________<br><span class="sub">Responsável de TI</span></div>
+      <div class="sig-block">
+        <canvas id="sigCanvas" class="sig-canvas"></canvas>
+        <img class="sig-img" id="sigImg" alt="Assinatura">
+        <div class="sig-line">{{ a.name }}<br><span class="sub">Colaborador(a) — assine no quadro acima</span></div>
+      </div>
+      <div class="sig-block">
+        <div class="sig-blank"></div>
+        <div class="sig-line">_______________________<br><span class="sub">Responsável de TI</span></div>
+      </div>
     </div>
   </div>
 
   <script>
-    // Abre o diálogo de impressão automaticamente (cancele para apenas visualizar).
-    window.addEventListener('load', function(){ setTimeout(function(){ window.print(); }, 400); });
+    // Assinatura no canvas (dedo no tablet ou mouse). Sem auto-print: assine e
+    // então clique em Imprimir/Salvar PDF.
+    (function(){
+      const c = document.getElementById('sigCanvas');
+      if (!c) return;
+      const ctx = c.getContext('2d');
+      // Resolução física = tamanho renderizado × DPR (assinatura nítida).
+      const rect = c.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      c.width = Math.round(rect.width * dpr);
+      c.height = Math.round(rect.height * dpr);
+      ctx.scale(dpr, dpr);
+      ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.strokeStyle = '#111';
+      let drawing = false, last = null;
+      function pos(e){ const r = c.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+      c.addEventListener('pointerdown', function(e){ drawing = true; last = pos(e); try { c.setPointerCapture(e.pointerId); } catch(_){} });
+      c.addEventListener('pointermove', function(e){ if (!drawing) return; const p = pos(e); ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke(); last = p; });
+      c.addEventListener('pointerup', function(){ drawing = false; });
+      c.addEventListener('pointercancel', function(){ drawing = false; });
+      window.clearSig = function(){ ctx.clearRect(0, 0, c.width, c.height); };
+      // Garante a assinatura na impressão/PDF (canvas -> imagem).
+      window.addEventListener('beforeprint', function(){
+        const img = document.getElementById('sigImg');
+        if (img) img.src = c.toDataURL('image/png');
+      });
+    })();
   </script>
 </body>
 </html>
