@@ -68,6 +68,9 @@ def _run_light_migrations():
         '  JOIN ticket tk ON tk.id = tc.ticket_id'
         '  WHERE tc.author_id IS DISTINCT FROM tk.opened_by_id GROUP BY tc.ticket_id'
         ') sub WHERE t.id = sub.ticket_id AND t.first_response_at IS NULL',
+        # Apoio ao "última limpeza por máquina" (DISTINCT ON) do dashboard.
+        'CREATE INDEX IF NOT EXISTS ix_machine_cleaning_machine_started '
+        'ON machine_cleaning (machine_id, started_at DESC)',
     ]
     for sql in stmts:
         try:

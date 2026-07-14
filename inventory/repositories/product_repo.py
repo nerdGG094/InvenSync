@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 from sqlalchemy import or_, func, case
+from sqlalchemy.orm import joinedload
 from ..extensions import db
 from ..models.product import Product
 
@@ -43,7 +44,9 @@ def list_products(
     - item_type: ex.: 'product', 'raw_material', 'kit', 'service'
     - unit: ex.: 'UN', 'KG', 'L', 'CX', ...
     """
-    query = Product.query
+    # Eager-load categoria/fornecedor (many-to-one): a lista lê p.category.name /
+    # p.supplier.name por linha — sem isso é N+1. joinedload não explode linhas.
+    query = Product.query.options(joinedload(Product.category), joinedload(Product.supplier))
 
     if search:
         s = f"%{search.strip()}%"

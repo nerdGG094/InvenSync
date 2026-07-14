@@ -246,19 +246,22 @@ def index():
     # recente por máquina e ordenamos pela data mais próxima.
     cleanings_next = []
     try:
-        rows = (
-            db.session.query(MachineCleaning, Machine)
-            .join(Machine, Machine.id == MachineCleaning.machine_id)
+        # Última limpeza por máquina resolvida no banco (DISTINCT ON) — antes
+        # materializava TODO o histórico só para exibir 8 linhas.
+        latest = (
+            db.session.query(MachineCleaning)
             .filter(MachineCleaning.next_date.isnot(None))
-            .order_by(MachineCleaning.started_at.desc().nullslast(),
+            .distinct(MachineCleaning.machine_id)
+            .order_by(MachineCleaning.machine_id,
+                      MachineCleaning.started_at.desc().nullslast(),
                       MachineCleaning.id.desc())
             .all()
         )
-        seen = set()
-        for cln, mac in rows:
-            if mac.id in seen:
+        latest.sort(key=lambda c: c.next_date)
+        for cln in latest[:8]:
+            mac = cln.machine
+            if mac is None:
                 continue
-            seen.add(mac.id)
             days = (cln.next_date - today).days
             cleanings_next.append({
                 "machine_id": mac.id,
@@ -272,8 +275,6 @@ def index():
                 "overdue": days < 0,
                 "executed_by": cln.executed_by,
             })
-        cleanings_next.sort(key=lambda c: c["next_date"])
-        cleanings_next = cleanings_next[:8]
     except Exception:
         db.session.rollback()
 
