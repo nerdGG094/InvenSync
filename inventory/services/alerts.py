@@ -205,11 +205,6 @@ def send_digest_if_window(app):
                     return  # já processado nesta janela
         except Exception:  # noqa: BLE001
             pass
-        try:
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(slot)
-        except Exception:  # noqa: BLE001
-            pass
 
         try:
             days = int(app.config.get("ALERTS_LICENSE_DAYS", 30) or 30)
@@ -218,6 +213,8 @@ def send_digest_if_window(app):
             lic = _expiring_licenses(days)
             stuck = _stuck_tickets(hours)
             total = len(low) + len(lic) + len(stuck)
+            # Nada a enviar? NÃO marca a janela — se surgir pendência mais tarde
+            # na mesma hora (ex.: host cai às 08:20), o digest ainda sai.
             if total <= 0:
                 return
             resumo = (
@@ -228,6 +225,16 @@ def send_digest_if_window(app):
             )
             whatsapp.notify_ti("🔔 *InvenSync — alertas do dia*\n" + resumo)
             mailer.notify_ti("[InvenSync] Alertas do dia", "Alertas do dia\n\n" + resumo)
+            # Marca a janela como consumida SÓ após enviar (evita duplicar no
+            # próximo tick da mesma hora).
+            try:
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write(slot)
+            except Exception as e:  # noqa: BLE001
+                try:
+                    app.logger.warning("alerts: não gravou estado do digest: %s", e)
+                except Exception:  # noqa: BLE001
+                    pass
         except Exception:  # noqa: BLE001
             db.session.rollback()
 

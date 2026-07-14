@@ -20,6 +20,13 @@ def _sig_key(name: str) -> str:
     return (name or "").strip().lower()
 
 
+def _valid_signature(data_url: str) -> bool:
+    """Assinatura tem que ser exatamente o PNG que o canvas gera (barra SVG e
+    outros subtipos), e caber no limite."""
+    return (data_url.startswith("data:image/png;base64,")
+            and len(data_url) <= 2_000_000)
+
+
 def _termo_itens(data: dict) -> list:
     """Congela os equipamentos de uma pessoa numa lista simples (p/ o comprovante)."""
     itens = []
@@ -167,9 +174,13 @@ def save_signature(name):
     """Salva a assinatura do colaborador e registra um comprovante de entrega
     (congela os equipamentos + a assinatura naquele momento)."""
     data_url = (request.form.get("signature") or "").strip()
-    if not data_url.startswith("data:image/") or len(data_url) > 2_000_000:
+    if not _valid_signature(data_url):
         return jsonify(ok=False, error="assinatura inválida"), 400
     key = _sig_key(name)
+    # Não deixa um "colaborador" cujo nome normalize para a chave reservada
+    # sobrescrever a assinatura única do Responsável de TI.
+    if key == TI_KEY:
+        return jsonify(ok=False, error="nome reservado"), 400
     _upsert_signature(key, name, data_url)
 
     # Comprovante de entrega — evita duplicar se nada mudou desde o último.
@@ -192,7 +203,7 @@ def save_ti_signature():
     """Salva/atualiza a assinatura (única) do Responsável de TI, reutilizada em
     todos os termos."""
     data_url = (request.form.get("signature") or "").strip()
-    if not data_url.startswith("data:image/") or len(data_url) > 2_000_000:
+    if not _valid_signature(data_url):
         return jsonify(ok=False, error="assinatura inválida"), 400
     _upsert_signature(TI_KEY, "Responsável de TI", data_url)
     db.session.commit()

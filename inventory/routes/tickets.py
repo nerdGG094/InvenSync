@@ -7,6 +7,7 @@ from flask import (Blueprint, render_template, request, redirect, url_for, flash
                    abort, jsonify, current_app)
 from flask_login import login_required, current_user
 from sqlalchemy import func
+from sqlalchemy.orm import joinedload
 from werkzeug.utils import secure_filename
 
 from ..extensions import db
@@ -27,6 +28,64 @@ bp = Blueprint("tickets", __name__)
 def _users_info() -> dict:
     """Mapa usuário (cadastrado em Máquinas) -> setor."""
     return people.users_sector_map()
+
+
+def _name_eq(user, name) -> bool:
+    return bool(name and (user.name or "").strip().lower() == name.strip().lower())
+
+
+def _is_requester(user, t) -> bool:
+    """É o solicitante do chamado? (casado por nome; sem solicitante nomeado,
+    quem abriu). Quem avalia a satisfação."""
+    if t.requester:
+        return _name_eq(user, t.requester)
+    return t.opened_by_id == user.id
+
+
+def _is_participant(user, t) -> bool:
+    """Não-admin pode ver/comentar o chamado se o abriu OU é o solicitante."""
+    return t.opened_by_id == user.id or _is_requester(user, t)
+
+
+def _requester_user(t):
+    """Usuário a notificar sobre o chamado: o solicitante (casado por nome no
+    cadastro). Cai para quem registrou quando não há solicitante nomeado; None
+    quando o solicitante nomeado não tem cadastro/e-mail."""
+    if t.requester:
+        return User.query.filter(db.func.lower(User.name) == t.requester.strip().lower()).first()
+    return t.opened_by
+
+
+def _period_range(args):
+    """Interpreta os parâmetros de período (hoje/7/30/todos/custom) → intervalo
+    de datas. Compartilhado entre a lista e a exportação Excel."""
+    period = (args.get("period") or "hoje").strip()
+    date_from_s = (args.get("from") or "").strip()
+    date_to_s = (args.get("to") or "").strip()
+    date_from = date_to = None
+    today = datetime.now().date()
+    if period == "custom":
+        try:
+            date_from = datetime.strptime(date_from_s, "%Y-%m-%d") if date_from_s else None
+        except ValueError:
+            date_from = None
+        try:
+            date_to = (datetime.strptime(date_to_s, "%Y-%m-%d") + timedelta(days=1)
+                       - timedelta(seconds=1)) if date_to_s else None
+        except ValueError:
+            date_to = None
+        if not date_from and not date_to:
+            period = "todos"
+    elif period == "7":
+        date_from = datetime.combine(today - timedelta(days=6), datetime.min.time())
+    elif period == "30":
+        date_from = datetime.combine(today - timedelta(days=29), datetime.min.time())
+    elif period == "todos":
+        pass
+    else:
+        period = "hoje"
+        date_from = datetime.combine(today, datetime.min.time())
+    return period, date_from, date_to, date_from_s, date_to_s
 
 
 def _populate(form: TicketForm):
@@ -64,34 +123,7 @@ def list_view():
     status = (request.args.get("status") or "").strip()
     priority = (request.args.get("priority") or "").strip()
     sla = (request.args.get("sla") or "").strip()   # 'late' = só os que estouraram o SLA
-    period = (request.args.get("period") or "hoje").strip()
-    date_from_s = (request.args.get("from") or "").strip()
-    date_to_s = (request.args.get("to") or "").strip()
-
-    # Filtro por data (padrão: somente os de hoje, p/ não acumular a lista)
-    date_from = date_to = None
-    today = datetime.now().date()
-    if period == "custom":
-        try:
-            date_from = datetime.strptime(date_from_s, "%Y-%m-%d") if date_from_s else None
-        except ValueError:
-            date_from = None
-        try:
-            date_to = (datetime.strptime(date_to_s, "%Y-%m-%d") + timedelta(days=1)
-                       - timedelta(seconds=1)) if date_to_s else None
-        except ValueError:
-            date_to = None
-        if not date_from and not date_to:
-            period = "todos"
-    elif period == "7":
-        date_from = datetime.combine(today - timedelta(days=6), datetime.min.time())
-    elif period == "30":
-        date_from = datetime.combine(today - timedelta(days=29), datetime.min.time())
-    elif period == "todos":
-        pass
-    else:
-        period = "hoje"
-        date_from = datetime.combine(today, datetime.min.time())
+    period, date_from, date_to, date_from_s, date_to_s = _period_range(request.args)
 
     # Sem filtro de status, pendentes (aberto/em andamento) aparecem sempre,
     # mesmo fora do período — para nada em aberto sumir da lista.
@@ -100,10 +132,12 @@ def list_view():
                                      include_open_always=not status)
 
     cnt = db.session.query(Ticket.status, func.count(Ticket.id))
-    # Usuário comum só vê os próprios chamados
+    # Usuário comum vê os que abriu E aqueles em que é o solicitante (por nome).
     if not current_user.is_admin:
-        items = [t for t in items if t.opened_by_id == current_user.id]
-        cnt = cnt.filter(Ticket.opened_by_id == current_user.id)
+        items = [t for t in items if _is_participant(current_user, t)]
+        my_name = (current_user.name or "").strip().lower()
+        cnt = cnt.filter(db.or_(Ticket.opened_by_id == current_user.id,
+                                db.func.lower(db.func.btrim(Ticket.requester)) == my_name))
     counts = dict(cnt.group_by(Ticket.status).all())
     totals = {
         "aberto": counts.get("aberto", 0),
@@ -116,7 +150,9 @@ def list_view():
     # SLA: total de atrasados (sobre os abertos do escopo) + filtro opcional.
     open_q = Ticket.query.filter(Ticket.status.in_(("aberto", "em_andamento")))
     if not current_user.is_admin:
-        open_q = open_q.filter(Ticket.opened_by_id == current_user.id)
+        my_name = (current_user.name or "").strip().lower()
+        open_q = open_q.filter(db.or_(Ticket.opened_by_id == current_user.id,
+                                      db.func.lower(db.func.btrim(Ticket.requester)) == my_name))
     overdue_total = sum(1 for t in open_q.all() if t.sla_overdue)
     if sla == "late":
         items = [t for t in items if t.sla_overdue]
@@ -135,7 +171,10 @@ def export():
     q = (request.args.get("q") or "").strip()
     status = (request.args.get("status") or "").strip()
     priority = (request.args.get("priority") or "").strip()
-    items = ticket_repo.list_tickets(q or None, status or None, priority or None)
+    # Respeita o mesmo período da tela (senão o Excel exporta tudo e diverge).
+    _p, date_from, date_to, _f, _t = _period_range(request.args)
+    items = ticket_repo.list_tickets(q or None, status or None, priority or None,
+                                     date_from=date_from, date_to=date_to)
     cat_lbl = dict(CATEGORY_CHOICES)
     prio_lbl = dict(PRIORITY_CHOICES)
     status_lbl = dict(STATUS_CHOICES)
@@ -166,7 +205,8 @@ def dashboard():
     prio_labels = dict(PRIORITY_CHOICES)
     status_labels = dict(STATUS_CHOICES)
 
-    all_tickets = Ticket.query.all()
+    # joinedload evita N+1: o loop de distribuição lê t.assigned_to.name.
+    all_tickets = Ticket.query.options(joinedload(Ticket.assigned_to)).all()
     open_statuses = ("aberto", "em_andamento")
 
     counts = {"aberto": 0, "em_andamento": 0, "resolvido": 0, "cancelado": 0}
@@ -254,7 +294,7 @@ def api_recent():
     if not current_user.is_admin:
         return jsonify(tickets=[], latest_id=0, open_count=0)
     since = request.args.get("since_id", type=int) or 0
-    open_count = Ticket.query.filter_by(status="aberto").count()
+    open_count = Ticket.query.filter(Ticket.status.in_(("aberto", "em_andamento"))).count()
     recent = Ticket.query.order_by(Ticket.id.desc()).limit(10).all()
     latest_id = recent[0].id if recent else 0
     novos = [t for t in recent if t.id > since] if since else []
@@ -298,6 +338,12 @@ def new():
         if data.get("resolution") and data.get("status") == "aberto":
             data["status"] = "resolvido"
         t = ticket_repo.create_ticket(opened_by_id=current_user.id, **data)
+        # Nasceu resolvido? A 1ª resposta é a própria abertura — senão um
+        # comentário futuro carimbaria first_response muito depois e poluiria a
+        # métrica de tempo de 1ª resposta.
+        if t.status == "resolvido" and t.first_response_at is None:
+            t.first_response_at = t.created_at
+            db.session.commit()
         # Notifica a equipe de TI por WhatsApp + e-mail (best-effort)
         _aberto = (f"Aberto por: {t.requester or current_user.name}"
                    f"{(' · ' + t.sector) if t.sector else ''}")
@@ -320,11 +366,12 @@ def new():
 @login_required
 def detail(tid):
     t = ticket_repo.get_ticket(tid)
-    if not current_user.is_admin and t.opened_by_id != current_user.id:
+    if not current_user.is_admin and not _is_participant(current_user, t):
         abort(403)
     comment_form = CommentForm()
     return render_template("tickets/detail.html", t=t, comment_form=comment_form,
-                           is_admin=current_user.is_admin)
+                           is_admin=current_user.is_admin,
+                           can_rate=_is_requester(current_user, t))
 
 
 def _notify_requester_resolved(t):
@@ -333,7 +380,7 @@ def _notify_requester_resolved(t):
     if t.resolution:
         corpo += f"\n\nResolução: {t.resolution.strip()}"
     corpo += "\n\nSe o problema persistir, responda no chamado que reabrimos."
-    mailer.notify_user(t.opened_by,
+    mailer.notify_user(_requester_user(t),
                        f"[InvenSync] Chamado {t.code} resolvido — {t.title}", corpo)
 
 
@@ -341,7 +388,7 @@ def _notify_requester_resolved(t):
 @login_required
 def comment(tid):
     t = ticket_repo.get_ticket(tid)
-    if not current_user.is_admin and t.opened_by_id != current_user.id:
+    if not current_user.is_admin and not _is_participant(current_user, t):
         abort(403)
     form = CommentForm()
     if form.validate_on_submit():
@@ -366,7 +413,7 @@ def comment(tid):
             else:
                 _st = STATUS_LABELS.get(t.status, t.status)
                 mailer.notify_user(
-                    t.opened_by,
+                    _requester_user(t),
                     f"[InvenSync] Chamado {t.code} atualizado — {t.title}",
                     f"{t.code} — {t.title}\nAtualizado por {current_user.name}.\n"
                     f"Status: {_st}\n\n{body}"
@@ -409,9 +456,10 @@ def assume(tid):
 @bp.route("/<int:tid>/rate", methods=["POST"])
 @login_required
 def rate(tid):
-    """Avaliação de satisfação — só quem abriu, e só com o chamado resolvido."""
+    """Avaliação de satisfação — só o solicitante, e só com o chamado resolvido
+    (evita a própria TI auto-avaliar quando registra o chamado por terceiros)."""
     t = ticket_repo.get_ticket(tid)
-    if t.opened_by_id != current_user.id:
+    if not _is_requester(current_user, t):
         abort(403)
     if t.status != "resolvido":
         flash("Só é possível avaliar chamados resolvidos.", "warning")

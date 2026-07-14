@@ -15,24 +15,33 @@ def _norm(name: str) -> str:
 
 
 def people_with_assets() -> list:
-    """Lista de { name, machines, mobiles, total } ordenada por nome."""
+    """Lista de { name, machines, mobiles, total } ordenada por nome.
+
+    Agrupa por nome case-insensitive (mesma chave que `assets_for`/assinatura),
+    para a mesma pessoa escrita com caixas diferentes ("Maria"/"MARIA") não virar
+    dois cards. O nome de exibição é o primeiro visto."""
     people = {}
 
-    for m in Machine.query.all():
-        nome = _norm(m.assigned_user)
+    def _bucket(nome):
+        nome = _norm(nome)
         if not nome:
-            continue
-        people.setdefault(nome, {"name": nome, "machines": [], "mobiles": []})
-        people[nome]["machines"].append(m)
+            return None
+        key = nome.lower()
+        if key not in people:
+            people[key] = {"name": nome, "machines": [], "mobiles": []}
+        return people[key]
+
+    for m in Machine.query.all():
+        b = _bucket(m.assigned_user)
+        if b is not None:
+            b["machines"].append(m)
 
     for d in MobileDevice.query.all():
         # Aparelho pode ser compartilhado: aparece para cada funcionário vinculado.
-        for nome in (d.employees or [_norm(d.assigned_employee)]):
-            nome = _norm(nome)
-            if not nome:
-                continue
-            people.setdefault(nome, {"name": nome, "machines": [], "mobiles": []})
-            people[nome]["mobiles"].append(d)
+        for nome in (d.employees or [d.assigned_employee]):
+            b = _bucket(nome)
+            if b is not None:
+                b["mobiles"].append(d)
 
     result = []
     for p in people.values():

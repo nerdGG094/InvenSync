@@ -154,8 +154,11 @@
       function syncImg(){ try { img.src = c.toDataURL('image/png'); } catch(_){} }
 
       if (saved) {
+        // Já aponta a <img> de impressão para a assinatura salva de imediato —
+        // se o usuário imprimir antes do onload, ela não sai em branco.
+        img.src = saved;
         const im = new Image();
-        im.onload = function(){ ctx.drawImage(im, 0, 0, CSSW, CSSH); img.src = saved; };
+        im.onload = function(){ ctx.drawImage(im, 0, 0, CSSW, CSSH); };
         im.src = saved;
       }
 

@@ -8,7 +8,7 @@ from flask import (Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
-from ..extensions import db
+from ..extensions import db, limiter
 from ..repositories import credential_repo
 from ..forms.credential import CredentialForm, CATEGORY_CHOICES
 from ..models.credential_photo import CredentialPhoto
@@ -161,9 +161,14 @@ def photo_delete(cid, pid):
 
 
 def _reauth_ok() -> bool:
-    """A re-autenticação (senha do usuário) ainda está dentro da janela?"""
+    """A re-autenticação (senha do usuário) ainda está dentro da janela?
+
+    A janela é amarrada ao id do usuário que reautenticou: se outra pessoa logar
+    no mesmo navegador (sessão compartilhada), o uid não bate e a janela não vale.
+    """
     ts = session.get("vault_reauth_at")
-    if not ts:
+    uid = session.get("vault_reauth_uid")
+    if not ts or uid != current_user.get_id():
         return False
     mins = current_app.config.get("VAULT_REAUTH_MINUTES", 5)
     try:
@@ -173,11 +178,13 @@ def _reauth_ok() -> bool:
 
 
 @bp.route("/reauth", methods=["POST"])
+@limiter.limit("10 per minute; 30 per hour")
 def reauth():
     """Confirma a senha do próprio usuário e abre a janela de revelação."""
     pwd = request.form.get("password") or ""
     if current_user.check_password(pwd):
         session["vault_reauth_at"] = datetime.now().timestamp()
+        session["vault_reauth_uid"] = current_user.get_id()
         return jsonify(ok=True)
     return jsonify(ok=False), 401
 
@@ -189,5 +196,11 @@ def reveal(cid):
     if not _reauth_ok():
         return jsonify(need_reauth=True), 401
     c = credential_repo.get_credential(cid)
-    audit.record("reveal", "credential", c.id, f"Revelou senha de '{c.name}'")
-    return jsonify(password=crypto.decrypt(c.password))
+    # A trilha de auditoria é obrigatória para o reveal (a UI promete isso). Se o
+    # registro falhar, não exiba a senha — accountability antes do segredo.
+    if not audit.record("reveal", "credential", c.id, f"Revelou senha de '{c.name}'"):
+        return jsonify(error="Falha ao registrar auditoria; exibição cancelada."), 503
+    try:
+        return jsonify(password=crypto.decrypt(c.password))
+    except crypto.DecryptError:
+        return jsonify(error="Não foi possível decifrar a senha (VAULT_KEY incorreta?)."), 500

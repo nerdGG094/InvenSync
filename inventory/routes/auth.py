@@ -107,4 +107,8 @@ def login_cancel():
 @bp.route("/logout")
 def logout():
     logout_user()
+    # Limpa a janela de re-autenticação do Cofre (chave custom que o logout_user
+    # não remove) para não sobreviver a um próximo login no mesmo navegador.
+    session.pop("vault_reauth_at", None)
+    session.pop("vault_reauth_uid", None)
     return redirect(url_for("auth.login"))

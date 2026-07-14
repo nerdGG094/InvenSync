@@ -134,6 +134,8 @@ def propagate_person_rename(old_name, new_name):
     from ..models.product import Product
     from ..models.movement import StockMovement
     from ..models.ticket import Ticket
+    from ..models.asset_signature import AssetSignature
+    from ..models.asset_termo import AssetTermo
     low = old.lower()
 
     def _ci(col):
@@ -153,6 +155,27 @@ def propagate_person_rename(old_name, new_name):
         {StockMovement.responsible_user: new}, synchronize_session=False)
     Ticket.query.filter(_ci(Ticket.requester)).update(
         {Ticket.requester: new}, synchronize_session=False)
+
+    # Assinatura do termo e comprovantes de entrega são chaveados pelo nome
+    # normalizado (lower). Re-chaveia para não órfã a prova de entrega no rename.
+    new_key = new.lower()
+    AssetTermo.query.filter(_ci(AssetTermo.person_key)).update(
+        {AssetTermo.person_key: new_key, AssetTermo.person_name: new},
+        synchronize_session=False)
+    # person_key da assinatura é UNIQUE: se o novo nome já tiver assinatura,
+    # descarta a antiga em vez de estourar a constraint.
+    old_sig = AssetSignature.query.filter(_ci(AssetSignature.person_key)).first()
+    if old_sig:
+        clash = AssetSignature.query.filter(
+            db.func.lower(AssetSignature.person_key) == new_key).first()
+        if clash and clash.id != old_sig.id:
+            db.session.delete(old_sig)
+        else:
+            old_sig.person_key = new_key
+            old_sig.person_name = new
+
+    # Bulk .update() não dispara eventos ORM → invalida o cache de setor na mão.
+    invalidate_people_cache()
 
 
 def propagate_sector_rename(old_name, new_name):
@@ -177,6 +200,8 @@ def propagate_sector_rename(old_name, new_name):
     for model, col in targets:
         model.query.filter(db.func.lower(db.func.btrim(col)) == low).update(
             {col: new}, synchronize_session=False)
+    # Bulk .update() não dispara eventos ORM → invalida o cache de setor na mão.
+    invalidate_people_cache()
 
 
 def sector_for(name: str) -> str:

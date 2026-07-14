@@ -1,6 +1,6 @@
 import os
 from flask import (Flask, render_template, request, redirect, url_for, flash,
-                   send_from_directory, make_response)
+                   send_from_directory, make_response, current_app)
 from flask_login import current_user
 from sqlalchemy import text
 from .extensions import db, login_manager, csrf, limiter
@@ -73,8 +73,15 @@ def _run_light_migrations():
         try:
             db.session.execute(text(sql))
             db.session.commit()
-        except Exception:  # noqa: BLE001
+        except Exception as e:  # noqa: BLE001
             db.session.rollback()
+            # Idempotente por design, mas uma falha real (lock, tipo incompatível)
+            # não pode passar em silêncio — deixa rastro para diagnóstico.
+            try:
+                current_app.logger.warning("migração leve falhou [%s]: %s",
+                                           (sql[:60] + "…") if len(sql) > 60 else sql, e)
+            except Exception:  # noqa: BLE001
+                pass
 
 
 def _seed_people_into_users():
@@ -394,6 +401,10 @@ def create_app():
         if not current_user.is_authenticated or current_user.is_admin:
             return
         ep = request.endpoint or ""
+        # URL inexistente (sem endpoint): deixa seguir para virar 404, em vez de
+        # redirecionar para os avisos (mascararia o 404 como "acesso negado").
+        if not ep:
+            return
         if ep in NON_ADMIN_ENDPOINTS or ep.startswith(NON_ADMIN_PREFIXES):
             return
         # Bloqueia o resto: manda para a tela inicial do perfil comum (avisos)
@@ -473,6 +484,13 @@ def create_app():
     @app.errorhandler(429)
     def too_many_requests(e):
         flash("Muitas tentativas em pouco tempo. Aguarde um instante e tente novamente.", "warning")
+        # Volta para o endpoint que estourou o limite quando faz sentido (ex.: o
+        # 2FA tem limite próprio), em vez de sempre jogar para o login.
+        ep = request.endpoint or ""
+        if ep == "auth.login_2fa":
+            return redirect(url_for("auth.login_2fa"))
+        if ep == "credentials.reauth":
+            return redirect(request.referrer or url_for("credentials.list_view"))
         return redirect(url_for("auth.login"))
 
     # Log central de erros: captura exceções NÃO tratadas das requisições (5xx).

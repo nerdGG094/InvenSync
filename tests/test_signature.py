@@ -56,6 +56,37 @@ def test_signature_save_and_reload(app, auth_client):
         assert AssetTermo.query.filter_by(person_name=nome).count() == 1
 
 
+def test_rename_rekeys_signature_and_termo(app, auth_client):
+    """Renomear a pessoa leva a assinatura e o comprovante para a nova chave."""
+    from inventory.services import people
+    nome, novo = f"{MARK}Renome", f"{MARK}Renomeado"
+    with app.app_context():
+        db.session.add(Machine(model=f"{MARK}-pc3", assigned_user=nome))
+        db.session.commit()
+    auth_client.post(f"/assets/{nome}/signature", data={"signature": SIG})
+    with app.app_context():
+        assert AssetSignature.query.filter_by(person_key=nome.lower()).first() is not None
+        assert AssetTermo.query.filter_by(person_key=nome.lower()).count() >= 1
+        people.propagate_person_rename(nome, novo)
+        db.session.commit()
+        # chave antiga esvaziada, nova preenchida
+        assert AssetSignature.query.filter_by(person_key=nome.lower()).first() is None
+        assert AssetSignature.query.filter_by(person_key=novo.lower()).first() is not None
+        assert AssetTermo.query.filter_by(person_key=novo.lower()).count() >= 1
+
+
+def test_decrypt_rejects_corrupt_token(app):
+    """Token com estrutura Fernet que não decifra (chave errada) levanta erro em
+    vez de devolver o ciphertext como se fosse a senha."""
+    import pytest as _pt
+    from inventory.services import crypto
+    with app.app_context():
+        assert crypto.decrypt(crypto.encrypt("segredo")) == "segredo"
+        assert crypto.decrypt("texto-legado") == "texto-legado"   # legado passa
+        with _pt.raises(crypto.DecryptError):
+            crypto.decrypt("gAAAAA" + "A" * 60)
+
+
 def test_ti_signature_shared(app, auth_client):
     r = auth_client.post("/assets/ti-signature", data={"signature": SIG})
     assert r.status_code == 200 and r.get_json().get("ok")

@@ -12,7 +12,10 @@ from ..extensions import db
 from ..models.audit import AuditLog
 
 
-def record(action: str, entity: str = None, entity_id: int = None, summary: str = None) -> None:
+def record(action: str, entity: str = None, entity_id: int = None, summary: str = None) -> bool:
+    """Grava um registro de auditoria. Retorna True se persistiu, False se falhou
+    (best-effort: nunca levanta). O retorno permite exigir a trilha antes de
+    liberar operações sensíveis, como revelar senhas do Cofre."""
     try:
         uid, uname = None, None
         try:
@@ -27,12 +30,14 @@ def record(action: str, entity: str = None, entity_id: int = None, summary: str 
                        summary=(summary or "")[:300], ip=ip)
         db.session.add(log)
         db.session.commit()
+        return True
     except Exception:  # noqa: BLE001
         # Auditoria jamais derruba a operação principal.
         try:
             db.session.rollback()
         except Exception:  # noqa: BLE001
             pass
+        return False
 
 
 def list_logs(limit: int = 300, action: str = None, entity: str = None):

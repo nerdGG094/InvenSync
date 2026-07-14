@@ -52,11 +52,19 @@ def is_encrypted(token) -> bool:
         return False
 
 
+class DecryptError(Exception):
+    """Falha ao decifrar um valor que É um token Fernet (chave errada/corrompido)."""
+
+
 def decrypt(token):
     if not token:
         return token or ""
     try:
         return _fernet().decrypt(token.encode("utf-8")).decode("utf-8")
     except (InvalidToken, Exception):  # noqa: BLE001
+        # Se o valor TEM estrutura de token mas não decifra, é chave errada/
+        # corrupção — não devolva o ciphertext como se fosse a senha.
+        if looks_encrypted(token):
+            raise DecryptError("não foi possível decifrar o segredo (VAULT_KEY?)")
         # valor legado em texto puro (pré-migração) — devolve como está
         return token
