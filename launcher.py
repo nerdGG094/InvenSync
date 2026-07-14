@@ -21,7 +21,10 @@ from pathlib import Path
 
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    # override=True para o .env sempre vencer (o launcher fica aberto na bandeja
+    # e repassa o próprio ambiente ao servidor; sem isso, editar o .env e só
+    # reiniciar o servidor não bastava).
+    load_dotenv(override=True)
 except Exception:
     pass
 

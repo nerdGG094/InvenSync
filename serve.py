@@ -16,7 +16,11 @@ from logging.handlers import RotatingFileHandler
 
 from dotenv import load_dotenv
 
-load_dotenv()
+# override=True: o .env é a fonte da verdade em produção. Sem isso, um valor
+# herdado do processo pai (o launcher PyQt guarda o .env de quando abriu e o
+# repassa via env ao reiniciar o servidor) venceria o .env atual — foi o que
+# fez a lista MAIL_TI ficar desatualizada mesmo após editar o .env e reiniciar.
+load_dotenv(override=True)
 
 from waitress import serve
 
