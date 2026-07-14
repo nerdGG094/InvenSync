@@ -19,7 +19,7 @@ from datetime import datetime
 
 from ..extensions import db
 from ..models.monitor import MonitoredHost
-from . import whatsapp
+from . import mailer
 
 # Quantas falhas seguidas antes de marcar como "down" (evita alarme por 1 perda de pacote)
 FAIL_THRESHOLD = 2
@@ -138,14 +138,16 @@ def check_all(app):
         for h, novo in transitions:
             try:
                 if novo == "down":
-                    whatsapp.notify_ti(
-                        f"🔴 *Host fora do ar*: {h.label} ({h.host})\n"
+                    mailer.notify_ti(
+                        f"[InvenSync] Host fora do ar: {h.label}",
+                        f"Host fora do ar: {h.label} ({h.host})\n"
                         f"Tipo: {KIND_LABELS.get(h.kind, h.kind)}\n"
                         f"Detectado em {now.strftime('%d/%m %H:%M')}"
                     )
                 elif novo == "up":
-                    whatsapp.notify_ti(
-                        f"🟢 *Host restabelecido*: {h.label} ({h.host})\n"
+                    mailer.notify_ti(
+                        f"[InvenSync] Host restabelecido: {h.label}",
+                        f"Host restabelecido: {h.label} ({h.host})\n"
                         f"Voltou em {now.strftime('%d/%m %H:%M')}"
                     )
             except Exception:  # noqa: BLE001

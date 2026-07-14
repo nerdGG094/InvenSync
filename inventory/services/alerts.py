@@ -3,7 +3,7 @@ Alertas proativos do InvenSync.
 
 Verifica periodicamente três pendências operacionais e publica um resumo na
 **Central de Avisos** (mantendo UM aviso automático, atualizado a cada rodada)
-e avisa a TI por WhatsApp (uma vez ao dia, quando há pendências):
+e avisa a TI por e-mail (uma vez ao dia, quando há pendências):
 
   1. Estoque no/abaixo do mínimo (materiais com min_stock definido).
   2. Licenças/garantias vencidas ou vencendo (≤ ALERTS_LICENSE_DAYS dias).
@@ -22,7 +22,7 @@ from ..models.license import License
 from ..models.product import Product
 from ..models.ticket import Ticket
 from ..repositories import product_repo
-from . import whatsapp, mailer
+from . import mailer
 
 # Título fixo do aviso automático (upsert: criamos uma vez, depois atualizamos).
 AUTO_TITLE = "🔔 Alertas automáticos do sistema"
@@ -137,7 +137,7 @@ def _render_body(low, lic, stuck, days, hours, stale=None) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Publicação (upsert no aviso + WhatsApp)
+# Publicação (upsert no aviso + e-mail)
 # ---------------------------------------------------------------------------
 def publish(app) -> int:
     """Atualiza o aviso automático e retorna o total de pendências (-1 em erro)."""
@@ -173,12 +173,12 @@ def publish(app) -> int:
 
 
 # ---------------------------------------------------------------------------
-# Digest por WhatsApp — só nas horas-alvo (ex.: 8 e 17), 1x por janela/dia.
+# Digest por e-mail — só nas horas-alvo (ex.: 8 e 17), 1x por janela/dia.
 # O controle é persistido em arquivo, então reiniciar o servidor NÃO reenvia.
 # ---------------------------------------------------------------------------
 def _target_hours(app):
     out = set()
-    for part in str(app.config.get("ALERTS_WHATSAPP_HOURS", "8,17")).split(","):
+    for part in str(app.config.get("ALERTS_DIGEST_HOURS", "8,17")).split(","):
         part = part.strip()
         if part.isdigit() and 0 <= int(part) <= 23:
             out.add(int(part))
@@ -223,7 +223,6 @@ def send_digest_if_window(app):
                 f"🎫 Chamados parados (>{hours}h): {len(stuck)}\n"
                 "Veja os detalhes na Central de Avisos."
             )
-            whatsapp.notify_ti("🔔 *InvenSync — alertas do dia*\n" + resumo)
             mailer.notify_ti("[InvenSync] Alertas do dia", "Alertas do dia\n\n" + resumo)
             # Marca a janela como consumida SÓ após enviar (evita duplicar no
             # próximo tick da mesma hora).
@@ -244,7 +243,7 @@ def send_digest_if_window(app):
 # ---------------------------------------------------------------------------
 def start_scheduler(app):
     """Thread daemon: a cada ALERTS_CHECK_MINUTES atualiza o aviso e, nas
-    horas-alvo, envia o digest por WhatsApp (no máximo 1x por janela/dia)."""
+    horas-alvo, envia o digest por e-mail (no máximo 1x por janela/dia)."""
     global _started
     # Sob o reloader do Flask (debug), só roda no processo filho real.
     if app.debug and os.environ.get("WERKZEUG_RUN_MAIN") != "true":
@@ -260,8 +259,8 @@ def start_scheduler(app):
         time.sleep(25)  # deixa o servidor subir antes da 1ª rodada
         while True:
             try:
-                publish(app)                 # atualiza o aviso (sem WhatsApp)
-                send_digest_if_window(app)   # WhatsApp só nas horas-alvo
+                publish(app)                 # atualiza o aviso (sem e-mail)
+                send_digest_if_window(app)   # e-mail só nas horas-alvo
             except Exception as e:  # noqa: BLE001
                 try:
                     with app.app_context():

@@ -78,12 +78,6 @@ class Config:
     BACKUP_HOUR = int(os.environ.get("BACKUP_HOUR", "2"))          # hora do dia (0-23)
     BACKUP_CHECK_SECONDS = int(os.environ.get("BACKUP_CHECK_SECONDS", "1800"))
 
-    # Notificações por WhatsApp via CallMeBot (gratuito) — desligado até configurar no .env.
-    # CALLMEBOT_RECIPIENTS: pares numero:apikey separados por vírgula.
-    #   ex.: 5544999999999:123456,5544988888888:654321
-    WHATSAPP_ENABLED = os.environ.get("WHATSAPP_ENABLED", "0") in ("1", "true", "True")
-    CALLMEBOT_RECIPIENTS = os.environ.get("CALLMEBOT_RECIPIENTS", "")
-
     # Notificações por e-mail (SMTP) — desligado até MAIL_ENABLED=1.
     MAIL_ENABLED = os.environ.get("MAIL_ENABLED", "0") in ("1", "true", "True")
     SMTP_HOST = os.environ.get("SMTP_HOST", "")
@@ -105,8 +99,10 @@ class Config:
     ALERTS_ENABLED = os.environ.get("ALERTS_ENABLED", "1") in ("1", "true", "True")
     ALERTS_TICKET_STUCK_HOURS = int(os.environ.get("ALERTS_TICKET_STUCK_HOURS", "48"))
     ALERTS_LICENSE_DAYS = int(os.environ.get("ALERTS_LICENSE_DAYS", "30"))
-    # Digest por WhatsApp: horas do dia em que envia (no máximo 1x por janela/dia).
-    ALERTS_WHATSAPP_HOURS = os.environ.get("ALERTS_WHATSAPP_HOURS", "8,17")
+    # Digest por e-mail: horas do dia em que envia (no máximo 1x por janela/dia).
+    # (aceita o nome antigo ALERTS_WHATSAPP_HOURS por compatibilidade.)
+    ALERTS_DIGEST_HOURS = os.environ.get(
+        "ALERTS_DIGEST_HOURS", os.environ.get("ALERTS_WHATSAPP_HOURS", "8,17"))
     # Frequência com que o agendador acorda para checar (minutos).
     ALERTS_CHECK_MINUTES = int(os.environ.get("ALERTS_CHECK_MINUTES", "30"))
     SQLALCHEMY_ENGINE_OPTIONS = {

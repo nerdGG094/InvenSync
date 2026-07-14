@@ -4,7 +4,7 @@ from flask_login import login_required, current_user
 
 from ..repositories import domain_repo
 from ..forms.domain import DomainForm, REGISTRAR_CHOICES
-from ..services import audit, whatsapp
+from ..services import audit
 from ..services.exports import xlsx_response
 
 bp = Blueprint("domains", __name__)
@@ -98,26 +98,3 @@ def export():
         ])
     audit.record("export", "domain", None, f"Exportou {len(rows)} domínio(s)")
     return xlsx_response("Dominios", headers, rows, filename="dominios")
-
-
-@bp.route("/alert", methods=["POST"])
-def alert():
-    days = request.form.get("days", type=int) or 60
-    itens = domain_repo.expiring_within(days)
-    if not itens:
-        flash("Nenhum domínio vencendo no período. Nada a notificar.", "info")
-        return redirect(url_for("domains.list_view"))
-    linhas = []
-    for d in itens:
-        dl = d.days_left
-        quando = "VENCIDO" if dl is not None and dl < 0 else f"vence em {dl}d"
-        emp = f" [{d.company}]" if d.company else ""
-        linhas.append(f"• {d.name}{emp} — {d.expiry_date.strftime('%d/%m/%Y')} ({quando})")
-    msg = "🌐 *Domínios a vencer*\n" + "\n".join(linhas)
-    whatsapp.notify_ti(msg)
-    audit.record("export", "domain", None, f"Disparou alerta de {len(itens)} domínio(s) por WhatsApp")
-    if whatsapp.configured() and whatsapp._enabled():
-        flash(f"Alerta enviado à TI ({len(itens)} domínio(s)).", "success")
-    else:
-        flash("WhatsApp não está ativo no .env — o alerta foi montado, mas não enviado.", "warning")
-    return redirect(url_for("domains.list_view"))

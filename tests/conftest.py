@@ -9,7 +9,7 @@ import os
 
 os.environ.setdefault("MONITORING_ENABLED", "0")
 os.environ.setdefault("ALERTS_ENABLED", "0")
-os.environ.setdefault("WHATSAPP_ENABLED", "0")
+os.environ.setdefault("MAIL_ENABLED", "0")
 os.environ.setdefault("SECRET_KEY", "test-secret-key")
 
 import pytest

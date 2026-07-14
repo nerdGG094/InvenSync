@@ -4,7 +4,7 @@ from flask_login import login_required, current_user
 
 from ..repositories import license_repo
 from ..forms.license import LicenseForm, KIND_CHOICES
-from ..services import audit, whatsapp
+from ..services import audit
 from ..services.exports import xlsx_response
 
 bp = Blueprint("licenses", __name__)
@@ -99,27 +99,3 @@ def export():
         ])
     audit.record("export", "license", None, f"Exportou {len(rows)} licença(s)/garantia(s)")
     return xlsx_response("Licencas", headers, rows, filename="licencas_garantias")
-
-
-@bp.route("/alert", methods=["POST"])
-def alert():
-    """Envia para a TI (WhatsApp) a lista de itens vencidos/vencendo em 30 dias."""
-    days = request.form.get("days", type=int) or 30
-    itens = license_repo.expiring_within(days)
-    if not itens:
-        flash("Nenhuma licença/garantia vencendo no período. Nada a notificar.", "info")
-        return redirect(url_for("licenses.list_view"))
-
-    linhas = []
-    for o in itens:
-        d = o.days_left
-        quando = "VENCIDO" if d is not None and d < 0 else f"vence em {d}d"
-        linhas.append(f"• {o.name} — {o.expiry_date.strftime('%d/%m/%Y')} ({quando})")
-    msg = "⚠️ *Licenças / Garantias a vencer*\n" + "\n".join(linhas)
-    whatsapp.notify_ti(msg)
-    audit.record("export", "license", None, f"Disparou alerta de {len(itens)} licença(s) por WhatsApp")
-    if whatsapp.configured() and whatsapp._enabled():
-        flash(f"Alerta enviado à TI ({len(itens)} item(ns)).", "success")
-    else:
-        flash("WhatsApp não está ativo no .env — o alerta foi montado, mas não enviado.", "warning")
-    return redirect(url_for("licenses.list_view"))

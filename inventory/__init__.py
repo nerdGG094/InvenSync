@@ -350,7 +350,7 @@ def create_app():
     from .routes.kb import bp as kb_bp  # ⬅️ NOVO: base de conhecimento
     from .routes.domains import bp as domains_bp  # ⬅️ NOVO: domínios por empresa
     from .routes.profile import bp as profile_bp  # ⬅️ NOVO: meu perfil
-    from .routes.wpp import bp as wpp_bp  # ⬅️ NOVO: teste de notificações WhatsApp (CallMeBot)
+    from .routes.wpp import bp as wpp_bp  # teste de notificações por e-mail (SMTP)
     from .routes.backups import bp as backups_bp  # ⬅️ NOVO: backups do banco (admin)
     from .routes.colaboradores import bp as colaboradores_bp  # ⬅️ NOVO: cadastro central de colaboradores
     from .routes.monitoring import bp as monitoring_bp  # ⬅️ NOVO: monitoramento de uptime

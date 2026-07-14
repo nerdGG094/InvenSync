@@ -17,7 +17,7 @@ from ..forms.tickets import (TicketForm, CommentForm, STATUS_CHOICES,
                              CATEGORY_CHOICES, PRIORITY_CHOICES)
 from ..models.ticket import Ticket
 from ..models.user import User
-from ..services import people, whatsapp, audit, mailer
+from ..services import people, audit, mailer
 from ..services.exports import xlsx_response
 
 STATUS_LABELS = dict(STATUS_CHOICES)
@@ -344,13 +344,9 @@ def new():
         if t.status == "resolvido" and t.first_response_at is None:
             t.first_response_at = t.created_at
             db.session.commit()
-        # Notifica a equipe de TI por WhatsApp + e-mail (best-effort)
+        # Notifica a equipe de TI por e-mail (best-effort)
         _aberto = (f"Aberto por: {t.requester or current_user.name}"
                    f"{(' · ' + t.sector) if t.sector else ''}")
-        whatsapp.notify_ti(
-            f"🆕 *Novo chamado {t.code}*\n{_aberto}\n"
-            f"Prioridade: {t.priority}\n{t.title}"
-        )
         mailer.notify_ti(
             f"[InvenSync] Novo chamado {t.code} — {t.title}",
             f"{t.code} — {t.title}\n{_aberto}\nPrioridade: {t.priority}\n"
