@@ -371,7 +371,6 @@
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('credentials.') %}active{% endif %}" href="{{ url_for('credentials.list_view') }}"><i class="bi bi-key me-2"></i> Cofre</a></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('audit.') %}active{% endif %}" href="{{ url_for('audit.list_view') }}"><i class="bi bi-shield-lock me-2"></i> Auditoria</a></li>
             <li><a class="dropdown-item" href="{{ url_for('kiox.index') }}" target="_blank" rel="noopener"><i class="bi bi-geo-alt me-2"></i> Kiox <span class="text-muted small">(mapa)</span></a></li>
-            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('smartplugs.') %}active{% endif %}" href="{{ url_for('smartplugs.list_view') }}"><i class="bi bi-plug me-2 text-success"></i> Tomadas Inteligentes</a></li>
             <li><hr class="dropdown-divider"></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('docs.') %}active{% endif %}" href="{{ url_for('docs.index') }}"><i class="bi bi-journal-code me-2"></i> Documentação</a></li>
           </ul>
