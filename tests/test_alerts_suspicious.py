@@ -14,14 +14,13 @@ def _cleanup(app):
     with app.app_context():
         AuditLog.query.filter(AuditLog.summary.like(f"{MARK}%")).delete()
         db.session.commit()
-    # zera o estado do detector para não vazar entre testes
-    import os
-    p = alerts._sec_state_file(app)
-    if os.path.exists(p):
-        os.remove(p)
 
 
-def test_suspicious_activity_triggers_on_reveal_burst(app):
+def test_suspicious_activity_triggers_on_reveal_burst(app, tmp_path, monkeypatch):
+    # Estado do detector isolado num arquivo temporário — não toca no de produção
+    # (instance/sec_alerts_lastid.txt) e garante o baseline limpo na 1ª rodada.
+    state = tmp_path / "sec_state.txt"
+    monkeypatch.setattr(alerts, "_sec_state_file", lambda app_: str(state))
     with app.app_context():
         app.config["SEC_ALERT_REVEAL"] = 3
         # 1ª rodada: só marca o ponto de partida (sem alerta retroativo).

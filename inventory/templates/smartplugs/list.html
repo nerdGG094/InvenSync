@@ -37,7 +37,8 @@
         <button class="btn btn-sm btn-success plug-on"><i class="bi bi-power"></i> Ligar</button>
         <button class="btn btn-sm btn-outline-danger plug-off"><i class="bi bi-power"></i> Desligar</button>
         <button class="btn btn-sm btn-outline-light plug-refresh" title="Atualizar estado"><i class="bi bi-arrow-repeat"></i></button>
-        <a class="btn btn-sm btn-outline-light ms-auto" href="{{ url_for('smartplugs.edit', pid=p.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
+        <a class="btn btn-sm btn-outline-light ms-auto" href="{{ url_for('smartplugs.schedules', pid=p.id) }}" title="Agendamentos"><i class="bi bi-clock-history"></i>{% if p.schedules %} {{ p.schedules|length }}{% endif %}</a>
+        <a class="btn btn-sm btn-outline-light" href="{{ url_for('smartplugs.edit', pid=p.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
         <form action="{{ url_for('smartplugs.delete', pid=p.id) }}" method="post" onsubmit="return confirm('Remover a tomada {{ p.name }}?');">
           <button class="btn btn-sm btn-outline-danger" title="Excluir"><i class="bi bi-trash"></i></button>
         </form>

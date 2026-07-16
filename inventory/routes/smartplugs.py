@@ -5,10 +5,15 @@ from flask_login import login_required, current_user
 
 from ..extensions import db
 from ..models.smart_plug import SmartPlug
+from ..models.smart_plug_schedule import SmartPlugSchedule
 from ..forms.smart_plug import SmartPlugForm
 from ..services import audit, crypto, tuya
 
 bp = Blueprint("smartplugs", __name__)
+
+# Dias da semana ISO (1=Seg ... 7=Dom) para os checkboxes do agendamento.
+DAYS = [("1", "Seg"), ("2", "Ter"), ("3", "Qua"), ("4", "Qui"),
+        ("5", "Sex"), ("6", "Sáb"), ("7", "Dom")]
 
 
 @bp.before_request
@@ -94,3 +99,51 @@ def toggle(pid):
         audit.record("update", "smart_plug", plug.id,
                      f"{'Ligou' if on else 'Desligou'} a tomada '{plug.name}'")
     return jsonify(res)
+
+
+# ===== Agendamentos (liga/desliga por horário) =====
+@bp.route("/<int:pid>/agendamentos")
+def schedules(pid):
+    plug = db.get_or_404(SmartPlug, pid)
+    regras = sorted(plug.schedules, key=lambda s: (s.hour, s.minute))
+    return render_template("smartplugs/schedules.html", plug=plug, regras=regras, days=DAYS)
+
+
+@bp.route("/<int:pid>/agendamentos/novo", methods=["POST"])
+def schedule_add(pid):
+    plug = db.get_or_404(SmartPlug, pid)
+    action = "on" if (request.form.get("action") == "on") else "off"
+    try:
+        hour = int(request.form.get("hour"))
+        minute = int(request.form.get("minute"))
+    except (TypeError, ValueError):
+        flash("Horário inválido.", "warning")
+        return redirect(url_for("smartplugs.schedules", pid=plug.id))
+    if not (0 <= hour <= 23 and 0 <= minute <= 59):
+        flash("Horário fora do intervalo.", "warning")
+        return redirect(url_for("smartplugs.schedules", pid=plug.id))
+    days = "".join(d for d, _ in DAYS if request.form.get(f"day_{d}"))
+    db.session.add(SmartPlugSchedule(plug_id=plug.id, action=action, hour=hour,
+                                     minute=minute, days=days))
+    db.session.commit()
+    audit.record("create", "smart_plug", plug.id,
+                 f"Agendou {'ligar' if action == 'on' else 'desligar'} {hour:02d}:{minute:02d} em '{plug.name}'")
+    flash("Agendamento criado.", "success")
+    return redirect(url_for("smartplugs.schedules", pid=plug.id))
+
+
+@bp.route("/<int:pid>/agendamentos/<int:sid>/toggle", methods=["POST"])
+def schedule_toggle(pid, sid):
+    s = SmartPlugSchedule.query.filter_by(id=sid, plug_id=pid).first_or_404()
+    s.is_active = not s.is_active
+    db.session.commit()
+    return redirect(url_for("smartplugs.schedules", pid=pid))
+
+
+@bp.route("/<int:pid>/agendamentos/<int:sid>/delete", methods=["POST"])
+def schedule_delete(pid, sid):
+    s = SmartPlugSchedule.query.filter_by(id=sid, plug_id=pid).first_or_404()
+    db.session.delete(s)
+    db.session.commit()
+    flash("Agendamento removido.", "success")
+    return redirect(url_for("smartplugs.schedules", pid=pid))

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Agendamentos — {{ plug.name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-clock-history"></i></span>
+    Agendamentos — {{ plug.name }}
+    <span class="badge bg-secondary-subtle text-secondary-emphasis ph-count">{{ regras|length }}</span>
+  </h1>
+  <a href="{{ url_for('smartplugs.list_view') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Voltar</a>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-lg-7">
+    <div class="table-card p-3">
+      <h2 class="h6 mb-3">Regras</h2>
+      {% if regras %}
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead><tr><th>Ação</th><th>Horário</th><th>Dias</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            {% for s in regras %}
+            <tr>
+              <td>{% if s.action == 'on' %}<span class="badge bg-success-subtle text-success-emphasis"><i class="bi bi-power"></i> Ligar</span>{% else %}<span class="badge bg-danger-subtle text-danger-emphasis"><i class="bi bi-power"></i> Desligar</span>{% endif %}</td>
+              <td class="font-monospace">{{ s.hhmm }}</td>
+              <td class="small">{{ s.days_label() }}</td>
+              <td>
+                <form action="{{ url_for('smartplugs.schedule_toggle', pid=plug.id, sid=s.id) }}" method="post" class="d-inline">
+                  {% if s.is_active %}<button class="btn btn-sm btn-success-subtle text-success-emphasis border-0">ativa</button>
+                  {% else %}<button class="btn btn-sm btn-secondary-subtle text-secondary-emphasis border-0">pausada</button>{% endif %}
+                </form>
+              </td>
+              <td class="text-end">
+                <form action="{{ url_for('smartplugs.schedule_delete', pid=plug.id, sid=s.id) }}" method="post" onsubmit="return confirm('Remover este agendamento?');">
+                  <button class="btn btn-sm btn-outline-danger" title="Excluir"><i class="bi bi-trash"></i></button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="contact-muted mb-0">Nenhum agendamento. Crie o primeiro ao lado →</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-5">
+    <div class="table-card p-3">
+      <h2 class="h6 mb-3">Novo agendamento</h2>
+      <form action="{{ url_for('smartplugs.schedule_add', pid=plug.id) }}" method="post">
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <label class="form-label fw-semibold small">Ação</label>
+            <select name="action" class="form-select">
+              <option value="on">Ligar</option>
+              <option value="off">Desligar</option>
+            </select>
+          </div>
+          <div class="col-3">
+            <label class="form-label fw-semibold small">Hora</label>
+            <input type="number" name="hour" min="0" max="23" value="7" class="form-control" required>
+          </div>
+          <div class="col-3">
+            <label class="form-label fw-semibold small">Min</label>
+            <input type="number" name="minute" min="0" max="59" value="0" class="form-control" required>
+          </div>
+        </div>
+        <label class="form-label fw-semibold small">Dias (nenhum marcado = todos os dias)</label>
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          {% for d, lbl in days %}
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="day_{{ d }}" id="day_{{ d }}">
+            <label class="form-check-label small" for="day_{{ d }}">{{ lbl }}</label>
+          </div>
+          {% endfor %}
+        </div>
+        <button class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i> Adicionar</button>
+      </form>
+      <hr class="my-3">
+      <p class="small text-muted mb-0"><i class="bi bi-info-circle me-1"></i> Os horários disparam com o servidor ligado (é um serviço 24/7). O comando vai direto à tomada na rede.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

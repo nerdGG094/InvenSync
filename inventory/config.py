@@ -94,6 +94,9 @@ class Config:
     # Chave dedicada do cofre de senhas (Fernet). Se vazia, deriva do SECRET_KEY.
     VAULT_KEY = os.environ.get("VAULT_KEY", "")
 
+    # Agendador das tomadas inteligentes (liga/desliga por horário).
+    PLUG_SCHEDULER_ENABLED = os.environ.get("PLUG_SCHEDULER_ENABLED", "1") in ("1", "true", "True")
+
     # Monitoramento de uptime (ping/HTTP em segundo plano).
     MONITORING_ENABLED = os.environ.get("MONITORING_ENABLED", "1") in ("1", "true", "True")
     MONITORING_INTERVAL = int(os.environ.get("MONITORING_INTERVAL", "120"))  # segundos

@@ -335,6 +335,7 @@ def create_app():
     from .models.asset_signature import AssetSignature
     from .models.asset_termo import AssetTermo
     from .models.smart_plug import SmartPlug
+    from .models.smart_plug_schedule import SmartPlugSchedule
 
     # Cria tabelas e semente inicial
     with app.app_context():
@@ -610,5 +611,13 @@ def create_app():
             backup_scheduler.start_scheduler(app)
         except Exception:  # noqa: BLE001
             app.logger.exception("Falha ao iniciar o agendador de backup")
+
+    # Agendamento das tomadas inteligentes (liga/desliga por horário)
+    if app.config.get("PLUG_SCHEDULER_ENABLED", True):
+        try:
+            from .services import plug_scheduler
+            plug_scheduler.start_scheduler(app)
+        except Exception:  # noqa: BLE001
+            app.logger.exception("Falha ao iniciar o agendador de tomadas")
 
     return app
