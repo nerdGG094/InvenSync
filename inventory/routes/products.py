@@ -1,7 +1,9 @@
+import io
 import re
 import unicodedata
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import (Blueprint, render_template, request, redirect, url_for, flash,
+                   jsonify, Response)
 from ..services.pagination import paginate
 from flask_login import login_required
 from sqlalchemy.exc import IntegrityError
@@ -12,7 +14,7 @@ from ..forms.catalog import ProductForm
 from ..models.product import Product
 from ..models.category import Category
 from ..models.supplier import Supplier
-from ..services import people
+from ..services import people, imports, audit
 
 bp = Blueprint("products", __name__)
 
@@ -240,6 +242,51 @@ def edit(pid):
     return render_template("products/form.html", form=form, title="Editar Material",
                            back_url=url_for("products.list_view"),
                            users_info=people.users_sector_map())
+
+@bp.route("/import", methods=["GET", "POST"])
+@login_required
+def import_view():
+    """Importa materiais em massa via CSV/XLSX (upsert por SKU)."""
+    if request.method == "POST":
+        f = request.files.get("file")
+        if not f or not f.filename:
+            flash("Selecione um arquivo CSV ou XLSX.", "warning")
+            return redirect(url_for("products.import_view"))
+        if not f.filename.lower().endswith((".csv", ".xlsx")):
+            flash("Formato não suportado: use .csv ou .xlsx.", "warning")
+            return redirect(url_for("products.import_view"))
+        try:
+            rows = imports.parse_table(f)
+        except Exception:  # noqa: BLE001
+            flash("Não consegui ler o arquivo. Confira o formato/planilha.", "danger")
+            return redirect(url_for("products.import_view"))
+        res = imports.import_products(rows)
+        audit.record("import", "product", None,
+                     f"Importou materiais: {res['created']} criados, {res['updated']} atualizados")
+        msg = (f"Importação concluída: {res['created']} criado(s), {res['updated']} atualizado(s)"
+               f"{f', {res['categorias']} categoria(s) nova(s)' if res['categorias'] else ''}"
+               f"{f', {res['fornecedores']} fornecedor(es) novo(s)' if res['fornecedores'] else ''}.")
+        flash(msg, "success" if not res["errors"] else "warning")
+        for err in res["errors"][:12]:
+            flash(err, "warning")
+        if len(res["errors"]) > 12:
+            flash(f"... e mais {len(res['errors']) - 12} erro(s).", "warning")
+        return redirect(url_for("products.list_view"))
+    return render_template("products/import.html",
+                           headers=imports.TEMPLATE_HEADERS)
+
+
+@bp.route("/import/template")
+@login_required
+def import_template():
+    """Baixa um CSV modelo com os cabeçalhos aceitos e uma linha de exemplo."""
+    buf = io.StringIO()
+    buf.write(";".join(imports.TEMPLATE_HEADERS) + "\r\n")
+    buf.write("TEC-0001;Cabo HDMI 2m;Cabos;Fornecedor X;UN;5;19,90;Genérico;HDMI 2.0;Rack TI\r\n")
+    return Response(
+        buf.getvalue().encode("utf-8-sig"), mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=modelo_materiais.csv"})
+
 
 @bp.route("/<int:pid>/delete", methods=["POST"])
 @login_required

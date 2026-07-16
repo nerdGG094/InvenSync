@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Importar Materiais{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="ph-title"><span class="ph-icon"><i class="bi bi-upload"></i></span> Importar Materiais</h1>
+  <a href="{{ url_for('products.list_view') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Voltar</a>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-lg-7">
+    <div class="table-card p-3">
+      <form method="post" enctype="multipart/form-data">
+        <label class="form-label fw-semibold">Arquivo (.csv ou .xlsx)</label>
+        <input type="file" name="file" accept=".csv,.xlsx" class="form-control mb-3" required>
+        <div class="d-flex gap-2">
+          <button class="btn btn-primary"><i class="bi bi-upload me-1"></i> Importar</button>
+          <a href="{{ url_for('products.import_template') }}" class="btn btn-outline-light"><i class="bi bi-download me-1"></i> Baixar modelo (CSV)</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-5">
+    <div class="table-card p-3">
+      <h2 class="h6 mb-2"><i class="bi bi-info-circle text-info me-1"></i> Como funciona</h2>
+      <ul class="small text-muted ps-3 mb-2">
+        <li>A 1ª linha é o <strong>cabeçalho</strong>. Colunas aceitas (nesta ou outra ordem):
+          <div class="mt-1">{% for h in headers %}<code class="me-1">{{ h }}</code>{% endfor %}</div>
+        </li>
+        <li><strong>SKU</strong> e <strong>nome</strong> são obrigatórios.</li>
+        <li>Upsert: SKU <strong>existente</strong> é <strong>atualizado</strong>; SKU novo é <strong>criado</strong>.</li>
+        <li><strong>Categoria</strong> e <strong>fornecedor</strong> vêm por nome — se não existirem, são criados.</li>
+        <li>Preço aceita vírgula (ex.: <code>19,90</code>). Separador do CSV pode ser <code>;</code> ou <code>,</code>.</li>
+      </ul>
+      <p class="small text-muted mb-0">Nada é apagado: o import só cria ou atualiza.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
