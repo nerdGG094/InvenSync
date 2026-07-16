@@ -241,6 +241,63 @@ def send_digest_if_window(app):
 # ---------------------------------------------------------------------------
 # Agendador em background
 # ---------------------------------------------------------------------------
+def _sec_state_file(app):
+    return os.path.join(app.instance_path, "sec_alerts_lastid.txt")
+
+
+def check_suspicious_activity(app):
+    """Varre a auditoria a cada rodada e avisa a TI por e-mail quando um padrão
+    suspeito cruza o limite na janela (muitas falhas de login, revelações do
+    Cofre em massa, exclusões em lote). Só analisa registros novos desde a última
+    checagem; a 1ª rodada apenas marca o ponto de partida (sem alerta retroativo).
+    """
+    with app.app_context():
+        if not app.config.get("SECURITY_ALERTS_ENABLED",
+                              app.config.get("ALERTS_ENABLED", True)):
+            return []
+        from collections import Counter
+        from ..models.audit import AuditLog
+        path = _sec_state_file(app)
+        try:
+            with open(path, encoding="utf-8") as f:
+                last_id = int(f.read().strip())
+        except Exception:  # noqa: BLE001
+            last_id = None
+
+        if last_id is None:
+            newest = db.session.query(db.func.max(AuditLog.id)).scalar() or 0
+            _write_state(path, str(newest))
+            return []
+
+        rows = AuditLog.query.filter(AuditLog.id > last_id).all()
+        if not rows:
+            return []
+        _write_state(path, str(max(r.id for r in rows)))
+
+        cnt = Counter((r.action or "").lower() for r in rows)
+        mins = int(app.config.get("ALERTS_CHECK_MINUTES", 30) or 30)
+        regras = [
+            ("login_fail", "falhas de login", int(app.config.get("SEC_ALERT_LOGINFAIL", 15) or 15)),
+            ("reveal", "revelações de senha do Cofre", int(app.config.get("SEC_ALERT_REVEAL", 20) or 20)),
+            ("delete", "exclusões", int(app.config.get("SEC_ALERT_DELETE", 25) or 25)),
+        ]
+        hits = [f"• {cnt[a]} {label} nos últimos ~{mins} min (limite {thr})"
+                for a, label, thr in regras if cnt.get(a, 0) >= thr]
+        if hits:
+            corpo = ("Atividade suspeita detectada na auditoria:\n\n"
+                     + "\n".join(hits) + "\n\nConfira em Admin → Auditoria.")
+            mailer.notify_ti("[InvenSync] ⚠️ Alerta de atividade suspeita", corpo)
+        return hits
+
+
+def _write_state(path, value):
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(value)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def start_scheduler(app):
     """Thread daemon: a cada ALERTS_CHECK_MINUTES atualiza o aviso e, nas
     horas-alvo, envia o digest por e-mail (no máximo 1x por janela/dia)."""
@@ -261,6 +318,7 @@ def start_scheduler(app):
             try:
                 publish(app)                 # atualiza o aviso (sem e-mail)
                 send_digest_if_window(app)   # e-mail só nas horas-alvo
+                check_suspicious_activity(app)  # avisa a TI de padrões suspeitos
             except Exception as e:  # noqa: BLE001
                 try:
                     with app.app_context():

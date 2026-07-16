@@ -108,6 +108,13 @@ class Config:
         "ALERTS_DIGEST_HOURS", os.environ.get("ALERTS_WHATSAPP_HOURS", "8,17"))
     # Frequência com que o agendador acorda para checar (minutos).
     ALERTS_CHECK_MINUTES = int(os.environ.get("ALERTS_CHECK_MINUTES", "30"))
+
+    # Alertas de atividade suspeita na auditoria (e-mail à TI ao cruzar o limite
+    # dentro de uma janela de ALERTS_CHECK_MINUTES).
+    SECURITY_ALERTS_ENABLED = os.environ.get("SECURITY_ALERTS_ENABLED", "1") in ("1", "true", "True")
+    SEC_ALERT_LOGINFAIL = int(os.environ.get("SEC_ALERT_LOGINFAIL", "15"))
+    SEC_ALERT_REVEAL = int(os.environ.get("SEC_ALERT_REVEAL", "20"))
+    SEC_ALERT_DELETE = int(os.environ.get("SEC_ALERT_DELETE", "25"))
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_pre_ping": True,   # evita conexões mortas após ociosidade
         "pool_recycle": 1800,    # recicla conexões a cada 30 min
