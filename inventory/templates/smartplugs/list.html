@@ -1,5 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Tomadas Inteligentes{% endblock %}
+{% block extra_head %}
+<style>
+  .plug-switch{ width:2.7em; height:1.35em; cursor:pointer; margin-top:0; }
+  .plug-switch:checked{ background-color:#00c853; border-color:#00c853; }
+  .plug-switch:disabled{ cursor:default; opacity:.55; }
+</style>
+{% endblock %}
 {% block content %}
 <div class="page-header">
   <h1 class="ph-title">
@@ -33,11 +40,13 @@
         {{ p.ip_address or 'sem IP' }} · {{ p.device_id }}
       </div>
 
-      <div class="d-flex gap-2 flex-wrap">
-        <button class="btn btn-sm btn-success plug-on"><i class="bi bi-power"></i> Ligar</button>
-        <button class="btn btn-sm btn-outline-danger plug-off"><i class="bi bi-power"></i> Desligar</button>
-        <button class="btn btn-sm btn-outline-light plug-refresh" title="Atualizar estado"><i class="bi bi-arrow-repeat"></i></button>
-        <a class="btn btn-sm btn-outline-light ms-auto" href="{{ url_for('smartplugs.schedules', pid=p.id) }}" title="Agendamentos"><i class="bi bi-clock-history"></i>{% if p.schedules %} {{ p.schedules|length }}{% endif %}</a>
+      <div class="d-flex gap-2 flex-wrap align-items-center">
+        <div class="form-check form-switch mb-0 d-flex align-items-center gap-2">
+          <input class="form-check-input plug-switch mt-0" type="checkbox" role="switch" disabled>
+          <label class="form-check-label small plug-switch-label text-muted">…</label>
+        </div>
+        <button class="btn btn-sm btn-outline-light plug-refresh ms-auto" title="Atualizar estado"><i class="bi bi-arrow-repeat"></i></button>
+        <a class="btn btn-sm btn-outline-light" href="{{ url_for('smartplugs.schedules', pid=p.id) }}" title="Agendamentos"><i class="bi bi-clock-history"></i>{% if p.schedules %} {{ p.schedules|length }}{% endif %}</a>
         <a class="btn btn-sm btn-outline-light" href="{{ url_for('smartplugs.edit', pid=p.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
         <form action="{{ url_for('smartplugs.delete', pid=p.id) }}" method="post" onsubmit="return confirm('Remover a tomada {{ p.name }}?');">
           <button class="btn btn-sm btn-outline-danger" title="Excluir"><i class="bi bi-trash"></i></button>
@@ -67,22 +76,38 @@
     b.innerHTML = '<i class="bi ' + icon + '"></i> ' + txt;
   }
 
+  function setSwitch(card, {checked, enabled, label, cls}){
+    const sw = card.querySelector('.plug-switch');
+    const lbl = card.querySelector('.plug-switch-label');
+    if (checked !== undefined) sw.checked = checked;
+    sw.disabled = !enabled;
+    lbl.textContent = label;
+    lbl.className = 'form-check-label small plug-switch-label ' + (cls || 'text-muted');
+  }
+
   async function refresh(card){
     setState(card, 'verificando…', 'bg-secondary-subtle text-secondary-emphasis', 'bi-arrow-repeat');
+    setSwitch(card, {enabled:false, label:'…'});
     try {
       const r = await fetch(card.dataset.statusUrl);
       const j = await r.json();
       if (j.ok) {
-        if (j.on) setState(card, 'Ligada', 'bg-success-subtle text-success-emphasis', 'bi-lightning-charge-fill');
-        else      setState(card, 'Desligada', 'bg-secondary-subtle text-secondary-emphasis', 'bi-power');
+        if (j.on) { setState(card, 'Ligada', 'bg-success-subtle text-success-emphasis', 'bi-lightning-charge-fill');
+                    setSwitch(card, {checked:true, enabled:true, label:'Ligada', cls:'text-success-emphasis'}); }
+        else      { setState(card, 'Desligada', 'bg-secondary-subtle text-secondary-emphasis', 'bi-power');
+                    setSwitch(card, {checked:false, enabled:true, label:'Desligada', cls:'text-muted'}); }
       } else {
         setState(card, 'Offline', 'bg-danger-subtle text-danger-emphasis', 'bi-wifi-off');
+        setSwitch(card, {checked:false, enabled:false, label:'Offline', cls:'text-danger-emphasis'});
       }
-    } catch(e){ setState(card, 'Erro', 'bg-danger-subtle text-danger-emphasis', 'bi-exclamation-triangle'); }
+    } catch(e){
+      setState(card, 'Erro', 'bg-danger-subtle text-danger-emphasis', 'bi-exclamation-triangle');
+      setSwitch(card, {enabled:false, label:'Erro', cls:'text-danger-emphasis'});
+    }
   }
 
-  async function toggle(card, on, btn){
-    const old = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+  async function toggle(card, on){
+    setSwitch(card, {enabled:false, label: on ? 'ligando…' : 'desligando…'});
     try {
       const body = new URLSearchParams(); body.append('on', on ? '1' : '0');
       const r = await fetch(card.dataset.toggleUrl, {
@@ -90,14 +115,15 @@
         headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
         body: body });
       const j = await r.json();
-      if (!j.ok) alert('Não foi possível: ' + (j.error || 'falha ao comandar a tomada.'));
-    } catch(e){ alert('Erro de rede ao comandar a tomada.'); }
-    finally { btn.disabled = false; btn.innerHTML = old; refresh(card); }
+      if (!j.ok){ alert('Não foi possível: ' + (j.error || 'falha ao comandar a tomada.'));
+                  card.querySelector('.plug-switch').checked = !on; }
+    } catch(e){ alert('Erro de rede ao comandar a tomada.');
+                card.querySelector('.plug-switch').checked = !on; }
+    finally { refresh(card); }
   }
 
   document.querySelectorAll('.plug-card').forEach(function(card){
-    card.querySelector('.plug-on').addEventListener('click', e => toggle(card, true, e.currentTarget));
-    card.querySelector('.plug-off').addEventListener('click', e => toggle(card, false, e.currentTarget));
+    card.querySelector('.plug-switch').addEventListener('change', e => toggle(card, e.currentTarget.checked));
     card.querySelector('.plug-refresh').addEventListener('click', () => refresh(card));
     refresh(card);
   });
