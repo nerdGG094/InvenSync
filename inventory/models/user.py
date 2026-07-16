@@ -50,9 +50,11 @@ class User(db.Model, UserMixin):
     # outros dispositivos ("sair de todas as sessões").
     session_token = db.Column(db.String(32), nullable=True, default=_new_token)
 
-    # Bloqueio por tentativas de senha erradas.
+    # Bloqueio por tentativas de senha erradas (reutilizado também no 2FA).
     failed_logins = db.Column(db.Integer, nullable=False, default=0, server_default="0")
     locked_until = db.Column(db.DateTime, nullable=True)
+    # Último código TOTP aceito — impede reuso do mesmo código (anti-replay).
+    last_totp_code = db.Column(db.String(10), nullable=True)
 
     # Autenticação em dois fatores (TOTP / Google Authenticator)
     totp_secret = db.Column(db.String(64), nullable=True)

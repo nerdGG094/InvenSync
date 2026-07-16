@@ -95,15 +95,41 @@ def login_2fa():
         session.pop(PENDING_KEY, None)
         return redirect(url_for("auth.login"))
 
+    # Conta travada por tentativas (mesma trava do login) — barra o brute force
+    # do 2FA por conta, não só por IP.
+    if user.is_locked():
+        mins = max(1, round(user.lock_seconds_left() / 60))
+        session.pop(PENDING_KEY, None)
+        flash(f"Conta temporariamente bloqueada por excesso de tentativas. Tente em ~{mins} min.", "warning")
+        return redirect(url_for("auth.login"))
+
     form = TwoFactorForm()
     if form.validate_on_submit():
-        if twofa.verify(user.totp_secret, form.code.data):
+        code = (form.code.data or "").strip()
+        # Anti-replay: o mesmo código TOTP não pode ser reutilizado.
+        replay = bool(user.last_totp_code and code == user.last_totp_code)
+        if not replay and twofa.verify(user.totp_secret, code):
+            user.last_totp_code = code
+            user.failed_logins = 0
+            user.locked_until = None
+            db.session.commit()
             session.pop(PENDING_KEY, None)
             session.permanent = True
             login_user(user, remember=True)
             audit.record("login", "user", user.id, f"Login de {user.name} (2FA)")
             return redirect(_home_for(user))
-        flash("Código inválido. Tente novamente.", "danger")
+        # Falha (código errado ou reuso): conta a tentativa e bloqueia no limite.
+        maxn = int(current_app.config.get("LOGIN_MAX_ATTEMPTS", 5) or 5)
+        lockmin = int(current_app.config.get("LOGIN_LOCKOUT_MINUTES", 15) or 15)
+        user.failed_logins = (user.failed_logins or 0) + 1
+        if user.failed_logins >= maxn:
+            user.locked_until = datetime.now() + timedelta(minutes=lockmin)
+            user.failed_logins = 0
+            audit.record("login_fail", "user", user.id,
+                         f"Conta bloqueada por {lockmin} min após {maxn} falhas de 2FA")
+        db.session.commit()
+        flash("Este código já foi usado — aguarde o próximo no app." if replay
+              else "Código inválido. Tente novamente.", "danger")
     return render_template("login_2fa.html", form=form)
 
 
