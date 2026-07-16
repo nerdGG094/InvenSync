@@ -36,8 +36,10 @@ REM ---------- 4. .env ----------
 if not exist ".env" (
     if exist ".env.example" (
         copy ".env.example" ".env" >nul
-        echo [3/5] .env criado a partir de .env.example.
-        echo       *** EDITE .env COM AS SENHAS REAIS ANTES DE INICIAR ***
+        REM Gera SECRET_KEY e VAULT_KEY fortes (nunca deixar o placeholder do exemplo).
+        ".venv\Scripts\python.exe" "setup\gen_secrets.py"
+        echo [3/5] .env criado a partir de .env.example (SECRET_KEY/VAULT_KEY gerados).
+        echo       *** EDITE .env COM AS SENHAS DO BANCO ANTES DE INICIAR ***
     ) else (
         echo [AVISO] .env e .env.example ausentes. Crie .env manualmente.
     )

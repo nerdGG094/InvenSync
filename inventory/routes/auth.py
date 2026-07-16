@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 
 from flask import Blueprint, render_template, redirect, url_for, flash, session, current_app
 from flask_login import login_user, logout_user, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 from ..forms.auth import LoginForm, TwoFactorForm
 from ..models.user import User
 from ..services import twofa, audit
@@ -11,6 +12,10 @@ from ..extensions import limiter, db
 bp = Blueprint("auth", __name__)
 
 PENDING_KEY = "pending_2fa_uid"
+
+# Hash "isca" p/ gastar o mesmo tempo quando o e-mail não existe/não tem senha —
+# evita enumeração de usuários por timing (o hash real só rodaria p/ conta válida).
+_DUMMY_PW_HASH = generate_password_hash("timing-equalizer")
 
 def _home_for(user):
     """Tela inicial conforme o perfil: admin -> painel, comum -> central de avisos."""
@@ -33,6 +38,11 @@ def login():
             audit.record("login_fail", "user", user.id, f"Login bloqueado (conta travada) — {email}")
             flash(f"Conta temporariamente bloqueada por excesso de tentativas. Tente em ~{mins} min.", "warning")
             return render_template("login.html", form=form)
+
+        # Sem conta válida com senha? Roda um hash isca para o tempo de resposta
+        # não denunciar se o e-mail existe (o check real só ocorreria abaixo).
+        if not (user and user.can_login and user.password_hash):
+            check_password_hash(_DUMMY_PW_HASH, form.password.data or "")
 
         if user and user.can_login and user.check_password(form.password.data):
             if not user.is_active:

@@ -496,10 +496,14 @@
     }
 
     function toast(t){
+      // Escapa TUDO que vem do chamado (título/solicitante/setor são texto livre
+      // do usuário) antes de ir para innerHTML — senão é XSS armazenado.
+      const esc = function(s){ return (s==null?'':String(s)).replace(/[&<>"']/g,
+        function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); };
       const div = document.createElement('div');
       div.className = 'iv-toast';
-      div.innerHTML = '<div class="t-title"><i class="bi bi-bell-fill text-warning"></i> Novo chamado '+t.code+'</div>'+
-        '<div class="t-body">'+(t.title||'')+(t.requester? ' · '+t.requester:'')+(t.sector? ' ('+t.sector+')':'')+
+      div.innerHTML = '<div class="t-title"><i class="bi bi-bell-fill text-warning"></i> Novo chamado '+esc(t.code)+'</div>'+
+        '<div class="t-body">'+esc(t.title||'')+(t.requester? ' · '+esc(t.requester):'')+(t.sector? ' ('+esc(t.sector)+')':'')+
         ' — <a href="'+LIST_URL+'">ver</a></div>';
       zone.appendChild(div);
       setTimeout(()=>{ div.style.transition='opacity .4s'; div.style.opacity='0'; setTimeout(()=>div.remove(),400); }, 12000);

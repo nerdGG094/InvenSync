@@ -4,7 +4,7 @@ import time
 from datetime import datetime, timedelta
 
 from flask import (Blueprint, render_template, request, redirect, url_for, flash,
-                   abort, jsonify, current_app)
+                   abort, jsonify, current_app, send_from_directory)
 from flask_login import login_required, current_user
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
@@ -30,16 +30,13 @@ def _users_info() -> dict:
     return people.users_sector_map()
 
 
-def _name_eq(user, name) -> bool:
-    return bool(name and (user.name or "").strip().lower() == name.strip().lower())
-
-
 def _is_requester(user, t) -> bool:
-    """É o solicitante do chamado? (casado por nome; sem solicitante nomeado,
-    quem abriu). Quem avalia a satisfação."""
-    if t.requester:
-        return _name_eq(user, t.requester)
-    return t.opened_by_id == user.id
+    """É o solicitante do chamado? Casado por ID ESTÁVEL (nunca pelo nome, que o
+    usuário edita livremente no perfil). Sem solicitante vinculado, só quem abriu
+    (e apenas se não há um nome de solicitante de terceiro). Quem avalia o CSAT."""
+    if t.requester_id:
+        return t.requester_id == user.id
+    return t.opened_by_id == user.id and not (t.requester or "").strip()
 
 
 def _is_participant(user, t) -> bool:
@@ -48,12 +45,11 @@ def _is_participant(user, t) -> bool:
 
 
 def _requester_user(t):
-    """Usuário a notificar sobre o chamado: o solicitante (casado por nome no
-    cadastro). Cai para quem registrou quando não há solicitante nomeado; None
-    quando o solicitante nomeado não tem cadastro/e-mail."""
-    if t.requester:
-        return User.query.filter(db.func.lower(User.name) == t.requester.strip().lower()).first()
-    return t.opened_by
+    """Usuário a notificar sobre o chamado: o solicitante (por id vinculado).
+    Cai para quem registrou quando não há solicitante identificável."""
+    if t.requester_id:
+        return t.requester_user
+    return t.opened_by if not (t.requester or "").strip() else None
 
 
 def _period_range(args):
@@ -135,9 +131,8 @@ def list_view():
     # Usuário comum vê os que abriu E aqueles em que é o solicitante (por nome).
     if not current_user.is_admin:
         items = [t for t in items if _is_participant(current_user, t)]
-        my_name = (current_user.name or "").strip().lower()
         cnt = cnt.filter(db.or_(Ticket.opened_by_id == current_user.id,
-                                db.func.lower(db.func.btrim(Ticket.requester)) == my_name))
+                                Ticket.requester_id == current_user.id))
     counts = dict(cnt.group_by(Ticket.status).all())
     totals = {
         "aberto": counts.get("aberto", 0),
@@ -150,9 +145,8 @@ def list_view():
     # SLA: total de atrasados (sobre os abertos do escopo) + filtro opcional.
     open_q = Ticket.query.filter(Ticket.status.in_(("aberto", "em_andamento")))
     if not current_user.is_admin:
-        my_name = (current_user.name or "").strip().lower()
         open_q = open_q.filter(db.or_(Ticket.opened_by_id == current_user.id,
-                                      db.func.lower(db.func.btrim(Ticket.requester)) == my_name))
+                                      Ticket.requester_id == current_user.id))
     overdue_total = sum(1 for t in open_q.all() if t.sla_overdue)
     if sla == "late":
         items = [t for t in items if t.sla_overdue]
@@ -545,6 +539,21 @@ def attach_delete(tid, aid):
     db.session.commit()
     flash("Anexo removido.", "success")
     return redirect(url_for("tickets.detail", tid=t.id))
+
+
+@bp.route("/<int:tid>/attach/<int:aid>/file")
+@login_required
+def attach_file(tid, aid):
+    """Baixa/abre um anexo. Fica FORA de /static: exige login + ser participante
+    do chamado (o que a rota estática pública não garantia)."""
+    t = ticket_repo.get_ticket(tid)
+    if not current_user.is_admin and not _is_participant(current_user, t):
+        abort(403)
+    att = TicketAttachment.query.filter_by(id=aid, ticket_id=t.id).first_or_404()
+    return send_from_directory(
+        current_app.config["ATTACH_FOLDER"], att.filename,
+        as_attachment=False, download_name=att.original_name or att.filename,
+    )
 
 
 @bp.route("/<int:tid>/edit", methods=["GET", "POST"])

@@ -64,9 +64,12 @@ class Config:
     # Upload de fotos de perfil (avatares) e anexos de chamados
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB
     AVATAR_FOLDER = os.path.join(BASE_DIR, "static", "uploads", "avatars")
-    ATTACH_FOLDER = os.path.join(BASE_DIR, "static", "uploads", "tickets")
+    # Anexos de chamados e NFs contêm dados sensíveis — guardados FORA da pasta
+    # estática (senão a rota pública /static burla o login/checagem de dono).
+    # Servidos só por rotas autenticadas (tickets.attach_file / movements.nf).
+    ATTACH_FOLDER = os.path.join(BASE_DIR, "uploads_private", "tickets")
     # Notas fiscais anexadas às entradas de estoque (XML/PDF)
-    NF_FOLDER = os.path.join(BASE_DIR, "static", "uploads", "nf")
+    NF_FOLDER = os.path.join(BASE_DIR, "uploads_private", "nf")
     # Fotos das credenciais do Cofre — guardadas FORA da pasta estática (dados
     # sensíveis); servidas apenas pela rota admin de /credentials, nunca por URL
     # estática pública.

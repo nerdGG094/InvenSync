@@ -71,6 +71,12 @@ def _run_light_migrations():
         # Apoio ao "última limpeza por máquina" (DISTINCT ON) do dashboard.
         'CREATE INDEX IF NOT EXISTS ix_machine_cleaning_machine_started '
         'ON machine_cleaning (machine_id, started_at DESC)',
+        # Segurança: solicitante do chamado por id estável (autorização não pode
+        # depender do nome, que o usuário edita livremente no perfil).
+        'ALTER TABLE ticket ADD COLUMN IF NOT EXISTS requester_id INTEGER REFERENCES "user"(id)',
+        'UPDATE ticket t SET requester_id = u.id FROM "user" u '
+        'WHERE t.requester_id IS NULL AND t.requester IS NOT NULL '
+        "AND lower(btrim(t.requester)) = lower(btrim(u.name))",
     ]
     for sql in stmts:
         try:
@@ -85,6 +91,28 @@ def _run_light_migrations():
                                            (sql[:60] + "…") if len(sql) > 60 else sql, e)
             except Exception:  # noqa: BLE001
                 pass
+
+
+def _migrate_private_uploads(app):
+    """Correção de segurança: anexos de chamados e NFs ficavam em
+    static/uploads/{tickets,nf} (servidos pela rota pública /static, sem login).
+    Move os arquivos existentes para uploads_private/... uma vez. Idempotente."""
+    import shutil
+    pares = [
+        (os.path.join(app.static_folder, "uploads", "tickets"), app.config["ATTACH_FOLDER"]),
+        (os.path.join(app.static_folder, "uploads", "nf"), app.config["NF_FOLDER"]),
+    ]
+    for antigo, novo in pares:
+        try:
+            if not os.path.isdir(antigo):
+                continue
+            os.makedirs(novo, exist_ok=True)
+            for fn in os.listdir(antigo):
+                src, dst = os.path.join(antigo, fn), os.path.join(novo, fn)
+                if os.path.isfile(src) and not os.path.exists(dst):
+                    shutil.move(src, dst)
+        except Exception:  # noqa: BLE001
+            pass
 
 
 def _seed_people_into_users():
@@ -221,9 +249,33 @@ def _encrypt_credentials():
 NON_ADMIN_PREFIXES = ("tickets.", "profile.", "auth.", "kb.", "announcements.")
 NON_ADMIN_ENDPOINTS = ("static", "health.health", "service_worker", "manifest")
 
+_WEAK_SECRETS = {"", "dev-secret-key", "troque-por-uma-chave-secreta", "changeme"}
+
+
+def _guard_secrets(app):
+    """Recusa iniciar em produção com SECRET_KEY placeholder/fraco (senão o cookie
+    de sessão é forjável → login como admin). VAULT_KEY vazio apenas alerta (por
+    compat: deriva do SECRET_KEY em instalações antigas)."""
+    import sys
+    if app.config.get("TESTING") or "pytest" in sys.modules:
+        return
+    sk = (app.config.get("SECRET_KEY") or "").strip()
+    if sk in _WEAK_SECRETS or len(sk) < 16:
+        raise RuntimeError(
+            "SECRET_KEY inseguro/placeholder. Defina um SECRET_KEY forte no .env "
+            "(ex.: python -c \"import secrets;print(secrets.token_urlsafe(48))\").")
+    if not (app.config.get("VAULT_KEY") or "").strip():
+        try:
+            app.logger.warning("VAULT_KEY vazio: o Cofre deriva a chave do "
+                               "SECRET_KEY. Defina um VAULT_KEY dedicado no .env.")
+        except Exception:  # noqa: BLE001
+            pass
+
+
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(Config)
+    _guard_secrets(app)
 
     # Garante a pasta instance
     try:
@@ -286,6 +338,7 @@ def create_app():
     with app.app_context():
         db.create_all()
         _run_light_migrations()
+        _migrate_private_uploads(app)   # move anexos/NFs p/ fora de /static
         # Semente de categoria/fornecedor padrão desativada — a base é mantida
         # limpa intencionalmente; cadastre categorias/fornecedores pela interface.
         #
@@ -318,9 +371,11 @@ def create_app():
             u = db.session.get(User, int(uid))
             if u is None:
                 return None
-            # Se o id traz token (formato novo), precisa bater com o atual.
-            # Cookies legados (só "id") continuam válidos até o próximo login.
-            if tok and (u.session_token or "") and tok != u.session_token:
+            # O token é obrigatório quando o usuário tem session_token (todos têm,
+            # via backfill): cookie sem token (formato legado) é rejeitado — força
+            # um novo login e garante que "sair de todas as sessões" invalide
+            # cookies antigos de fato.
+            if (u.session_token or "") and tok != u.session_token:
                 return None
             return u
         except Exception:
@@ -461,12 +516,21 @@ def create_app():
             "frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
         )
 
+        secure = bool(app.config.get("SESSION_COOKIE_SECURE"))
+
         @app.after_request
         def _security_headers(resp):
             resp.headers.setdefault("X-Content-Type-Options", "nosniff")
             resp.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
             resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
             resp.headers.setdefault("Content-Security-Policy", csp)
+            resp.headers.setdefault(
+                "Permissions-Policy", "geolocation=(), microphone=(), camera=()")
+            # HSTS só faz sentido (e só é seguro) sob HTTPS — ligado junto com o
+            # cookie Secure (BEHIND_PROXY + SESSION_COOKIE_SECURE=1).
+            if secure:
+                resp.headers.setdefault(
+                    "Strict-Transport-Security", "max-age=31536000; includeSubDomains")
             return resp
 
     # Handlers de erro

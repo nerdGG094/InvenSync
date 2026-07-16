@@ -157,9 +157,9 @@
         {% for a in t.attachments %}
         <div class="col-6 col-md-4">
           <div class="border rounded p-2 h-100 d-flex flex-column" style="background:#15211a;border-color:#243024!important">
-            <a href="{{ url_for('static', filename='uploads/tickets/' ~ a.filename) }}" target="_blank" class="text-decoration-none text-center flex-grow-1 d-flex align-items-center justify-content-center">
+            <a href="{{ url_for('tickets.attach_file', tid=t.id, aid=a.id) }}" target="_blank" class="text-decoration-none text-center flex-grow-1 d-flex align-items-center justify-content-center">
               {% if a.is_image %}
-                <img src="{{ url_for('static', filename='uploads/tickets/' ~ a.filename) }}" alt="{{ a.original_name }}" style="max-width:100%;max-height:120px;border-radius:6px">
+                <img src="{{ url_for('tickets.attach_file', tid=t.id, aid=a.id) }}" alt="{{ a.original_name }}" style="max-width:100%;max-height:120px;border-radius:6px">
               {% else %}
                 <span class="text-muted"><i class="bi bi-file-earmark-text fs-1"></i></span>
               {% endif %}

@@ -92,9 +92,20 @@ def _apply_status_side_effects(t: Ticket):
         t.resolved_at = None
 
 
+def _resolve_requester_id(requester) -> Optional[int]:
+    """id da pessoa no cadastro central a partir do nome do solicitante."""
+    nome = (requester or "").strip()
+    if not nome:
+        return None
+    from ..models.user import User
+    u = User.query.filter(db.func.lower(User.name) == nome.lower()).first()
+    return u.id if u else None
+
+
 def create_ticket(opened_by_id: Optional[int] = None, **kwargs) -> Ticket:
     data = {k: kwargs.get(k) for k in _ALLOWED}
     t = Ticket(code=next_code(), opened_by_id=opened_by_id, **data)
+    t.requester_id = _resolve_requester_id(t.requester)
     _apply_status_side_effects(t)
     db.session.add(t)
     db.session.commit()
@@ -105,6 +116,8 @@ def update_ticket(t: Ticket, **kwargs) -> Ticket:
     for k in _ALLOWED:
         if k in kwargs:
             setattr(t, k, kwargs[k])
+    if "requester" in kwargs:
+        t.requester_id = _resolve_requester_id(t.requester)
     _apply_status_side_effects(t)
     db.session.commit()
     return t

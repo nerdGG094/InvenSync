@@ -17,7 +17,10 @@ class Ticket(db.Model):
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=True)
 
-    requester = db.Column(db.String(150), nullable=True)        # solicitante (pessoa/setor)
+    requester = db.Column(db.String(150), nullable=True)        # solicitante (texto/legado)
+    # Vínculo estável ao cadastro (resolvido do nome na criação/edição). A
+    # autorização "é o solicitante" usa este id, NUNCA o nome (que é mutável).
+    requester_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
     sector = db.Column(db.String(120), nullable=True)
 
     category = db.Column(db.String(30), nullable=False, default="outro", server_default="outro")
@@ -38,6 +41,7 @@ class Ticket(db.Model):
 
     opened_by = db.relationship("User", foreign_keys=[opened_by_id])
     assigned_to = db.relationship("User", foreign_keys=[assigned_to_id])
+    requester_user = db.relationship("User", foreign_keys=[requester_id])
     machine = db.relationship("Machine")
 
     @property

@@ -190,6 +190,7 @@ def reauth():
 
 
 @bp.route("/<int:cid>/reveal")
+@limiter.limit("40 per minute")
 def reveal(cid):
     """Retorna a senha em texto e registra na auditoria quem revelou.
     Exige re-autenticação recente (senha do próprio usuário)."""

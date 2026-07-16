@@ -17,12 +17,17 @@ from ..services import twofa, people
 bp = Blueprint("profile", __name__)
 
 SETUP_SECRET_KEY = "twofa_setup_secret"
+# Avatares são servidos publicamente por /static — restringe a imagens (nunca
+# svg/html), independentemente do validador do form (defesa em profundidade).
+_AVATAR_EXT = {"png", "jpg", "jpeg", "gif", "webp", "bmp"}
 
 
 def _save_avatar(file_storage) -> str:
     folder = current_app.config["AVATAR_FOLDER"]
     os.makedirs(folder, exist_ok=True)
     ext = (secure_filename(file_storage.filename).rsplit(".", 1)[-1] or "png").lower()
+    if ext not in _AVATAR_EXT:
+        abort(400)
     fname = f"user_{current_user.id}_{int(time.time())}.{ext}"
     file_storage.save(os.path.join(folder, fname))
     # remove a foto anterior

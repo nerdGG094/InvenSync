@@ -3,7 +3,7 @@
 import time
 from datetime import datetime
 
-from flask import Blueprint, jsonify, current_app
+from flask import Blueprint, jsonify, current_app, request
 from sqlalchemy import text
 
 from ..extensions import db
@@ -68,8 +68,17 @@ def _uptime() -> str:
     return f"{sec}s"
 
 
+def _is_local() -> bool:
+    """Requisição vinda do próprio servidor (launcher em 127.0.0.1)?"""
+    return (request.remote_addr or "") in ("127.0.0.1", "::1", "localhost")
+
+
 @bp.route("/health")
 def health():
+    """Público: só status/uptime/checks. Detalhes de infra (último backup,
+    schedulers, e-mail) e a mensagem de erro do banco ficam apenas para o
+    launcher local — não vazam para qualquer um na rede."""
+    local = _is_local()
     checks = {}
 
     t0 = time.perf_counter()
@@ -80,10 +89,15 @@ def health():
             "latency_ms": round((time.perf_counter() - t0) * 1000, 1),
         }
     except Exception as e:  # noqa: BLE001
+        try:
+            current_app.logger.warning("healthcheck DB falhou: %s", e)
+        except Exception:  # noqa: BLE001
+            pass
         checks["PostgreSQL"] = {
             "status": "error",
             "latency_ms": round((time.perf_counter() - t0) * 1000, 1),
-            "error": str(e),
+            # str(e) do psycopg pode conter host/porta/usuário/db — só p/ o local.
+            "error": str(e) if local else "erro de conexão",
         }
 
     all_ok = all(c["status"] == "ok" for c in checks.values())
@@ -91,6 +105,7 @@ def health():
         "status": "ok" if all_ok else "degraded",
         "uptime": _uptime(),
         "checks": checks,
-        "info": _info(),
     }
+    if local:
+        payload["info"] = _info()
     return jsonify(payload), (200 if all_ok else 503)
