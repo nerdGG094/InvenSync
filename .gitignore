@@ -61,3 +61,5 @@ flask_output.log
 # === Sistema ===
 .DS_Store
 Thumbs.db
+snapshot.json
+instance/
