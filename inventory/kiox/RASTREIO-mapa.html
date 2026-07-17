@@ -14,6 +14,7 @@
     #topo b { color:#4aa3ff; }
     #busca { margin-left:auto; background:#0d1117; color:#fff; border:1px solid #2e3d4d; border-radius:6px; padding:6px 10px; font-size:13px; width:180px; }
     #ranking { background:#3a2330; color:#ffd0d0; border:1px solid #5a2e3d; border-radius:6px; padding:5px 12px; cursor:pointer; font-size:13px; font-weight:600; }
+    #todos { background:#20303a; color:#cfe3ff; border:1px solid #2e4d5a; border-radius:6px; padding:5px 12px; cursor:pointer; font-size:13px; font-weight:600; }
     #sair { background:#1c2530; color:#cfe3ff; border:1px solid #2e3d4d; border-radius:6px; padding:5px 10px; cursor:pointer; font-size:13px; }
     #mapa { width: 100%; height: calc(100% - 46px); }
     .info { font-size: 13px; line-height: 1.5; }
@@ -37,17 +38,22 @@
     #login button { width:100%; padding:11px; border:0; border-radius:7px; background:#1f6feb; color:#fff; font-size:15px; font-weight:600; cursor:pointer; }
     #login button:disabled { opacity:.6; cursor:default; }
     #erro { color:#ff6b6b; font-size:13px; min-height:18px; margin-top:8px; }
-    /* Modal do ranking de desligados */
-    #ranking-modal { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:1100; }
-    #ranking-modal .box { background:#161b22; color:#fff; border-radius:12px; width:min(620px,92vw); max-height:82vh; overflow:auto; box-shadow:0 8px 30px rgba(0,0,0,.6); }
-    #ranking-modal h2 { margin:0; padding:15px 18px; font-size:17px; border-bottom:1px solid #2e3d4d; display:flex; align-items:center; gap:10px; position:sticky; top:0; background:#161b22; }
-    #ranking-modal table { width:100%; border-collapse:collapse; font-size:14px; }
-    #ranking-modal th, #ranking-modal td { padding:9px 16px; text-align:left; border-bottom:1px solid #222c38; }
-    #ranking-modal th { color:#9fb0c0; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.03em; }
-    #ranking-modal .fechar { margin-left:auto; background:#1c2530; color:#cfe3ff; border:1px solid #2e3d4d; border-radius:6px; padding:5px 12px; cursor:pointer; font-size:13px; }
-    #ranking-modal .vazio { padding:26px 20px; color:#7CFC98; text-align:center; font-size:15px; }
+    /* Modais (ranking de desligados e lista de todos) */
+    #ranking-modal, #todos-modal { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:1100; }
+    #ranking-modal .box, #todos-modal .box { background:#161b22; color:#fff; border-radius:12px; width:min(760px,94vw); max-height:82vh; overflow:auto; box-shadow:0 8px 30px rgba(0,0,0,.6); }
+    #ranking-modal h2, #todos-modal h2 { margin:0; padding:15px 18px; font-size:17px; border-bottom:1px solid #2e3d4d; display:flex; align-items:center; gap:10px; position:sticky; top:0; background:#161b22; }
+    #ranking-modal table, #todos-modal table { width:100%; border-collapse:collapse; font-size:14px; }
+    #ranking-modal th, #ranking-modal td, #todos-modal th, #todos-modal td { padding:9px 16px; text-align:left; border-bottom:1px solid #222c38; }
+    #ranking-modal th, #todos-modal th { color:#9fb0c0; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.03em; }
+    #ranking-modal .fechar, #todos-modal .fechar { margin-left:auto; background:#1c2530; color:#cfe3ff; border:1px solid #2e3d4d; border-radius:6px; padding:5px 12px; cursor:pointer; font-size:13px; }
+    #ranking-modal .vazio, #todos-modal .vazio { padding:26px 20px; color:#7CFC98; text-align:center; font-size:15px; }
     #ranking-modal .tempo { color:#ff6b6b; font-weight:700; white-space:nowrap; }
-    #ranking-modal .bat-baixa { color:#e53935; font-weight:700; }
+    #ranking-modal .bat-baixa, #todos-modal .bat-baixa { color:#e53935; font-weight:700; }
+    #todos-modal tbody tr { cursor:pointer; }
+    #todos-modal tbody tr:hover { background:#1c2530; }
+    #todos-modal .st-ok { color:#7CFC98; font-weight:700; white-space:nowrap; }
+    #todos-modal .st-off { color:#ff6b6b; font-weight:700; white-space:nowrap; }
+    #todos-modal .sub { color:#9fb0c0; font-size:12px; }
   </style>
 </head>
 <body>
@@ -66,6 +72,7 @@
   <div id="topo">KioX — Rastreio mobile &nbsp; <span id="status">conectando...</span> &nbsp;•&nbsp; <b id="qtd">0</b> aparelho(s)
     <input id="busca" type="text" placeholder="🔎 buscar aparelho..." />
     <button id="ranking" type="button">🔴 Ranking desligados</button>
+    <button id="todos" type="button">📋 Todos os aparelhos</button>
     <button id="sair" type="button">Sair</button>
   </div>
   <div id="mapa"></div>
@@ -77,6 +84,16 @@
         <button class="fechar" id="rankFechar" type="button">Fechar</button>
       </h2>
       <div id="rankConteudo"></div>
+    </div>
+  </div>
+
+  <!-- Lista completa: todos os aparelhos (ligados e desligados) -->
+  <div id="todos-modal">
+    <div class="box">
+      <h2>📋 Todos os aparelhos <span id="todosResumo" style="font-size:12px;color:#9fb0c0;font-weight:400"></span>
+        <button class="fechar" id="todosFechar" type="button">Fechar</button>
+      </h2>
+      <div id="todosConteudo"></div>
     </div>
   </div>
 
@@ -222,6 +239,54 @@
         cont.innerHTML = html + '</tbody></table>';
       }
       document.getElementById('ranking-modal').style.display = 'flex';
+    }
+
+    // Lista completa de TODOS os aparelhos (ligados e desligados).
+    document.getElementById('todos').addEventListener('click', abrirTodos);
+    document.getElementById('todosFechar').addEventListener('click', () => {
+      document.getElementById('todos-modal').style.display = 'none';
+    });
+    document.getElementById('todos-modal').addEventListener('click', (ev) => {
+      if (ev.target.id === 'todos-modal') ev.target.style.display = 'none';
+    });
+    function abrirTodos() {
+      const lista = Object.keys(ultimos).map((id) => ({ id: id, d: ultimos[id] }))
+        .sort((a, b) => nomeDe(a.d, a.id).localeCompare(nomeDe(b.d, b.id), 'pt-BR'));
+      const cont = document.getElementById('todosConteudo');
+      const resumo = document.getElementById('todosResumo');
+      if (!lista.length) {
+        cont.innerHTML = '<div class="vazio">Nenhum aparelho no mapa ainda.</div>';
+        resumo.textContent = '';
+      } else {
+        const off = lista.filter((x) => estaOffline(x.d)).length;
+        const on = lista.length - off;
+        resumo.textContent = '— ' + lista.length + ' no total · ' + on + ' ligado(s) · ' + off + ' sem sinal';
+        let html = '<table><thead><tr><th>#</th><th>Aparelho</th><th>Status</th><th>Versão</th><th>Bateria</th><th>Última atualização</th></tr></thead><tbody>';
+        lista.forEach((x, i) => {
+          const d = x.d;
+          const offline = estaOffline(d);
+          const bat = (d.bateria == null) ? '?' : (d.bateria + '%');
+          const batCls = (d.bateria != null && d.bateria <= 20) ? ' class="bat-baixa"' : '';
+          const st = offline
+            ? '<span class="st-off">🔴 sem sinal ' + fmtHaQuanto(d.hora).replace('há ', '') + '</span>'
+            : '<span class="st-ok">🟢 ligado</span>';
+          html += '<tr onclick="irParaAparelho(\'' + x.id + '\')">' +
+            '<td>' + (i + 1) + '</td>' +
+            '<td><b>' + nomeDe(d, x.id) + '</b><br><span class="sub">' + (d.modelo || '') + '</span></td>' +
+            '<td>' + st + '</td>' +
+            '<td>' + (d.versao || '?') + '</td>' +
+            '<td' + batCls + '>' + bat + (d.carregando ? ' ⚡' : '') + '</td>' +
+            '<td>' + fmtHora(d.hora) + '<br><span class="sub">' + fmtHaQuanto(d.hora) + '</span></td></tr>';
+        });
+        cont.innerHTML = html + '</tbody></table>';
+      }
+      document.getElementById('todos-modal').style.display = 'flex';
+    }
+
+    // Clicar numa linha da lista: fecha o modal e vai até o aparelho no mapa.
+    function irParaAparelho(id) {
+      document.getElementById('todos-modal').style.display = 'none';
+      if (marcadores[id]) clusterGroup.zoomToShowLayer(marcadores[id], () => marcadores[id].openPopup());
     }
 
     firebase.auth().onAuthStateChanged((user) => {
