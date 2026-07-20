@@ -54,7 +54,7 @@
 
 > **Stack:** Python 3.12 · Flask 3 · Flask-Login · Flask-WTF (CSRF) · SQLAlchemy 2 · psycopg 3
 > · PostgreSQL 17 · Jinja2 · Bootstrap 5.3 · Bootstrap Icons · Chart.js · `waitress` · `openpyxl`
-> · `qrcode` · `pyotp` (TOTP) · `requests` (CallMeBot) · PyQt5 (launcher)
+> · `qrcode` · `pyotp` (TOTP) · `tinytuya` (tomadas inteligentes) · PyQt5 (launcher)
 > **Segurança:** hash de senha (werkzeug/scrypt) · 2FA TOTP · RBAC por perfil (admin × comum)
 > · `is_active` bloqueia login · trilha de auditoria · segredos só no `.env`
 
@@ -83,7 +83,7 @@
 10. [Chamados de Suporte (ciclo de vida)](#10-chamados-de-suporte-ciclo-de-vida)
 11. [Ativos por Colaborador e Termo de Responsabilidade](#11-ativos-por-colaborador-e-termo-de-responsabilidade)
 12. [Monitoramento de Uptime](#12-monitoramento-de-uptime)
-13. [Notificações WhatsApp (CallMeBot)](#13-notificações-whatsapp-callmebot)
+13. [Notificações por E-mail (SMTP)](#13-notificações-por-e-mail-smtp)
 14. [Auditoria](#14-auditoria)
 15. [Implantação (Deployment) e Launcher](#15-implantação-deployment-e-launcher)
 16. [Segurança](#16-segurança)
@@ -108,7 +108,8 @@ de TI** inteira. Hoje reúne, num só lugar:
   **ativos por colaborador** com **termo de responsabilidade** imprimível.
 - **Suporte** — chamados (tickets) com comentários, anexos, SLA e painel; **base de conhecimento**.
 - **Administração de TI** — **cofre de senhas**, **licenças & garantias**, **domínios**,
-  **monitoramento de uptime** (ping/HTTP com alerta WhatsApp), **backups** do banco e **auditoria**.
+  **monitoramento de uptime** (ping/HTTP com alerta por e-mail), **tomadas inteligentes**
+  (controle local + agendamento), **backups** do banco e **auditoria**.
 
 ```mermaid
 mindmap
@@ -129,7 +130,8 @@ mindmap
       Bootstrap Icons
       Chart.js
     Integrações
-      CallMeBot WhatsApp
+      E-mail SMTP
+      Tuya local (tomadas)
       QR Code
       TOTP 2FA
     Operação
@@ -154,9 +156,9 @@ flowchart TB
 
     subgraph APP["🐍 Aplicação Flask (create_app)"]
         direction TB
-        ROUTES["Camada de Rotas — 30 Blueprints<br/>auth · dashboard · products · categories · suppliers<br/>movements · reports · kanban · machines · mobile · chips<br/>routers · cleanings · maintenance · monitoring · labels<br/>colaboradores · departments · assets · tickets · kb<br/>credentials · licenses · domains · audit · backups<br/>profile · wpp · health · docs"]
+        ROUTES["Camada de Rotas — Blueprints<br/>auth · dashboard · products · categories · suppliers<br/>movements · reports · kanban · machines · mobile · chips<br/>routers · cleanings · maintenance · monitoring · labels<br/>colaboradores · departments · assets · tickets · kb<br/>credentials · licenses · domains · audit · backups<br/>smartplugs · errors · announcements · profile · health · docs"]
         FORMS["Formulários (Flask-WTF)<br/>validação de entrada + CSRF"]
-        SERVICES["Serviços (transversais)<br/>assets · audit · exports · inventory_service<br/>monitoring · people · twofa · whatsapp · docs"]
+        SERVICES["Serviços (transversais)<br/>assets · audit · exports · imports · inventory_service<br/>mailer · monitoring · people · twofa · tuya · plug_scheduler · docs"]
         REPOS["Repositórios (acesso a dados)<br/>product · category · supplier · movement · machine<br/>mobile · chip · router · cleaning · maintenance<br/>ticket · kb · credential · license · domain"]
         MODELS["Modelos (SQLAlchemy ORM)<br/>22 entidades — User · Product · Machine · Ticket …"]
         EXT["Extensões<br/>db (SQLAlchemy) · login_manager"]
@@ -164,8 +166,9 @@ flowchart TB
 
     subgraph DATA["🗄️ Persistência & Integrações"]
         PG[("PostgreSQL 17<br/>inventario_almox")]
-        WPP["CallMeBot<br/>(WhatsApp)"]
+        SMTP["Servidor SMTP<br/>(e-mail da TI)"]
         NET["Hosts monitorados<br/>(ICMP / HTTP)"]
+        PLUGS["Tomadas Tuya<br/>(LAN, protocolo local)"]
     end
 
     BROWSER -->|HTTP| ROUTES
@@ -176,8 +179,9 @@ flowchart TB
     REPOS --> MODELS
     MODELS --> EXT
     EXT -->|SQL via psycopg| PG
-    SERVICES -.->|alertas| WPP
+    SERVICES -.->|alertas/notificações| SMTP
     SERVICES -.->|ping/http| NET
+    SERVICES -.->|liga/desliga local| PLUGS
 ```
 
 ---
@@ -205,7 +209,7 @@ flowchart LR
         licenses & domains
     end
     subgraph ADMIN["⚙️ Admin"]
-        credentials & audit & backups & wpp & docs
+        credentials & audit & backups & smartplugs & errors & docs
     end
     subgraph BASE["🔐 Base"]
         auth & dashboard & profile & health
@@ -221,8 +225,10 @@ flowchart LR
 | Colaboradores | `colaboradores` · `departments` · `assets` | Admin |
 | Suporte | `tickets` | Todos |
 | Conhecimento | `kb` | Ver: todos · Editar: Admin |
-| Admin (Cofre/Auditoria) | `credentials` · `audit` | Admin |
-| Perfil / Sistema | `profile` · `wpp` · `backups` · `docs` | Perfil: todos · resto Admin |
+| Admin (Cofre/Auditoria) | `credentials` · `audit` · `errors` | Admin |
+| Tomadas Inteligentes | `smartplugs` | Admin |
+| Avisos | `announcements` | Ver: todos · Postar: Admin |
+| Perfil / Sistema | `profile` · `backups` · `docs` | Perfil: todos · resto Admin |
 | Infra | `auth` · `health` | Público |
 
 ---
@@ -535,7 +541,7 @@ erDiagram
 | is_active | boolean | não | inativo não loga |
 | sector | varchar(120) | sim | departamento |
 | photo | varchar(255) | sim | avatar |
-| whatsapp | varchar(30) | sim | destino de notificações |
+| whatsapp | varchar(30) | sim | telefone/WhatsApp de contato |
 | totp_secret | varchar(64) | sim | segredo 2FA |
 | is_2fa_enabled | boolean | não | 2FA ativo |
 
@@ -693,12 +699,14 @@ Visão por blueprint. `L` = exige login · `A` = exige admin.
 | GET … | `/tickets` … | tickets.* | Chamados (+ painel, anexos, API) | L |
 | GET … | `/kb` … | kb.* | Base de conhecimento | L (editar: A) |
 | GET … | `/credentials` … | credentials.* | Cofre de senhas (+ reveal) | A |
-| GET … | `/licenses` … | licenses.* | Licenças & garantias (+ alerta) | A |
-| GET … | `/domains` … | domains.* | Domínios (+ alerta) | A |
+| GET … | `/licenses` … | licenses.* | Licenças & garantias | A |
+| GET … | `/domains` … | domains.* | Domínios | A |
 | GET | `/audit` | audit.list_view | Trilha de auditoria | A |
 | GET/POST | `/backups` · `/backups/run` | backups.* | Backups do banco | A |
 | GET/POST | `/profile` · `/profile/2fa/*` | profile.* | Meu perfil + 2FA | L |
-| GET/POST | `/wpp` · `/wpp/test` | wpp.* | Teste de WhatsApp | A |
+| GET/POST | `/wpp` · `/wpp/email-test` | wpp.* | Notificações por e-mail (teste SMTP) | A |
+| GET/POST | `/tomadas` … | smartplugs.* | Tomadas inteligentes (+ agendamentos) | A |
+| GET | `/errors` | errors.* | Log central de erros | A |
 | GET | `/docs` | docs.index | **Documentação viva** | A |
 | GET | `/health` | health.health | Status do serviço (JSON) | — |
 
@@ -771,9 +779,8 @@ Um chip (`sim_chip`) pode estar **vinculado a um aparelho** (`mobile_id`) ou ser
 ```mermaid
 flowchart LR
     A["Cadastro com expiry_date"] --> B["status = days_left:<br/>vencido / vencendo / vigente"]
-    B --> C{"Admin aciona alerta?"}
-    C -->|Sim| D["services.whatsapp.notify_ti(...)"]
-    D --> E["CallMeBot → grupo de TI"]
+    B --> C["services.alerts (agendador)"]
+    C --> D["Aviso automático na Central de Avisos<br/>+ digest diário por e-mail à TI"]
 ```
 
 ### 9.6 Cofre de credenciais (reveal auditado)
@@ -834,7 +841,7 @@ flowchart LR
 ## 12. Monitoramento de Uptime
 
 Uma **thread em segundo plano** (`services.monitoring.start_scheduler`) checa periodicamente os
-hosts cadastrados (ICMP ping ou HTTP). Mudança de estado dispara alerta por WhatsApp.
+hosts cadastrados (ICMP ping ou HTTP). Mudança de estado dispara alerta por **e-mail** à TI.
 
 ```mermaid
 sequenceDiagram
@@ -842,7 +849,7 @@ sequenceDiagram
     participant H as monitored_host
     participant NET as Host (rede)
     participant DB as PostgreSQL
-    participant WPP as CallMeBot
+    participant MAIL as SMTP (e-mail TI)
 
     loop a cada MONITORING_INTERVAL (120s)
         SCH->>H: lista hosts habilitados
@@ -850,7 +857,7 @@ sequenceDiagram
         NET-->>SCH: up / down + latência
         alt mudou de estado
             SCH->>DB: atualiza last_status / last_change
-            SCH->>WPP: notify_ti("host X caiu/voltou")
+            SCH->>MAIL: notify_ti("host X caiu/voltou")
         else estável
             SCH->>DB: atualiza last_checked / latência
         end
@@ -862,19 +869,48 @@ sequenceDiagram
 
 ---
 
-## 13. Notificações WhatsApp (CallMeBot)
+## 13. Notificações por E-mail (SMTP)
 
-`services.whatsapp` envia mensagens via **CallMeBot** (gratuito, sem QR/navegador). Os destinatários
-de TI são pares `numero:apikey` em `CALLMEBOT_RECIPIENTS` (`.env`); usuários recebem no próprio
-`whatsapp`. Usado por: monitoramento (host caiu/voltou), alertas de licenças/domínios a vencer e a
-página de teste (`/wpp`).
+`services.mailer` é o **único canal de notificação** do sistema (o antigo CallMeBot/WhatsApp foi
+removido). Envia de forma **assíncrona e tolerante a falhas** (nunca derruba o request): `notify_ti`
+para a equipe (lista `MAIL_TI`) e `notify_user` para um usuário específico.
+
+Usado por:
+- **Chamados** — abertura (avisa a TI) e resolução/atualização (avisa o **solicitante**).
+- **Monitoramento** — host caiu / voltou.
+- **Alertas proativos** — digest diário (estoque mínimo, licenças/garantias a vencer, chamados parados).
+- **Atividade suspeita** — muitas falhas de login, revelações do Cofre em massa, exclusões em lote.
 
 ```mermaid
 flowchart LR
-    EV["Evento (host down · vencimento · teste)"] --> W["services.whatsapp"]
-    W --> CFG{"WHATSAPP_ENABLED<br/>e recipients?"}
+    EV["Evento (chamado · host down · digest · atividade suspeita)"] --> M["services.mailer"]
+    M --> CFG{"MAIL_ENABLED<br/>e SMTP configurado?"}
     CFG -->|Não| NOOP["(no-op)"]
-    CFG -->|Sim| API["GET api.callmebot.com<br/>(por destinatário)"]
+    CFG -->|Sim| SMTP["Envio SMTP em thread<br/>(TLS 587 / SSL 465)"]
+```
+
+> A página **Admin → Notificações por e-mail** (`/wpp`) mostra o status da configuração e permite
+> disparar um **e-mail de teste** para a TI.
+
+---
+
+## 13.1 Tomadas Inteligentes (Tuya — controle local)
+
+Módulo **Admin → Tomadas Inteligentes** (`/tomadas`) controla tomadas Wi-Fi Tuya/NeoAvant
+**localmente na rede**, sem nuvem e sem API do fabricante:
+
+- `services.tuya` fala o protocolo local (via `tinytuya`) usando **device_id + IP + local key**.
+  A *local key* é guardada **cifrada** (mesma `VAULT_KEY` do Cofre) e só é decifrada no comando.
+- A tela lista as tomadas com **status ao vivo** e uma **switch** de liga/desliga.
+- `services.plug_scheduler` é uma thread que acorda a cada ~30s e dispara os **agendamentos**
+  (ligar/desligar em horário, por dias da semana), registrando cada ação na auditoria.
+
+```mermaid
+flowchart LR
+    UI["Tela /tomadas (switch)"] --> SVC["services.tuya"]
+    SCH["plug_scheduler (thread)"] --> SVC
+    SVC -->|TCP local :6668| PLUG["Tomada Tuya na LAN"]
+    SVC -.->|decifra local key| VAULT["VAULT_KEY"]
 ```
 
 ---
@@ -907,7 +943,7 @@ flowchart TB
             FLASK["Flask app (create_app)"]
             MON["Thread de monitoramento"]
         end
-        ENVF[".env<br/>SECRET_KEY · credenciais DB · CallMeBot"]
+        ENVF[".env<br/>SECRET_KEY · VAULT_KEY · credenciais DB · SMTP"]
         PG[("PostgreSQL 17<br/>:5432 · inventario_almox")]
         BK["backups/ (dumps)"]
     end
@@ -963,7 +999,8 @@ flowchart LR
 - **CSRF** global via Flask-WTF; uploads limitados a 16 MB.
 - **RBAC**: portão `_gate_non_admins` + `abort(403)` em rotas sensíveis.
 - **Auditoria** registra ações críticas (inclusive *reveal* de senha do cofre).
-- **Segredos** (`SECRET_KEY`, `DB_PASSWORD`, `CALLMEBOT_RECIPIENTS`) só no `.env`.
+- **Segredos** (`SECRET_KEY`, `VAULT_KEY`, `DB_PASSWORD`, `SMTP_PASSWORD`) só no `.env`; o boot
+  **recusa iniciar** com `SECRET_KEY` placeholder/fraco.
 
 ---
 
@@ -977,12 +1014,13 @@ InventarioAlmox/
 │   ├── extensions.py           # db, login_manager
 │   ├── models/                 # 22 entidades ORM (user, product, machine, ticket, …)
 │   ├── repositories/           # acesso a dados por entidade
-│   ├── services/               # transversais: assets, audit, exports, monitoring,
-│   │                           #   people, twofa, whatsapp, inventory_service, docs
+│   ├── services/               # transversais: assets, audit, exports, imports, mailer,
+│   │                           #   monitoring, people, twofa, tuya, plug_scheduler, docs
 │   ├── forms/                  # formulários Flask-WTF
-│   ├── routes/                 # 30 blueprints (auth … docs, health)
+│   ├── routes/                 # blueprints (auth … docs, health)
 │   ├── templates/              # Jinja2 (base.html + telas por módulo)
-│   └── static/                 # style.css, logo, favicons, uploads/
+│   └── static/                 # style.css, logo, favicons, uploads/ (avatares)
+├── uploads_private/            # anexos de chamados, NFs e fotos do Cofre (fora da /static)
 ├── docs/
 │   ├── DOCUMENTACAO.md         # ESTE documento (fonte única)
 │   ├── DOCUMENTACAO.html       # versão navegável (gerada por gerar_html.py)
@@ -1010,10 +1048,18 @@ InventarioAlmox/
 | `DB_NAME` | `inventario_almox` | Banco dedicado |
 | `DB_USER` / `DB_PASSWORD` | `postgres` / — | Credenciais |
 | `DATABASE_URL` | (montada) | Sobrescreve a URL inteira (opcional) |
-| `WHATSAPP_ENABLED` | `0` | Liga notificações CallMeBot |
-| `CALLMEBOT_RECIPIENTS` | — | `numero:apikey,numero:apikey` (TI) |
+| `VAULT_KEY` | — | Chave do Cofre (Fernet). **Fixa e estável** — mudá-la torna os segredos ilegíveis |
+| `MAIL_ENABLED` | `0` | Liga as notificações por e-mail |
+| `SMTP_HOST` / `SMTP_PORT` | — / `587` | Servidor SMTP (587 TLS ou 465 SSL) |
+| `SMTP_USER` / `SMTP_PASSWORD` | — | Credenciais SMTP |
+| `MAIL_FROM` / `MAIL_TI` | — | Remetente e destinatários da TI (vírgula) |
 | `MONITORING_ENABLED` | `1` | Liga a thread de uptime |
 | `MONITORING_INTERVAL` | `120` | Intervalo de checagem (segundos) |
+| `ALERTS_ENABLED` | `1` | Alertas proativos (estoque/licenças/chamados) |
+| `ALERTS_DIGEST_HOURS` | `8,17` | Horas do digest diário por e-mail |
+| `SECURITY_ALERTS_ENABLED` | `1` | Alerta de atividade suspeita na auditoria |
+| `PLUG_SCHEDULER_ENABLED` | `1` | Agendador das tomadas inteligentes |
+| `BEHIND_PROXY` / `SESSION_COOKIE_SECURE` | `0` / `0` | Ligue ambos ao servir por HTTPS (ver `docs/HTTPS.md`) |
 
 > `MAX_CONTENT_LENGTH` = 16 MB · `pool_pre_ping` + `pool_recycle=1800s` · `TEMPLATES_AUTO_RELOAD=True`.
 
@@ -1077,7 +1123,8 @@ mindmap
       Domínios
       Auditoria
       Backups
-      WhatsApp
+      Tomadas inteligentes
+      Notificações por e-mail
       Documentação viva
     Segurança
       Login + 2FA
