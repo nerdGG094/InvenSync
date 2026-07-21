@@ -101,6 +101,10 @@ class Config:
     PLUG_OFFLINE_CHECK_MINUTES = int(os.environ.get("PLUG_OFFLINE_CHECK_MINUTES", "10"))
     PLUG_OFFLINE_ALERT_MINUTES = int(os.environ.get("PLUG_OFFLINE_ALERT_MINUTES", "30"))
 
+    # Impressoras de rede via SNMP (páginas, toner, cilindro) — porta 161/UDP.
+    SNMP_COMMUNITY = os.environ.get("SNMP_COMMUNITY", "public")
+    SNMP_TIMEOUT = float(os.environ.get("SNMP_TIMEOUT", "3"))
+
     # Monitoramento de uptime (ping/HTTP em segundo plano).
     MONITORING_ENABLED = os.environ.get("MONITORING_ENABLED", "1") in ("1", "true", "True")
     MONITORING_INTERVAL = int(os.environ.get("MONITORING_INTERVAL", "120"))  # segundos

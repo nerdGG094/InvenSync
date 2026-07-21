@@ -2,7 +2,7 @@
 import io
 
 from flask import (Blueprint, render_template, request, redirect, url_for, flash,
-                   Response)
+                   Response, jsonify, current_app)
 from flask_login import login_required
 from sqlalchemy import func
 
@@ -10,7 +10,7 @@ from ..extensions import db
 from ..repositories import machine_repo
 from ..forms.machines import MachineForm
 from ..models.machine import Machine
-from ..services import people, patrimony, imports, audit
+from ..services import people, patrimony, imports, audit, snmp_printer
 
 bp = Blueprint("machines", __name__)
 
@@ -117,6 +117,22 @@ def delete(mid):
     machine_repo.delete_machine(m)
     flash("Máquina excluída.", "success")
     return redirect(url_for("machines.list_view"))
+
+
+@bp.route("/<int:mid>/snmp")
+@login_required
+def snmp_status(mid):
+    """Status ao vivo de uma impressora de rede (páginas, toner, cilindro).
+    Consumido por AJAX no card — a consulta é de rede e não pode travar a página."""
+    m = machine_repo.get_machine(mid)
+    if m.kind != "impressora" or not (m.ip_address or "").strip():
+        return jsonify(ok=False, error="não é impressora de rede"), 400
+    dados = snmp_printer.query(
+        m.ip_address,
+        community=current_app.config.get("SNMP_COMMUNITY", "public"),
+        timeout=float(current_app.config.get("SNMP_TIMEOUT", 3)),
+    )
+    return jsonify(dados)
 
 
 @bp.route("/import", methods=["GET", "POST"])

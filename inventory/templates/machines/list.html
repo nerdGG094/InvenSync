@@ -5,6 +5,13 @@
 <style>
   /* Grid, .pchip e estrutura dos cartões vivem em static/style.css */
   .machine-card.dim{ opacity:.6; }
+  /* Bloco SNMP das impressoras */
+  .prt-snmp{ margin-top:.55rem; padding-top:.5rem; border-top:1px dashed #243024; }
+  .prt-row{ display:flex; align-items:center; gap:.5rem; font-size:.76rem; margin-top:.3rem; }
+  .prt-row .lbl{ color:#8fb0a0; min-width:58px; }
+  .prt-bar{ flex:1; height:7px; border-radius:999px; background:#0f1a13; overflow:hidden; }
+  .prt-bar i{ display:block; height:100%; }
+  .prt-pct{ min-width:34px; text-align:right; font-weight:600; }
 </style>
 {% endblock %}
 
@@ -123,6 +130,13 @@
       {% if m.serial_number %}<span class="pchip mono" title="Nº de série"><i class="bi bi-upc-scan"></i> {{ m.serial_number }}</span>{% endif %}
     </div>
 
+    {# Impressora de rede: páginas/toner/cilindro ao vivo via SNMP (AJAX) #}
+    {% if m.kind == 'impressora' and m.ip_address %}
+    <div class="prt-snmp" data-snmp-url="{{ url_for('machines.snmp_status', mid=m.id) }}">
+      <span class="prt-loading text-muted small"><i class="bi bi-arrow-repeat"></i> consultando impressora…</span>
+    </div>
+    {% endif %}
+
     <div class="machine-foot">
       <span></span>
       <div class="machine-actions">
@@ -144,4 +158,44 @@
   </div>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script nonce="{{ csp_nonce() }}">
+(function(){
+  // Cada impressora consulta o próprio status (SNMP) em paralelo, sem travar a página.
+  function cor(p){ return p <= 10 ? '#f44336' : (p <= 25 ? '#ffb020' : '#00c853'); }
+  function barra(rotulo, pct){
+    return '<div class="prt-row"><span class="lbl">' + rotulo + '</span>'
+         + '<span class="prt-bar"><i style="width:' + pct + '%;background:' + cor(pct) + '"></i></span>'
+         + '<span class="prt-pct" style="color:' + cor(pct) + '">' + pct + '%</span></div>';
+  }
+  document.querySelectorAll('.prt-snmp').forEach(function(box){
+    fetch(box.dataset.snmpUrl)
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (!d.ok) {
+          box.innerHTML = '<span class="text-muted small"><i class="bi bi-wifi-off"></i> '
+                        + 'sem leitura SNMP</span>';
+          return;
+        }
+        var html = '';
+        if (d.pages !== null && d.pages !== undefined) {
+          html += '<div class="prt-row"><span class="lbl">Páginas</span>'
+                + '<strong class="text-info">' + d.pages.toLocaleString('pt-BR') + '</strong></div>';
+        }
+        if (d.toner_pct !== null && d.toner_pct !== undefined) html += barra('Toner', d.toner_pct);
+        (d.supplies || []).forEach(function(s){
+          if (s.pct === null || s.pct === undefined) return;
+          if ((s.desc || '').toLowerCase().indexOf('toner') !== -1) return; // já mostrado
+          html += barra((s.desc || 'Suprimento').replace(/ unit$/i, ''), s.pct);
+        });
+        box.innerHTML = html || '<span class="text-muted small">sem dados</span>';
+      })
+      .catch(function(){
+        box.innerHTML = '<span class="text-muted small"><i class="bi bi-exclamation-triangle"></i> erro na consulta</span>';
+      });
+  });
+})();
+</script>
 {% endblock %}
