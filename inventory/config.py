@@ -96,6 +96,10 @@ class Config:
 
     # Agendador das tomadas inteligentes (liga/desliga por horário).
     PLUG_SCHEDULER_ENABLED = os.environ.get("PLUG_SCHEDULER_ENABLED", "1") in ("1", "true", "True")
+    # Aviso de tomada offline: de quanto em quanto tempo checar e a partir de
+    # quantos minutos fora avisar a TI por e-mail.
+    PLUG_OFFLINE_CHECK_MINUTES = int(os.environ.get("PLUG_OFFLINE_CHECK_MINUTES", "10"))
+    PLUG_OFFLINE_ALERT_MINUTES = int(os.environ.get("PLUG_OFFLINE_ALERT_MINUTES", "30"))
 
     # Monitoramento de uptime (ping/HTTP em segundo plano).
     MONITORING_ENABLED = os.environ.get("MONITORING_ENABLED", "1") in ("1", "true", "True")

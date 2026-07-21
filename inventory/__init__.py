@@ -74,6 +74,10 @@ def _run_light_migrations():
         # Segurança: solicitante do chamado por id estável (autorização não pode
         # depender do nome, que o usuário edita livremente no perfil).
         'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS last_totp_code VARCHAR(10)',
+        # Tomadas: estado de disponibilidade para o aviso de "offline".
+        'ALTER TABLE smart_plug ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP',
+        'ALTER TABLE smart_plug ADD COLUMN IF NOT EXISTS offline_since TIMESTAMP',
+        'ALTER TABLE smart_plug ADD COLUMN IF NOT EXISTS offline_alerted BOOLEAN NOT NULL DEFAULT false',
         'ALTER TABLE ticket ADD COLUMN IF NOT EXISTS requester_id INTEGER REFERENCES "user"(id)',
         'UPDATE ticket t SET requester_id = u.id FROM "user" u '
         'WHERE t.requester_id IS NULL AND t.requester IS NOT NULL '

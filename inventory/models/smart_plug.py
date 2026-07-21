@@ -22,5 +22,12 @@ class SmartPlug(db.Model):
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
 
+    # Monitoramento: última vez que respondeu, desde quando está fora e se a TI
+    # já foi avisada (evita repetir o e-mail a cada rodada).
+    last_seen = db.Column(db.DateTime, nullable=True)
+    offline_since = db.Column(db.DateTime, nullable=True)
+    offline_alerted = db.Column(db.Boolean, nullable=False, default=False,
+                                server_default=db.text("false"))
+
     def __repr__(self) -> str:
         return f"<SmartPlug {self.name!r} {self.device_id!r}>"

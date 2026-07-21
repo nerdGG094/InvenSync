@@ -46,6 +46,39 @@ def test_scheduler_marks_slot_and_matches_day(app, monkeypatch):
         assert plug_scheduler.run_due(app) == 0
 
 
+def test_offline_alert_fires_once_and_recovers(app, monkeypatch):
+    """Tomada que para de responder gera 1 aviso; ao voltar, marca recuperação."""
+    with app.app_context():
+        app.config["PLUG_OFFLINE_ALERT_MINUTES"] = 0   # avisa na hora
+        plug = SmartPlug(name=f"{MARK} Offline", device_id="bfOff",
+                         ip_address="10.255.255.1", local_key=None)
+        db.session.add(plug)
+        db.session.commit()
+        pid = plug.id
+
+        # 1) sem resposta -> entra em offline e avisa uma vez
+        monkeypatch.setattr("inventory.services.tuya.get_status",
+                            lambda p: {"ok": False, "error": "unreachable"})
+        caidas, _ = plug_scheduler.check_offline(app)
+        assert any(c["id"] == pid for c in caidas)
+        db.session.expire_all()          # relê do banco (check_offline usa outra sessão)
+        p = db.session.get(SmartPlug, pid)
+        assert p.offline_alerted and p.offline_since
+
+        # 2) segunda rodada ainda offline -> NÃO repete o aviso
+        caidas2, _ = plug_scheduler.check_offline(app)
+        assert caidas2 == []
+
+        # 3) voltou a responder -> registra recuperação e limpa o estado
+        monkeypatch.setattr("inventory.services.tuya.get_status",
+                            lambda p: {"ok": True, "on": True, "dps": {"1": True}})
+        _, voltaram = plug_scheduler.check_offline(app)
+        assert any(v["id"] == pid for v in voltaram)
+        db.session.expire_all()          # relê do banco (check_offline usa outra sessão)
+        p = db.session.get(SmartPlug, pid)
+        assert p.offline_since is None and not p.offline_alerted and p.last_seen
+
+
 def test_matches_day_and_labels(app):
     with app.app_context():
         s = SmartPlugSchedule(action="on", hour=7, minute=0, days="15")  # Seg e Sex
