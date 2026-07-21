@@ -338,7 +338,7 @@
         {% endif %}
         {% if current_user.is_admin %}
         <li class="nav-item">
-          <a class="nav-link" href="#" onclick="if(window.__openGSearch){window.__openGSearch();}return false;" title="Buscar (Ctrl+K)">
+          <a class="nav-link" href="#" data-open-search title="Buscar (Ctrl+K)">
             <i class="bi bi-search"></i> Buscar
           </a>
         </li>
@@ -420,7 +420,7 @@
     <i class="bi bi-shield-exclamation"></i>
     <span class="flex-grow-1">Sua conta de administrador está <strong>sem verificação em duas etapas (2FA)</strong>. Ative para mais segurança.</span>
     <a href="{{ url_for('profile.twofa_setup') }}" class="btn btn-sm btn-warning"><i class="bi bi-shield-lock"></i> Ativar 2FA</a>
-    <button type="button" class="btn-close" aria-label="Fechar" onclick="this.closest('#twofaNudge').remove()"></button>
+    <button type="button" class="btn-close" aria-label="Fechar" data-dismiss-parent="#twofaNudge"></button>
   </div>
   {% endif %}
   {% with messages = get_flashed_messages(with_categories=True) %}
@@ -460,7 +460,7 @@
   .iv-toast a{ color:#6ee7a0; }
   @keyframes ivIn{ from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:none} }
 </style>
-<script>
+<script nonce="{{ csp_nonce() }}">
   (function(){
     const ENDPOINT = "{{ url_for('tickets.api_recent') }}";
     const LIST_URL = "{{ url_for('tickets.list_view') }}";
@@ -537,7 +537,7 @@
 </script>
 {% endif %}
 
-<script>
+<script nonce="{{ csp_nonce() }}">
   // Barra lateral (desktop): usa o texto de cada item como tooltip, já que
   // o rótulo fica oculto e só o ícone aparece.
   (function(){
@@ -550,7 +550,7 @@
   })();
 </script>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
   // Proteção CSRF: garante o campo "csrf_token" em todo form POST que ainda
   // não o tenha (os FlaskForm já trazem via hidden_tag). Cobre também forms
   // criados dinamicamente, via listener de submit em fase de captura.
@@ -585,7 +585,7 @@
     </div>
   </div>
 </div>
-<script>
+<script nonce="{{ csp_nonce() }}">
   // Busca global (Ctrl+K / ⌘K)
   (function(){
     var ov = document.getElementById('gsearchOv'); if(!ov) return;
@@ -645,7 +645,7 @@
     </div>
   </div>
 </div>
-<script>
+<script nonce="{{ csp_nonce() }}">
   // Modal de confirmação: intercepta onsubmit="return confirm('...')" e mostra
   // um diálogo estilizado. CSRF não é afetado (o token já é injetado no load).
   (function(){
@@ -672,10 +672,36 @@
       show(msg).then(function(ok){ if(ok){ form.dataset.cfmDone='1'; form.removeAttribute('onsubmit'); form.submit(); } });
     }, true);
   })();
+
+  // ===== Substitutos dos handlers inline (bloqueados pelo CSP com nonce) =====
+  (function(){
+    // Filtros que submetem o formulário ao mudar: <select data-autosubmit>
+    // (data-check marca um checkbox antes de enviar).
+    document.addEventListener('change', function(e){
+      var el = e.target;
+      if (!el || !el.hasAttribute || !el.hasAttribute('data-autosubmit') || !el.form) return;
+      var alvo = el.getAttribute('data-check');
+      if (alvo) { var c = document.getElementById(alvo); if (c) c.checked = true; }
+      el.form.submit();
+    });
+
+    document.addEventListener('click', function(e){
+      var el = e.target.closest ? e.target.closest('[data-print],[data-open-search],[data-dismiss-parent]') : null;
+      if (!el) return;
+      if (el.hasAttribute('data-print')) { e.preventDefault(); window.print(); return; }
+      if (el.hasAttribute('data-open-search')) {
+        e.preventDefault();
+        if (window.__openGSearch) window.__openGSearch();
+        return;
+      }
+      var sel = el.getAttribute('data-dismiss-parent');
+      if (sel) { var alvo = el.closest(sel); if (alvo) alvo.remove(); }
+    });
+  })();
 </script>
 
 {% if config.INACTIVITY_MINUTES and current_user.is_authenticated %}
-<script>
+<script nonce="{{ csp_nonce() }}">
   // Logout automático por inatividade (configurável via INACTIVITY_MINUTES).
   (function(){
     var mins = {{ config.INACTIVITY_MINUTES|int }};
@@ -688,7 +714,7 @@
 </script>
 {% endif %}
 
-<script>
+<script nonce="{{ csp_nonce() }}">
   // PWA: registra o service worker (escopo raiz).
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function(){
@@ -697,7 +723,7 @@
   }
 </script>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
   // Toasts: fecha no clique e some sozinho após alguns segundos.
   (function(){
     var stack = document.getElementById('toastStack');
@@ -711,7 +737,7 @@
   })();
 </script>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
   // Filtros recolhíveis: esconde a barra de filtros e mostra só sob demanda.
   // - Detecta automaticamente qualquer .table-card-tools que tenha campos.
   // - Barra de filtro isolada -> esconde o card inteiro; filtro junto da tabela

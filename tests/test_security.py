@@ -1,4 +1,6 @@
 """Regressões da revisão de segurança (#3)."""
+import re
+
 import pytest
 
 from inventory.extensions import db
@@ -16,6 +18,28 @@ def _cleanup(app):
         Ticket.query.filter(Ticket.title.like(f"{MARK}%")).delete()
         User.query.filter(User.name.like(f"{MARK}%")).delete()
         db.session.commit()
+
+
+def test_csp_uses_nonce_and_drops_unsafe_inline(app):
+    """S-CSP: script-src usa nonce por request (e NÃO 'unsafe-inline'); o nonce
+    do header tem que ser o mesmo dos <script> renderizados."""
+    client = app.test_client()
+    r = client.get("/login")
+    csp = r.headers.get("Content-Security-Policy", "")
+    script_src = re.search(r"script-src[^;]*", csp)
+    assert script_src, "CSP sem script-src"
+    assert "'unsafe-inline'" not in script_src.group(0)
+    assert "object-src 'none'" in csp
+
+    nonce = re.search(r"'nonce-([\w-]+)'", script_src.group(0))
+    assert nonce, "script-src sem nonce"
+    html = r.get_data(as_text=True)
+    assert set(re.findall(r'<script nonce="([\w-]+)"', html)) == {nonce.group(1)}
+
+    # o nonce precisa ser novo a cada resposta
+    r2 = client.get("/login")
+    n2 = re.search(r"'nonce-([\w-]+)'", r2.headers.get("Content-Security-Policy", ""))
+    assert n2 and n2.group(1) != nonce.group(1)
 
 
 def test_ticket_authz_binds_requester_by_stable_id(app):

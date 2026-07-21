@@ -42,9 +42,9 @@
 <body>
   <div class="toolbar">
     <a href="javascript:history.back()" class="btn">← Voltar</a>
-    <button class="btn" onclick="clearSig('colab')">✕ Limpar</button>
-    <button class="btn" onclick="saveSig()">💾 Salvar assinatura</button>
-    <button class="btn primary" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+    <button class="btn" data-sig-clear="colab">✕ Limpar</button>
+    <button class="btn" data-sig-save="colab">💾 Salvar assinatura</button>
+    <button class="btn primary" data-print>🖨️ Imprimir / Salvar PDF</button>
   </div>
 
   <div class="sheet">
@@ -122,15 +122,15 @@
         <img class="sig-img" id="tiImg" alt="Assinatura do TI">
         <div class="sig-line">Responsável de TI
           <div class="no-print" style="margin-top:6px; display:flex; gap:6px; justify-content:center;">
-            <button type="button" class="btn" style="padding:4px 10px; font-size:12px;" onclick="clearSig('ti')">✕ Limpar</button>
-            <button type="button" class="btn" style="padding:4px 10px; font-size:12px;" onclick="saveTiSig()">💾 Salvar assinatura do TI</button>
+            <button type="button" class="btn" style="padding:4px 10px; font-size:12px;" data-sig-clear="ti">✕ Limpar</button>
+            <button type="button" class="btn" style="padding:4px 10px; font-size:12px;" data-sig-save="ti">💾 Salvar assinatura do TI</button>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <script>
+  <script nonce="{{ csp_nonce() }}">
     // Assinatura no canvas (dedo no tablet ou mouse). Dois quadros: colaborador e
     // Responsável de TI (este é único e reaproveitado em todos os termos).
     const CSRF = "{{ csrf_token() }}";
@@ -190,6 +190,20 @@
       colab: makePad('sigCanvas', 'sigImg', {{ (saved_signature or '')|tojson }}),
       ti:    makePad('tiCanvas', 'tiImg', {{ (ti_signature or '')|tojson }}),
     };
+
+    // Botões por data-attribute + listener (sem handler inline: o CSP com nonce
+    // bloqueia onclick="...").
+    document.querySelectorAll('[data-sig-clear]').forEach(function(b){
+      b.addEventListener('click', function(){ window.clearSig(b.dataset.sigClear); });
+    });
+    document.querySelectorAll('[data-sig-save]').forEach(function(b){
+      b.addEventListener('click', function(){
+        (b.dataset.sigSave === 'ti' ? window.saveTiSig : window.saveSig)();
+      });
+    });
+    document.querySelectorAll('[data-print]').forEach(function(b){
+      b.addEventListener('click', function(){ window.print(); });
+    });
 
     window.clearSig = function(which){ if (PADS[which]) PADS[which].clear(); };
     window.saveSig = function(){

@@ -9,7 +9,7 @@
     {% if p.per_page_options %}
     <form method="get" class="d-inline">
       {% for k, v in request.args.items() %}{% if k not in ('per_page','page') %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endif %}{% endfor %}
-      <select name="per_page" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()" title="Itens por página">
+      <select name="per_page" class="form-select form-select-sm" style="width:auto" data-autosubmit title="Itens por página">
         {% for opt in p.per_page_options %}<option value="{{ opt }}" {{ 'selected' if opt == p.per_page }}>{{ opt }}/pág</option>{% endfor %}
       </select>
     </form>

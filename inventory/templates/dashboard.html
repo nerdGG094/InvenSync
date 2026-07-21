@@ -209,7 +209,7 @@ adb shell dpm set-device-owner com.empresa.semhotspot/.HotspotDeviceAdminReceive
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
   (function(){
     document.querySelectorAll('.adb-copy[data-copy-target]').forEach(function(b){
       b.addEventListener('click', function(){
@@ -470,7 +470,7 @@ adb shell dpm set-device-owner com.empresa.semhotspot/.HotspotDeviceAdminReceive
 
 {# ===================== SCRIPTS ===================== #}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function(){
   if (typeof Chart === 'undefined') return;
 

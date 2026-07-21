@@ -19,7 +19,7 @@
       <span class="input-group-text"><i class="bi bi-search"></i></span>
       <input class="form-control" type="search" placeholder="Buscar problema, solução, palavra-chave..." name="q" value="{{ q }}">
     </div>
-    <select class="form-select" name="category" style="max-width:180px" onchange="this.form.submit()">
+    <select class="form-select" name="category" style="max-width:180px" data-autosubmit >
       <option value="">Categoria: todas</option>
       {% for k, lbl in categories %}<option value="{{ k }}" {{ 'selected' if category==k }}>{{ lbl }}</option>{% endfor %}
     </select>

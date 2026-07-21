@@ -1,6 +1,7 @@
 import os
+import secrets
 from flask import (Flask, render_template, request, redirect, url_for, flash,
-                   send_from_directory, make_response, current_app)
+                   send_from_directory, make_response, current_app, g)
 from flask_login import current_user
 from sqlalchemy import text
 from .extensions import db, login_manager, csrf, limiter
@@ -513,17 +514,33 @@ def create_app():
 
         return {"avatar_url": avatar_url, "page_url": page_url}
 
+    # ===== CSP com nonce =====
+    # Cada resposta ganha um nonce aleatório; os <script> inline dos templates o
+    # declaram (nonce="{{ csp_nonce() }}"). Assim o script-src dispensa
+    # 'unsafe-inline' — um XSS injetado não consegue adivinhar o nonce e não roda.
+    # (style-src mantém 'unsafe-inline': são atributos style=... espalhados pelos
+    # templates, risco muito menor e nonce não se aplica a atributos.)
+    @app.before_request
+    def _gerar_csp_nonce():
+        g.csp_nonce = secrets.token_urlsafe(16)
+
+    @app.context_processor
+    def _csp_nonce_ctx():
+        return {"csp_nonce": lambda: getattr(g, "csp_nonce", "")}
+
     # Cabeçalhos de segurança em toda resposta
     if app.config.get("SECURITY_HEADERS", True):
-        csp = (
-            "default-src 'self'; "
-            "img-src 'self' data: https:; "
-            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://www.gstatic.com https://*.firebaseio.com; "
-            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; "
-            "font-src 'self' data: https://cdn.jsdelivr.net; "
-            "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com wss://*.firebaseio.com; "
-            "frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
-        )
+        def _csp(nonce):
+            return (
+                "default-src 'self'; "
+                "img-src 'self' data: https:; "
+                f"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net https://unpkg.com https://www.gstatic.com https://*.firebaseio.com; "
+                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; "
+                "font-src 'self' data: https://cdn.jsdelivr.net; "
+                "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com wss://*.firebaseio.com; "
+                "object-src 'none'; "
+                "frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
+            )
 
         secure = bool(app.config.get("SESSION_COOKIE_SECURE"))
 
@@ -532,7 +549,8 @@ def create_app():
             resp.headers.setdefault("X-Content-Type-Options", "nosniff")
             resp.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
             resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-            resp.headers.setdefault("Content-Security-Policy", csp)
+            resp.headers.setdefault("Content-Security-Policy",
+                                    _csp(getattr(g, "csp_nonce", "")))
             resp.headers.setdefault(
                 "Permissions-Policy", "geolocation=(), microphone=(), camera=()")
             # HSTS só faz sentido (e só é seguro) sob HTTPS — ligado junto com o

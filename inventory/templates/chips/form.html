@@ -98,7 +98,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
   (function(){
     const UINFO = {{ (users_info or {})|tojson }};   // colaborador -> setor
     const emp = document.getElementById('assigned_employee');

@@ -41,7 +41,7 @@
     Etiquetas QR
     <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ items|length }}</span>
   </h1>
-  <button class="btn btn-primary" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button>
+  <button class="btn btn-primary" data-print><i class="bi bi-printer"></i> Imprimir</button>
 </div>
 
 <div class="labels-tools table-card p-3 mb-3">
@@ -107,7 +107,7 @@
 <div class="empty-state"><i class="bi bi-qr-code"></i> Nenhum ativo deste tipo cadastrado.</div>
 {% endif %}
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function(){
   const cards = () => Array.from(document.querySelectorAll('[data-label]'));
   const visible = () => cards().filter(c => !c.classList.contains('dept-hidden'));

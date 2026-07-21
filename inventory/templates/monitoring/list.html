@@ -173,7 +173,7 @@
   Quedas e retornos são avisados à TI por e-mail. Esta página atualiza sozinha.
 </p>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
   // Atualiza a página periodicamente para refletir o estado mais recente do banco.
   setTimeout(function(){ location.reload(); }, 30000);
 </script>

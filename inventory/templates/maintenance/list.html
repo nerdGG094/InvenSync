@@ -54,7 +54,7 @@
       <span class="input-group-text"><i class="bi bi-search"></i></span>
       <input class="form-control" type="search" placeholder="Máquina, peça, técnico..." name="q" value="{{ q }}">
     </div>
-    <select class="form-select" name="kind" style="max-width:170px" onchange="this.form.submit()">
+    <select class="form-select" name="kind" style="max-width:170px" data-autosubmit >
       <option value="">Tipo: todos</option>
       {% for k, lbl in kind_choices %}<option value="{{ k }}" {{ 'selected' if kind==k }}>{{ lbl }}</option>{% endfor %}
     </select>

@@ -112,7 +112,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function(){
   const trend = {{ trend|tojson }};
   const cat = {{ cat_data|tojson }};

@@ -74,7 +74,7 @@
         <span class="input-group-text"><i class="bi bi-search"></i></span>
         <input class="form-control" type="search" placeholder="Usuário, modelo, IP, setor..." name="q" value="{{ q }}">
       </div>
-      <select class="form-select" name="kind" style="max-width:160px" onchange="this.form.submit()">
+      <select class="form-select" name="kind" style="max-width:160px" data-autosubmit >
         <option value="">Todos os tipos</option>
         <option value="computador" {{ 'selected' if kind=='computador' }}>Computadores</option>
         <option value="notebook" {{ 'selected' if kind=='notebook' }}>Notebooks</option>

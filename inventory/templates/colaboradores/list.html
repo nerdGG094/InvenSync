@@ -126,7 +126,7 @@
       {% else %}
         <form action="{{ url_for('colaboradores.toggle_active', cid=c.id) }}" method="post" class="form-check form-switch mb-0 d-flex align-items-center gap-2">
           <input class="form-check-input mt-0" type="checkbox" role="switch"
-                 {{ 'checked' if c.is_active else '' }} onchange="this.form.submit()">
+                 {{ 'checked' if c.is_active else '' }} data-autosubmit >
           <span class="small {{ 'text-success' if c.is_active else 'text-secondary' }}">{{ 'Ativo' if c.is_active else 'Inativo' }}</span>
         </form>
       {% endif %}

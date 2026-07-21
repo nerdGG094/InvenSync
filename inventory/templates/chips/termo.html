@@ -34,7 +34,7 @@
 <body>
   <div class="toolbar">
     <a href="javascript:history.back()" class="btn">← Voltar</a>
-    <button class="btn primary" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+    <button class="btn primary" data-print>🖨️ Imprimir / Salvar PDF</button>
   </div>
 
   <div class="sheet">
@@ -107,8 +107,12 @@
     </div>
   </div>
 
-  <script>
+  <script nonce="{{ csp_nonce() }}">
     window.addEventListener('load', function(){ setTimeout(function(){ window.print(); }, 400); });
+    // Botão de imprimir por data-attribute (o CSP com nonce bloqueia onclick inline).
+    document.querySelectorAll('[data-print]').forEach(function(b){
+      b.addEventListener('click', function(){ window.print(); });
+    });
   </script>
 </body>
 </html>

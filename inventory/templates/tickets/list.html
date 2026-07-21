@@ -119,7 +119,7 @@
       {% set periods = [('hoje','Hoje'),('7','7 dias'),('30','30 dias'),('todos','Tudo')] %}
       {% for val, lbl in periods %}
         <input type="radio" class="btn-check" name="period" id="pd-{{ val }}" value="{{ val }}"
-               {{ 'checked' if period==val }} autocomplete="off" onchange="this.form.submit()">
+               {{ 'checked' if period==val }} autocomplete="off" data-autosubmit >
         <label class="btn btn-outline-light btn-sm" for="pd-{{ val }}">{{ lbl }}</label>
       {% endfor %}
       <input type="radio" class="btn-check" name="period" id="pd-custom" value="custom"
@@ -130,9 +130,9 @@
     <!-- Intervalo personalizado -->
     <div class="input-group input-group-sm" style="width:auto">
       <span class="input-group-text"><i class="bi bi-calendar-event"></i></span>
-      <input type="date" class="form-control" name="from" value="{{ date_from }}" onchange="document.getElementById('pd-custom').checked=true;this.form.submit()" style="max-width:160px">
+      <input type="date" class="form-control" name="from" value="{{ date_from }}" data-autosubmit data-check="pd-custom" style="max-width:160px">
       <span class="input-group-text">até</span>
-      <input type="date" class="form-control" name="to" value="{{ date_to }}" onchange="document.getElementById('pd-custom').checked=true;this.form.submit()" style="max-width:160px">
+      <input type="date" class="form-control" name="to" value="{{ date_to }}" data-autosubmit data-check="pd-custom" style="max-width:160px">
     </div>
   </form>
 
@@ -147,11 +147,11 @@
       <span class="input-group-text"><i class="bi bi-search"></i></span>
       <input class="form-control" type="search" placeholder="Código, título, solicitante..." name="q" value="{{ q }}">
     </div>
-    <select class="form-select" name="status" style="max-width:160px" onchange="this.form.submit()">
+    <select class="form-select" name="status" style="max-width:160px" data-autosubmit >
       <option value="">Status: todos</option>
       {% for k, m in st_meta.items() %}<option value="{{ k }}" {{ 'selected' if status==k }}>{{ m[0] }}</option>{% endfor %}
     </select>
-    <select class="form-select" name="priority" style="max-width:150px" onchange="this.form.submit()">
+    <select class="form-select" name="priority" style="max-width:150px" data-autosubmit >
       <option value="">Prioridade: todas</option>
       {% for k, m in pr_meta.items() %}<option value="{{ k }}" {{ 'selected' if priority==k }}>{{ m[0] }}</option>{% endfor %}
     </select>

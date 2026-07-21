@@ -68,7 +68,7 @@
         <span class="input-group-text"><i class="bi bi-search"></i></span>
         <input class="form-control" type="search" placeholder="Funcionário, modelo, número, IMEI..." name="q" value="{{ q }}">
       </div>
-      <select class="form-select" name="status" style="max-width:160px" onchange="this.form.submit()">
+      <select class="form-select" name="status" style="max-width:160px" data-autosubmit >
         <option value="">Status: todos</option>
         {% for k, m in st_meta.items() %}<option value="{{ k }}" {{ 'selected' if status==k }}>{{ m[0] }}</option>{% endfor %}
       </select>

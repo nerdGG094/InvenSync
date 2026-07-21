@@ -62,11 +62,11 @@
         <span class="input-group-text"><i class="bi bi-search"></i></span>
         <input class="form-control" type="search" placeholder="Domínio ou empresa..." name="q" value="{{ q }}">
       </div>
-      <select class="form-select" name="company" style="max-width:170px" onchange="this.form.submit()">
+      <select class="form-select" name="company" style="max-width:170px" data-autosubmit >
         <option value="">Empresa: todas</option>
         {% for c in companies %}<option value="{{ c }}" {{ 'selected' if company==c }}>{{ c }}</option>{% endfor %}
       </select>
-      <select class="form-select" name="registrar" style="max-width:160px" onchange="this.form.submit()">
+      <select class="form-select" name="registrar" style="max-width:160px" data-autosubmit >
         <option value="">Registrador: todos</option>
         {% for k, lbl in registrars %}<option value="{{ k }}" {{ 'selected' if registrar==k }}>{{ lbl }}</option>{% endfor %}
       </select>
