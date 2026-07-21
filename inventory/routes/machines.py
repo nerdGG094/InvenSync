@@ -1,5 +1,8 @@
 # inventory/routes/machines.py
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+import io
+
+from flask import (Blueprint, render_template, request, redirect, url_for, flash,
+                   Response)
 from flask_login import login_required
 from sqlalchemy import func
 
@@ -7,7 +10,7 @@ from ..extensions import db
 from ..repositories import machine_repo
 from ..forms.machines import MachineForm
 from ..models.machine import Machine
-from ..services import people, patrimony
+from ..services import people, patrimony, imports, audit
 
 bp = Blueprint("machines", __name__)
 
@@ -114,6 +117,49 @@ def delete(mid):
     machine_repo.delete_machine(m)
     flash("Máquina excluída.", "success")
     return redirect(url_for("machines.list_view"))
+
+
+@bp.route("/import", methods=["GET", "POST"])
+@login_required
+def import_view():
+    """Importa máquinas em massa via CSV/XLSX (upsert por patrimônio/nº série)."""
+    if request.method == "POST":
+        f = request.files.get("file")
+        if not f or not f.filename:
+            flash("Selecione um arquivo CSV ou XLSX.", "warning")
+            return redirect(url_for("machines.import_view"))
+        if not f.filename.lower().endswith((".csv", ".xlsx")):
+            flash("Formato não suportado: use .csv ou .xlsx.", "warning")
+            return redirect(url_for("machines.import_view"))
+        try:
+            rows = imports.parse_table(f, imports.MACHINE_ALIASES)
+        except Exception:  # noqa: BLE001
+            flash("Não consegui ler o arquivo. Confira o formato/planilha.", "danger")
+            return redirect(url_for("machines.import_view"))
+        res = imports.import_machines(rows)
+        audit.record("import", "machine", None,
+                     f"Importou máquinas: {res['created']} criadas, {res['updated']} atualizadas")
+        flash(f"Importação concluída: {res['created']} criada(s), {res['updated']} atualizada(s).",
+              "success" if not res["errors"] else "warning")
+        for err in res["errors"][:12]:
+            flash(err, "warning")
+        if len(res["errors"]) > 12:
+            flash(f"... e mais {len(res['errors']) - 12} erro(s).", "warning")
+        return redirect(url_for("machines.list_view"))
+    return render_template("machines/import.html", headers=imports.MACHINE_TEMPLATE_HEADERS)
+
+
+@bp.route("/import/template")
+@login_required
+def import_template():
+    """CSV modelo com os cabeçalhos aceitos e uma linha de exemplo."""
+    buf = io.StringIO()
+    buf.write(";".join(imports.MACHINE_TEMPLATE_HEADERS) + "\r\n")
+    buf.write("notebook;NB-FINANCEIRO-01;Dell;Latitude 3420;PAT-0123;SN123456;"
+              "192.168.0.50;Financeiro;Maria Silva\r\n")
+    return Response(
+        buf.getvalue().encode("utf-8-sig"), mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=modelo_maquinas.csv"})
 
 
 @bp.route("/<int:mid>/historico")

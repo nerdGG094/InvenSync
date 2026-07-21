@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Importar Máquinas{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="ph-title"><span class="ph-icon"><i class="bi bi-upload"></i></span> Importar Máquinas</h1>
+  <a href="{{ url_for('machines.list_view') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Voltar</a>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-lg-7">
+    <div class="table-card p-3">
+      <form method="post" enctype="multipart/form-data">
+        <label class="form-label fw-semibold">Arquivo (.csv ou .xlsx)</label>
+        <input type="file" name="file" accept=".csv,.xlsx" class="form-control mb-3" required>
+        <div class="d-flex gap-2">
+          <button class="btn btn-primary"><i class="bi bi-upload me-1"></i> Importar</button>
+          <a href="{{ url_for('machines.import_template') }}" class="btn btn-outline-light"><i class="bi bi-download me-1"></i> Baixar modelo (CSV)</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-5">
+    <div class="table-card p-3">
+      <h2 class="h6 mb-2"><i class="bi bi-info-circle text-info me-1"></i> Como funciona</h2>
+      <ul class="small text-muted ps-3 mb-2">
+        <li>A 1ª linha é o <strong>cabeçalho</strong>. Colunas aceitas:
+          <div class="mt-1">{% for h in headers %}<code class="me-1">{{ h }}</code>{% endfor %}</div>
+        </li>
+        <li>Informe ao menos <strong>nome</strong> ou <strong>modelo</strong>.</li>
+        <li>Upsert por <strong>patrimônio</strong> (ou <strong>nº de série</strong>): existente é
+          <strong>atualizado</strong>, novo é <strong>criado</strong>. Sem nenhum dos dois, cria sempre.</li>
+        <li><strong>tipo</strong> aceita <code>computador</code>, <code>notebook</code> ou
+          <code>impressora</code> (padrão: computador).</li>
+        <li>O <strong>responsável</strong> é casado com o cadastro de pessoas; o
+          <strong>setor</strong> vem dele quando deixado em branco.</li>
+      </ul>
+      <p class="small text-muted mb-0">Nada é apagado: o import só cria ou atualiza.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

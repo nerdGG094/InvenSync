@@ -21,9 +21,14 @@
     Máquinas
     <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ totals.total }}</span>
   </h1>
-  <a href="{{ url_for('machines.new') }}" class="btn btn-primary">
-    <i class="bi bi-plus-circle"></i> Nova Máquina
-  </a>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('machines.import_view') }}" class="btn btn-outline-light">
+      <i class="bi bi-upload"></i> Importar
+    </a>
+    <a href="{{ url_for('machines.new') }}" class="btn btn-primary">
+      <i class="bi bi-plus-circle"></i> Nova Máquina
+    </a>
+  </div>
 </div>
 
 <!-- Cartões por tipo (clicáveis = filtro) -->

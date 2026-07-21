@@ -4,6 +4,7 @@ import pytest
 from inventory.extensions import db
 from inventory.models.product import Product
 from inventory.models.category import Category
+from inventory.models.machine import Machine
 from inventory.services import imports
 
 MARK = "PYTEST"
@@ -24,6 +25,7 @@ def _cleanup(app):
     with app.app_context():
         Product.query.filter(Product.sku.like(f"{MARK}%")).delete()
         Category.query.filter(Category.name.like(f"{MARK}%")).delete()
+        Machine.query.filter(Machine.patrimony.like(f"{MARK}%")).delete()
         db.session.commit()
 
 
@@ -43,6 +45,34 @@ def test_import_upsert_and_category_creation(app):
         db.session.expire_all()
         p2 = Product.query.filter_by(sku=f"{MARK}-1").first()
         assert p2.name == "Cabo A v2" and abs(float(p2.price or 0) - 25.0) < 0.01
+
+
+def test_import_machines_upsert_by_patrimony(app):
+    with app.app_context():
+        csv1 = (f"tipo;nome;marca;modelo;patrimonio;ip\n"
+                f"notebook;NB-01;Dell;Latitude;{MARK}-P1;192.168.0.50\n").encode("utf-8")
+        res = imports.import_machines(
+            imports.parse_table(_FakeFile("m.csv", csv1), imports.MACHINE_ALIASES))
+        assert res["created"] == 1 and res["updated"] == 0
+        m = Machine.query.filter_by(patrimony=f"{MARK}-P1").first()
+        assert m and m.kind == "notebook" and m.name == "NB-01" and m.ip_address == "192.168.0.50"
+
+        # Mesmo patrimônio -> atualiza (não duplica)
+        csv2 = f"tipo;nome;patrimonio\ncomputador;NB-01-renomeado;{MARK}-P1\n".encode("utf-8")
+        res2 = imports.import_machines(
+            imports.parse_table(_FakeFile("m.csv", csv2), imports.MACHINE_ALIASES))
+        assert res2["updated"] == 1 and res2["created"] == 0
+        db.session.expire_all()
+        m2 = Machine.query.filter_by(patrimony=f"{MARK}-P1").first()
+        assert m2.name == "NB-01-renomeado" and m2.kind == "computador"
+
+
+def test_import_machines_requires_name_or_model(app):
+    with app.app_context():
+        csv = f"tipo;nome;patrimonio\nnotebook;;{MARK}-P9\n".encode("utf-8")
+        res = imports.import_machines(
+            imports.parse_table(_FakeFile("m.csv", csv), imports.MACHINE_ALIASES))
+        assert res["created"] == 0 and res["errors"]
 
 
 def test_import_requires_sku(app):
