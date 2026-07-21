@@ -42,6 +42,21 @@ def test_csp_uses_nonce_and_drops_unsafe_inline(app):
     assert n2 and n2.group(1) != nonce.group(1)
 
 
+def test_kiox_map_has_its_own_csp(auth_client):
+    """O mapa KioX é servido cru (sem Jinja), então não tem nonce: precisa do
+    CSP próprio com 'unsafe-inline', senão o JS dele (e o login) não roda."""
+    r = auth_client.get("/kiox")
+    if r.status_code == 404:
+        pytest.skip("mapa do KioX não está presente nesta instalação")
+    assert r.status_code == 200
+    csp = r.headers.get("Content-Security-Policy", "")
+    script_src = re.search(r"script-src[^;]*", csp)
+    assert script_src and "'unsafe-inline'" in script_src.group(0)
+    assert "nonce-" not in csp                     # página crua não tem nonce
+    assert "https://*.firebaseio.com" in csp       # Firebase (dados da frota)
+    assert "nominatim.openstreetmap.org" in csp    # geocoding
+
+
 def test_ticket_authz_binds_requester_by_stable_id(app):
     """S4: o solicitante é vinculado por id (não pelo nome, que é mutável).
     Assim, renomear-se no perfil não dá acesso ao chamado de outra pessoa."""
