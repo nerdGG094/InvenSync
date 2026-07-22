@@ -71,6 +71,35 @@ def test_printer_monitor_history_and_single_alert(app, monkeypatch):
         db.session.commit()
 
 
+def test_printers_report_computes_pages_in_date_range(app, auth_client):
+    """Consumo no intervalo = contador do fim − contador do início."""
+    from datetime import datetime, timedelta
+    from inventory.extensions import db
+    from inventory.models.machine import Machine
+    from inventory.models.printer_reading import PrinterReading
+
+    with app.app_context():
+        m = Machine(kind="impressora", model="PYTEST-RPT", ip_address="10.0.0.7", sector="TI")
+        db.session.add(m)
+        db.session.commit()
+        mid = m.id
+        base = datetime.now()
+        db.session.add(PrinterReading(machine_id=mid, pages=100000,
+                                      taken_at=base - timedelta(days=6)))
+        db.session.add(PrinterReading(machine_id=mid, pages=112345,
+                                      taken_at=base - timedelta(days=1)))
+        db.session.commit()
+
+    r = auth_client.get("/machines/impressoras/consumo?dias=7")
+    assert r.status_code == 200
+    assert b"12.345" in r.data          # 112345 - 100000 = 12345 (pt-BR)
+
+    with app.app_context():
+        PrinterReading.query.filter_by(machine_id=mid).delete()
+        Machine.query.filter_by(id=mid).delete()
+        db.session.commit()
+
+
 def test_query_sem_ip_nao_levanta():
     r = sp.query("")
     assert r["ok"] is False and r["error"]

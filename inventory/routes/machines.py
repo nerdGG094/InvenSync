@@ -138,16 +138,35 @@ def snmp_status(mid):
 @bp.route("/impressoras/consumo")
 @login_required
 def printers_report():
-    """Consumo de impressão por impressora/setor no período (páginas =
-    última leitura − primeira do intervalo), a partir do histórico SNMP."""
+    """Consumo de impressão por impressora/setor num período (páginas = leitura
+    do fim − leitura do início), a partir do histórico SNMP. O período pode ser
+    'últimos N dias' ou um intervalo de datas exato (de/até)."""
     from datetime import datetime, timedelta
     from ..models.printer_reading import PrinterReading
 
-    try:
-        dias = max(1, min(365, int(request.args.get("dias", 30))))
-    except (TypeError, ValueError):
-        dias = 30
-    desde = datetime.now() - timedelta(days=dias)
+    de_s = (request.args.get("de") or "").strip()
+    ate_s = (request.args.get("ate") or "").strip()
+    dias = None
+    if de_s or ate_s:
+        # Intervalo de datas: 'de' 00:00 até 'ate' 23:59:59.
+        try:
+            desde = datetime.strptime(de_s, "%Y-%m-%d") if de_s else datetime.now() - timedelta(days=30)
+        except ValueError:
+            desde = datetime.now() - timedelta(days=30)
+        try:
+            ate = (datetime.strptime(ate_s, "%Y-%m-%d") + timedelta(days=1) - timedelta(seconds=1)
+                   ) if ate_s else datetime.now()
+        except ValueError:
+            ate = datetime.now()
+    else:
+        try:
+            dias = max(1, min(3650, int(request.args.get("dias", 30))))
+        except (TypeError, ValueError):
+            dias = 30
+        desde, ate = datetime.now() - timedelta(days=dias), datetime.now()
+
+    label = (f"{desde.strftime('%d/%m/%Y')} a {ate.strftime('%d/%m/%Y')}"
+             if dias is None else f"últimos {dias} dias")
 
     impressoras = (Machine.query.filter_by(kind="impressora")
                    .filter(Machine.ip_address.isnot(None)).all())
@@ -156,19 +175,24 @@ def printers_report():
         leituras = (PrinterReading.query
                     .filter(PrinterReading.machine_id == m.id,
                             PrinterReading.taken_at >= desde,
+                            PrinterReading.taken_at <= ate,
                             PrinterReading.pages.isnot(None))
                     .order_by(PrinterReading.taken_at).all())
         paginas = None
+        primeira = ultima = None
         if len(leituras) >= 2:
-            paginas = max(0, (leituras[-1].pages or 0) - (leituras[0].pages or 0))
-        ultima = leituras[-1] if leituras else None
+            primeira, ultima = leituras[0], leituras[-1]
+            paginas = max(0, (ultima.pages or 0) - (primeira.pages or 0))
+        elif leituras:
+            ultima = leituras[-1]
         linhas.append({
             "machine": m, "sector": (m.sector or "").strip() or "Sem setor",
             "pages_period": paginas,
             "pages_total": ultima.pages if ultima else None,
             "toner_pct": ultima.toner_pct if ultima else None,
             "drum_pct": ultima.drum_pct if ultima else None,
-            "last_at": ultima.taken_at if ultima else None,
+            "de_at": primeira.taken_at if primeira else None,
+            "ate_at": ultima.taken_at if ultima else None,
             "amostras": len(leituras),
         })
 
@@ -181,7 +205,8 @@ def printers_report():
     total = sum(setores.values())
     linhas.sort(key=lambda x: (x["pages_period"] is None, -(x["pages_period"] or 0)))
     return render_template("machines/printers_report.html", linhas=linhas,
-                           por_setor=por_setor, total=total, dias=dias)
+                           por_setor=por_setor, total=total, dias=dias, label=label,
+                           de=de_s, ate=ate_s)
 
 
 @bp.route("/import", methods=["GET", "POST"])

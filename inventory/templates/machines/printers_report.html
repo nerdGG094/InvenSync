@@ -3,20 +3,43 @@
 {% block content %}
 <div class="page-header">
   <h1 class="ph-title"><span class="ph-icon"><i class="bi bi-printer"></i></span> Consumo de Impressão</h1>
-  <div class="d-flex gap-2 align-items-center">
-    <form method="get" class="d-flex align-items-center gap-2">
-      <label class="small text-muted mb-0">Período (dias)</label>
-      <input type="number" name="dias" min="1" max="365" value="{{ dias }}" class="form-control form-control-sm" style="width:90px" data-autosubmit>
+  <a href="{{ url_for('machines.list_view', kind='impressora') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Impressoras</a>
+</div>
+
+<div class="table-card p-3 mb-3">
+  <div class="row g-3 align-items-end">
+    <div class="col-auto">
+      <label class="form-label small text-muted mb-1">Atalho</label>
+      <div class="d-flex gap-1">
+        {% for d in [7, 30, 90, 365] %}
+        <a href="{{ url_for('machines.printers_report', dias=d) }}"
+           class="btn btn-sm {{ 'btn-primary' if (dias == d) else 'btn-outline-light' }}">{{ d }}d</a>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="col-auto"><span class="text-muted small pb-2">ou intervalo exato:</span></div>
+    <form method="get" class="col-auto">
+      <div class="d-flex gap-2 align-items-end">
+        <div>
+          <label class="form-label small text-muted mb-1">De</label>
+          <input type="date" name="de" value="{{ de }}" class="form-control form-control-sm">
+        </div>
+        <div>
+          <label class="form-label small text-muted mb-1">Até</label>
+          <input type="date" name="ate" value="{{ ate }}" class="form-control form-control-sm">
+        </div>
+        <button class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> Aplicar</button>
+      </div>
     </form>
-    <a href="{{ url_for('machines.list_view', kind='impressora') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Impressoras</a>
   </div>
+  <div class="small text-muted mt-2"><i class="bi bi-calendar-range me-1"></i>Período: <strong>{{ label }}</strong></div>
 </div>
 
 {% if por_setor %}
 <div class="row g-3 mb-3">
   <div class="col-12 col-lg-5">
     <div class="table-card p-3">
-      <h2 class="h6 mb-3">Páginas por setor <span class="text-muted small">({{ dias }} dias · total {{ '{:,}'.format(total).replace(',', '.') }})</span></h2>
+      <h2 class="h6 mb-3">Páginas por setor <span class="text-muted small">(total {{ '{:,}'.format(total).replace(',', '.') }})</span></h2>
       {% for setor, pgs in por_setor %}
       {% set pct = (pgs / total * 100) if total else 0 %}
       <div class="mb-2">
@@ -31,13 +54,13 @@
       <h2 class="h6 mb-3">Por impressora</h2>
       <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
-          <thead><tr><th>Impressora</th><th>Setor</th><th class="text-end">Páginas ({{ dias }}d)</th><th class="text-end">Total</th><th>Toner</th><th>Cilindro</th></tr></thead>
+          <thead><tr><th>Impressora</th><th>Setor</th><th class="text-end">Páginas no período</th><th class="text-end">Contador atual</th><th>Toner</th><th>Cilindro</th></tr></thead>
           <tbody>
             {% for l in linhas %}
             <tr>
               <td>{{ l.machine.model or l.machine.name or '—' }}<div class="text-muted small font-monospace">{{ l.machine.ip_address }}</div></td>
               <td class="small">{{ l.sector }}</td>
-              <td class="text-end">{% if l.pages_period is not none %}<strong>{{ '{:,}'.format(l.pages_period).replace(',', '.') }}</strong>{% else %}<span class="text-muted small" title="Precisa de ao menos 2 coletas no período">—</span>{% endif %}</td>
+              <td class="text-end">{% if l.pages_period is not none %}<strong>{{ '{:,}'.format(l.pages_period).replace(',', '.') }}</strong><div class="text-muted" style="font-size:.68rem">{{ l.de_at.strftime('%d/%m %H:%M') }} → {{ l.ate_at.strftime('%d/%m %H:%M') }}</div>{% else %}<span class="text-muted small" title="Precisa de ao menos 2 coletas no período">—</span>{% endif %}</td>
               <td class="text-end small text-muted">{{ '{:,}'.format(l.pages_total).replace(',', '.') if l.pages_total is not none else '—' }}</td>
               <td>{% if l.toner_pct is not none %}<span class="badge {{ 'bg-danger-subtle text-danger-emphasis' if l.toner_pct <= 10 else ('bg-warning-subtle text-warning-emphasis' if l.toner_pct <= 25 else 'bg-success-subtle text-success-emphasis') }}">{{ l.toner_pct }}%</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
               <td>{% if l.drum_pct is not none %}<span class="badge {{ 'bg-danger-subtle text-danger-emphasis' if l.drum_pct <= 10 else ('bg-warning-subtle text-warning-emphasis' if l.drum_pct <= 25 else 'bg-secondary-subtle text-secondary-emphasis') }}">{{ l.drum_pct }}%</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
