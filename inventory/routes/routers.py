@@ -133,24 +133,3 @@ def senha(rid):
                        password=crypto.decrypt(getattr(r, field)) or "")
     except crypto.DecryptError:
         return jsonify(error="Não foi possível decifrar (VAULT_KEY incorreta?)."), 500
-
-
-@bp.route("/<int:rid>/entrar")
-def entrar(rid):
-    """Auto-login: redireciona ao painel do roteador com as credenciais embutidas
-    (funciona quando o painel usa Basic Auth). A senha não passa pelo HTML da
-    página — só pelo cabeçalho Location desta resposta."""
-    r = router_repo.get_router(rid)
-    if not (r.ip_address or "").strip():
-        abort(404)
-    try:
-        pw = crypto.decrypt(r.admin_password) or ""
-    except crypto.DecryptError:
-        flash("Não foi possível decifrar a senha do roteador (VAULT_KEY?).", "danger")
-        return redirect(url_for("routers.list_view"))
-    audit.record("access", "router", r.id, f"Acesso ao painel de '{r.label or r.model}'")
-    if r.admin_user and pw:
-        target = router_ctl.auth_url(r.ip_address, r.admin_user, pw)
-    else:
-        target = router_ctl.base_url(r.ip_address)
-    return redirect(target, code=302)

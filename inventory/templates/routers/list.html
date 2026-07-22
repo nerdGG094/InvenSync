@@ -267,41 +267,30 @@
       box.innerHTML = '<span class="rt-hint"><i class="bi bi-plug"></i> painel indisponível agora</span>';
       return;
     }
-    if (d.auth_kind === 'basic'){
-      // Auto-login real: navegação iniciada pelo clique (o navegador aceita
-      // credenciais na URL só assim — num redirect 302 ele as descarta). Copia
-      // a senha como rede de segurança caso o navegador peça mesmo assim.
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'btn btn-sm btn-enter';
-      b.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> Entrar direto';
-      b.addEventListener('click', function(){
-        fetchSenha(rid, 'admin').then(function(dd){
-          if (dd && dd.error){ toast(dd.error, 'danger'); return; }
-          var scheme = /^https:\/\//i.test(ip) ? 'https' : 'http';
-          var host = ip.replace(/^[a-z]+:\/\//i, '');
-          var user = encodeURIComponent((dd && dd.user) || '');
-          var pass = (dd && dd.password) ? ':' + encodeURIComponent(dd.password) : '';
-          var url = user ? (scheme + '://' + user + pass + '@' + host) : (scheme + '://' + host);
-          if (dd && dd.password) copyText(dd.password, 'Senha copiada (cole se o navegador pedir).');
-          window.open(url, '_blank', 'noopener');
-        });
+    // Navegadores modernos (Chrome/Edge) descartam credenciais embutidas na URL
+    // — não há login 100% automático a partir de uma página web. O confiável é
+    // abrir o painel com a senha JÁ copiada: o admin só cola (1 ação). Para
+    // Basic Auth cai no popup do navegador; para formulário, no campo da página.
+    var kind = d.auth_kind;
+    var alvo = /:\/\//.test(ip) ? ip : 'http://' + ip;
+    var b = document.createElement('a');
+    b.className = 'btn btn-sm btn-enter'; b.href = alvo; b.target = '_blank'; b.rel = 'noopener';
+    b.innerHTML = '<i class="bi bi-box-arrow-up-right"></i> Abrir painel';
+    // A navegação (clique no link) acontece de imediato; a cópia roda em paralelo
+    // e fica pronta antes de o usuário chegar ao campo de login.
+    b.addEventListener('click', function(){
+      fetchSenha(rid, 'admin').then(function(dd){
+        if (dd && dd.error){ toast(dd.error, 'danger'); return; }
+        if (dd && dd.password) copyText(dd.password,
+          kind === 'basic' ? 'Senha copiada — cole no login do roteador.'
+                           : 'Senha copiada — cole no formulário do painel.');
       });
-      box.appendChild(b);
-      box.insertAdjacentHTML('beforeend', '<span class="rt-hint">auto-login</span>');
-    } else {
-      // Formulário/desconhecido: abre o painel e copia a senha admin p/ colar.
-      var b = document.createElement('button');
-      b.type='button'; b.className = 'btn btn-sm btn-primary';
-      b.innerHTML = '<i class="bi bi-box-arrow-up-right"></i> Abrir painel';
-      b.addEventListener('click', function(){
-        var url = /:\/\//.test(ip) ? ip : 'http://' + ip;
-        fetchSenha(rid, 'admin').then(function(dd){
-          if (dd && dd.password) copyText(dd.password, 'Senha copiada — cole no painel.');
-        }).finally(function(){ window.open(url, '_blank', 'noopener'); });
-      });
-      box.appendChild(b);
-      box.insertAdjacentHTML('beforeend', '<span class="rt-hint">senha copiada ao abrir</span>');
-    }
+    });
+    box.appendChild(b);
+    var dica = (kind === 'basic') ? 'senha copiada — cole no popup'
+             : (kind === 'form')  ? 'senha copiada — cole no formulário'
+             : 'senha copiada ao abrir';
+    box.insertAdjacentHTML('beforeend', '<span class="rt-hint">' + dica + '</span>');
   }
 
   function loadStatus(card){

@@ -73,22 +73,6 @@ def test_senha_endpoint_revela_decifrado(app, auth_client):
         db.session.commit()
 
 
-def test_entrar_redireciona_com_credenciais(app, auth_client):
-    from inventory.extensions import db
-    from inventory.models.router import Router
-    from inventory.repositories import router_repo
-    with app.app_context():
-        r = router_repo.create_router(model="PYTEST-ENTRAR", ip_address="10.5.5.5",
-                                      admin_user="adm", admin_password="pw1")
-        rid = r.id
-    resp = auth_client.get(f"/routers/{rid}/entrar", follow_redirects=False)
-    assert resp.status_code == 302
-    assert resp.headers["Location"] == "http://adm:pw1@10.5.5.5"
-    with app.app_context():
-        db.session.delete(db.session.get(Router, rid))
-        db.session.commit()
-
-
 def test_painel_bloqueia_nao_admin(app, common_client):
     from inventory.extensions import db
     from inventory.models.router import Router
