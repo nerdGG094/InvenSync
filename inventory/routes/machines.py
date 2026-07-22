@@ -26,19 +26,26 @@ def _group_by_sector(items: list) -> list:
     return [{"name": s or None, "items": grupos_map[s]} for s in ordem]
 
 
-def _supply_choices():
-    """Materiais de suprimento (toner/cilindro) do Estoque, para os comboboxes."""
+def _supply_choices(tipo: str):
+    """Materiais do Estoque para o combo, filtrados por categoria/nome.
+    tipo: 'toner' -> categoria/nome com 'toner'; 'drum' -> 'cilindro'/'fotocondutor'."""
+    from sqlalchemy import or_
     from ..models.product import Product
-    sup = (Product.query.filter(Product.segment == "suprimento")
-           .order_by(Product.name.asc()).all())
-    return [(0, "— nenhum —")] + [(p.id, f"{p.name} ({p.sku})") for p in sup]
+    from ..models.category import Category
+    if tipo == "toner":
+        cond = or_(Category.name.ilike("%toner%"), Product.name.ilike("%toner%"))
+    else:
+        cond = or_(Category.name.ilike("%cilindro%"), Category.name.ilike("%fotocondutor%"),
+                   Product.name.ilike("%cilindro%"))
+    itens = (Product.query.outerjoin(Category, Product.category_id == Category.id)
+             .filter(cond).order_by(Product.name.asc()).all())
+    return [(0, "— nenhum —")] + [(p.id, f"{p.name} ({p.sku})") for p in itens]
 
 
 def _fill_supply_choices(form: MachineForm, m: "Machine | None" = None):
-    choices = _supply_choices()
-    form.toner_product_id.choices = list(choices)
-    form.drum_product_id.choices = list(choices)
-    # Garante que o material atual apareça mesmo se deixar de ser 'suprimento'.
+    form.toner_product_id.choices = _supply_choices("toner")
+    form.drum_product_id.choices = _supply_choices("drum")
+    # Garante que o material atual apareça mesmo fora do filtro de categoria.
     if m is not None:
         from ..models.product import Product
         for fld, pid in (("toner_product_id", m.toner_product_id),
