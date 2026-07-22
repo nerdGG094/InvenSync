@@ -10,7 +10,6 @@ Roda numa thread de fundo (como o monitoramento de uptime). Cada varredura:
 import os
 import threading
 import time
-from datetime import datetime
 
 from ..extensions import db
 
@@ -50,7 +49,7 @@ def collect_once(app):
                          if s.get("pct") is not None and "drum" in (s.get("desc") or "").lower()),
                         None)
             # Sem nada mensurável (ex.: Canon de tanque via IPP)? Não grava linha
-            # vazia — o consumo dessas vem por leitura manual.
+            # vazia — dessas só temos estado/alertas ao vivo, sem contador.
             if d.get("pages") is None and d.get("toner_pct") is None and drum is None:
                 continue
             db.session.add(PrinterReading(

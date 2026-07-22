@@ -1,15 +1,74 @@
 {% extends "base.html" %}
 {% block title %}Consumo de Impressão{% endblock %}
+
+{% block extra_head %}
+<style>
+  .cons-filter{ display:flex; flex-wrap:wrap; align-items:end; gap:1rem; }
+  .cons-shortcuts .btn{ min-width:46px; }
+  /* Ranking por setor */
+  .sec-row{ margin-bottom:.7rem; }
+  .sec-row .sec-top{ display:flex; align-items:center; justify-content:space-between; gap:.5rem; font-size:.82rem; }
+  .sec-rank{ display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px;
+    border-radius:6px; background:#0f1a13; border:1px solid #243024; font-size:.68rem; font-weight:700; color:#8fb0a0; }
+  .sec-row.top .sec-rank{ background:#0f5132; border-color:#1f7a4d; color:#8affb9; }
+  .sec-bar{ height:9px; border-radius:999px; background:#0f1a13; overflow:hidden; margin-top:.28rem; }
+  .sec-bar i{ display:block; height:100%; background:linear-gradient(90deg,#00c853,#00e676); }
+  .sec-row.top .sec-bar i{ background:linear-gradient(90deg,#00e676,#8affb9); }
+  /* Cards de impressora */
+  .pc-grid{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); }
+  .pc-card{ position:relative; background:#15211a; border:1px solid #243024; border-left:4px solid #00c853;
+    border-radius:16px; padding:1rem 1.1rem .9rem; transition:transform .14s, border-color .14s; }
+  .pc-card:hover{ transform:translateY(-3px); border-color:#2f6b46; }
+  .pc-card.nodata{ border-left-color:#5c6b5c; opacity:.72; }
+  .pc-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:.5rem; }
+  .pc-name{ font-weight:600; color:#eafff0; }
+  .pc-ip{ color:#6f8a7b; font-size:.72rem; font-family:"Cascadia Mono",monospace; }
+  .pc-pages{ font-size:1.9rem; font-weight:700; color:#d0ffd6; line-height:1; margin-top:.6rem; }
+  .pc-pages small{ font-size:.7rem; font-weight:500; color:#8fb0a0; }
+  .pc-share{ height:6px; border-radius:999px; background:#0f1a13; overflow:hidden; margin:.55rem 0 .5rem; }
+  .pc-share i{ display:block; height:100%; background:linear-gradient(90deg,#00c853,#00e676); }
+  .pc-chips{ display:flex; flex-wrap:wrap; gap:.35rem; }
+  .pc-chip{ font-size:.7rem; padding:.15rem .5rem; border-radius:999px; background:#0f1a13;
+    border:1px solid #243024; color:#9bb6a6; display:inline-flex; align-items:center; gap:.28rem; }
+  .pc-when{ color:#6f8a7b; font-size:.68rem; margin-top:.55rem; }
+</style>
+{% endblock %}
+
 {% block content %}
+{% macro num(n) %}{{ '{:,.0f}'.format(n).replace(',', '.') if n is not none else '—' }}{% endmacro %}
+{% macro supply_chip(rotulo, pct, icon) %}
+  {% if pct is not none %}
+  {% set cls = 'text-danger-emphasis' if pct <= 10 else ('text-warning-emphasis' if pct <= 25 else 'text-success-emphasis') %}
+  <span class="pc-chip"><i class="bi {{ icon }} {{ cls }}"></i> {{ rotulo }} <strong class="{{ cls }}">{{ pct }}%</strong></span>
+  {% endif %}
+{% endmacro %}
+
+{# ---- Métricas do período (calculadas aqui) ---- #}
+{% set ns = namespace(com_dados=0, criticos=0, maxpg=0, maxsetor=0) %}
+{% for l in linhas %}
+  {% if l.pages_period is not none %}
+    {% set ns.com_dados = ns.com_dados + 1 %}
+    {% if l.pages_period > ns.maxpg %}{% set ns.maxpg = l.pages_period %}{% endif %}
+  {% endif %}
+  {% if (l.toner_pct is not none and l.toner_pct <= 10) or (l.drum_pct is not none and l.drum_pct <= 10) %}
+    {% set ns.criticos = ns.criticos + 1 %}
+  {% endif %}
+{% endfor %}
+{% if por_setor %}{% set ns.maxsetor = por_setor[0][1] %}{% endif %}
+{% set media = (total / ns.com_dados) if ns.com_dados else 0 %}
+
 <div class="page-header">
-  <h1 class="ph-title"><span class="ph-icon"><i class="bi bi-printer"></i></span> Consumo de Impressão</h1>
+  <h1 class="ph-title"><span class="ph-icon"><i class="bi bi-printer"></i></span> Consumo de Impressão
+    <span class="badge bg-secondary-subtle text-secondary-emphasis ph-count">{{ label }}</span>
+  </h1>
   <a href="{{ url_for('machines.list_view', kind='impressora') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Impressoras</a>
 </div>
 
+{# ---- Filtros ---- #}
 <div class="table-card p-3 mb-3">
-  <div class="row g-3 align-items-end">
-    <div class="col-auto">
-      <label class="form-label small text-muted mb-1">Atalho</label>
+  <div class="cons-filter">
+    <div class="cons-shortcuts">
+      <label class="form-label small text-muted mb-1 d-block"><i class="bi bi-lightning-charge me-1"></i>Atalho</label>
       <div class="d-flex gap-1">
         {% for d in [7, 30, 90, 365] %}
         <a href="{{ url_for('machines.printers_report', dias=d) }}"
@@ -17,58 +76,95 @@
         {% endfor %}
       </div>
     </div>
-    <div class="col-auto"><span class="text-muted small pb-2">ou intervalo exato:</span></div>
-    <form method="get" class="col-auto">
-      <div class="d-flex gap-2 align-items-end">
-        <div>
-          <label class="form-label small text-muted mb-1">De</label>
-          <input type="date" name="de" value="{{ de }}" class="form-control form-control-sm">
-        </div>
-        <div>
-          <label class="form-label small text-muted mb-1">Até</label>
-          <input type="date" name="ate" value="{{ ate }}" class="form-control form-control-sm">
-        </div>
-        <button class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> Aplicar</button>
-      </div>
+    <div class="text-muted small pb-2">ou período exato</div>
+    <form method="get" class="d-flex gap-2 align-items-end">
+      <div><label class="form-label small text-muted mb-1">De</label>
+        <input type="date" name="de" value="{{ de }}" class="form-control form-control-sm"></div>
+      <div><label class="form-label small text-muted mb-1">Até</label>
+        <input type="date" name="ate" value="{{ ate }}" class="form-control form-control-sm"></div>
+      <button class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> Aplicar</button>
     </form>
   </div>
-  <div class="small text-muted mt-2"><i class="bi bi-calendar-range me-1"></i>Período: <strong>{{ label }}</strong></div>
 </div>
 
 {% if por_setor %}
+{# ---- KPIs ---- #}
 <div class="row g-3 mb-3">
-  <div class="col-12 col-lg-5">
-    <div class="table-card p-3">
-      <h2 class="h6 mb-3">Páginas por setor <span class="text-muted small">(total {{ '{:,}'.format(total).replace(',', '.') }})</span></h2>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card h-100"><div class="card-body d-flex align-items-center justify-content-between">
+      <div><div class="text-muted small">Páginas no período</div><div class="h3 mb-0 number">{{ num(total) }}</div></div>
+      <i class="bi bi-files fs-2 text-success"></i>
+    </div></div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card h-100" style="border-left-color:#0dcaf0"><div class="card-body d-flex align-items-center justify-content-between">
+      <div><div class="text-muted small">Impressoras com consumo</div><div class="h3 mb-0 number text-info">{{ ns.com_dados }}</div></div>
+      <i class="bi bi-printer fs-2 text-info"></i>
+    </div></div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card h-100" style="border-left-color:#ffc107"><div class="card-body d-flex align-items-center justify-content-between">
+      <div><div class="text-muted small">Média por impressora</div><div class="h3 mb-0 number text-warning">{{ num(media) }}</div></div>
+      <i class="bi bi-bar-chart fs-2 text-warning"></i>
+    </div></div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card h-100" style="border-left-color:{{ '#f44336' if ns.criticos else '#198754' }}"><div class="card-body d-flex align-items-center justify-content-between">
+      <div><div class="text-muted small">Suprimento crítico</div><div class="h3 mb-0 number {{ 'text-danger' if ns.criticos else 'text-success' }}">{{ ns.criticos }}</div></div>
+      <i class="bi {{ 'bi-exclamation-octagon text-danger' if ns.criticos else 'bi-check-circle text-success' }} fs-2"></i>
+    </div></div>
+  </div>
+</div>
+
+<div class="row g-3">
+  {# ---- Ranking por setor ---- #}
+  <div class="col-12 col-xl-4">
+    <div class="table-card p-3 h-100">
+      <h2 class="h6 mb-3"><i class="bi bi-diagram-3 text-success me-1"></i> Ranking por setor</h2>
       {% for setor, pgs in por_setor %}
-      {% set pct = (pgs / total * 100) if total else 0 %}
-      <div class="mb-2">
-        <div class="d-flex justify-content-between small"><span>{{ setor }}</span><strong>{{ '{:,}'.format(pgs).replace(',', '.') }}</strong></div>
-        <div class="prt-bar" style="height:8px"><i style="width:{{ pct }}%;background:#00c853"></i></div>
+      {% set pct = (pgs / ns.maxsetor * 100) if ns.maxsetor else 0 %}
+      <div class="sec-row {{ 'top' if loop.first }}">
+        <div class="sec-top">
+          <span class="text-truncate"><span class="sec-rank">{{ loop.index }}</span> {{ setor }}</span>
+          <strong>{{ num(pgs) }}</strong>
+        </div>
+        <div class="sec-bar"><i style="width:{{ pct }}%"></i></div>
       </div>
       {% endfor %}
     </div>
   </div>
-  <div class="col-12 col-lg-7">
-    <div class="table-card p-3">
-      <h2 class="h6 mb-3">Por impressora</h2>
-      <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
-          <thead><tr><th>Impressora</th><th>Setor</th><th class="text-end">Páginas no período</th><th class="text-end">Contador atual</th><th>Toner</th><th>Cilindro</th></tr></thead>
-          <tbody>
-            {% for l in linhas %}
-            <tr>
-              <td>{{ l.machine.model or l.machine.name or '—' }}<div class="text-muted small font-monospace">{{ l.machine.ip_address }}</div></td>
-              <td class="small">{{ l.sector }}</td>
-              <td class="text-end">{% if l.pages_period is not none %}<strong>{{ '{:,}'.format(l.pages_period).replace(',', '.') }}</strong><div class="text-muted" style="font-size:.68rem">{{ l.de_at.strftime('%d/%m %H:%M') }} → {{ l.ate_at.strftime('%d/%m %H:%M') }}</div>{% else %}<span class="text-muted small" title="Precisa de ao menos 2 coletas no período">—</span>{% endif %}</td>
-              <td class="text-end small text-muted">{{ '{:,}'.format(l.pages_total).replace(',', '.') if l.pages_total is not none else '—' }}</td>
-              <td>{% if l.toner_pct is not none %}<span class="badge {{ 'bg-danger-subtle text-danger-emphasis' if l.toner_pct <= 10 else ('bg-warning-subtle text-warning-emphasis' if l.toner_pct <= 25 else 'bg-success-subtle text-success-emphasis') }}">{{ l.toner_pct }}%</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
-              <td>{% if l.drum_pct is not none %}<span class="badge {{ 'bg-danger-subtle text-danger-emphasis' if l.drum_pct <= 10 else ('bg-warning-subtle text-warning-emphasis' if l.drum_pct <= 25 else 'bg-secondary-subtle text-secondary-emphasis') }}">{{ l.drum_pct }}%</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+
+  {# ---- Cards por impressora ---- #}
+  <div class="col-12 col-xl-8">
+    <div class="pc-grid">
+      {% for l in linhas %}
+      {% set share = (l.pages_period / ns.maxpg * 100) if (l.pages_period and ns.maxpg) else 0 %}
+      <div class="pc-card {{ 'nodata' if l.pages_period is none }}">
+        <div class="pc-head">
+          <div class="min-w-0">
+            <div class="pc-name text-truncate"><i class="bi bi-printer me-1 text-success"></i>{{ l.machine.model or l.machine.name or '—' }}</div>
+            <div class="pc-ip">{{ l.machine.ip_address }}</div>
+          </div>
+          <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ l.sector }}</span>
+        </div>
+
+        {% if l.pages_period is not none %}
+        <div class="pc-pages">{{ num(l.pages_period) }} <small>páginas</small></div>
+        <div class="pc-share"><i style="width:{{ share }}%"></i></div>
+        {% else %}
+        <div class="pc-pages text-muted" style="font-size:1.1rem">sem dados <small>no período</small></div>
+        {% endif %}
+
+        <div class="pc-chips">
+          {% if l.pages_total is not none %}<span class="pc-chip"><i class="bi bi-123"></i> contador {{ num(l.pages_total) }}</span>{% endif %}
+          {{ supply_chip('Toner', l.toner_pct, 'bi-droplet-half') }}
+          {{ supply_chip('Cilindro', l.drum_pct, 'bi-record-circle') }}
+        </div>
+        {% if l.de_at and l.ate_at %}
+        <div class="pc-when"><i class="bi bi-clock-history me-1"></i>{{ l.de_at.strftime('%d/%m %H:%M') }} → {{ l.ate_at.strftime('%d/%m %H:%M') }}</div>
+        {% endif %}
       </div>
+      {% endfor %}
     </div>
   </div>
 </div>
@@ -76,7 +172,7 @@
 <div class="empty-state">
   <i class="bi bi-graph-up"></i>
   <p>Ainda não há histórico suficiente para calcular o consumo.</p>
-  <p class="small text-muted">A coleta roda a cada {{ config.PRINTER_MONITOR_MINUTES }} min — o consumo aparece quando houver ao menos 2 leituras da mesma impressora no período.</p>
+  <p class="small text-muted">A coleta roda a cada {{ config.PRINTER_MONITOR_MINUTES }} min — o consumo aparece quando houver ao menos 2 leituras da mesma impressora no período ({{ label }}).</p>
 </div>
 {% endif %}
 {% endblock %}
