@@ -15,7 +15,6 @@ def _mk_product(db, sku, segment="suprimento", stock_in=0):
 
 def _reset(pm):
     pm._alerted.clear()
-    pm._last_pct.clear()
 
 
 def test_troca_da_baixa_de_uma_unidade(app, monkeypatch):

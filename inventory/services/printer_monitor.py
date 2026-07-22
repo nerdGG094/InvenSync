@@ -17,10 +17,8 @@ _started = False
 _lock = threading.Lock()
 
 # Estado em memória do "já avisei": machine_id -> {"toner": bool, "drum": bool}.
+# (A detecção de troca NÃO usa memória — compara com a última leitura do banco.)
 _alerted = {}
-# Último nível lido por suprimento: machine_id -> {"toner": pct|None, "drum": pct|None}.
-# Serve para detectar a TROCA (subiu de baixo p/ cheio entre duas leituras).
-_last_pct = {}
 
 
 def _limite(app):
@@ -91,25 +89,30 @@ def collect_once(app):
             # vazia — dessas só temos estado/alertas ao vivo, sem contador.
             if d.get("pages") is None and d.get("toner_pct") is None and drum is None:
                 continue
+            # Nível ANTERIOR vem da última leitura no banco (não da memória) — assim
+            # a detecção de troca sobrevive a reinícios do servidor. Busca ANTES de
+            # inserir a leitura nova.
+            last = (PrinterReading.query.filter_by(machine_id=m.id)
+                    .order_by(PrinterReading.id.desc()).first())
+            prev = {"toner": (last.toner_pct if last else None),
+                    "drum": (last.drum_pct if last else None)}
             db.session.add(PrinterReading(
                 machine_id=m.id, pages=d.get("pages"),
                 toner_pct=d.get("toner_pct"), drum_pct=drum))
             lidas += 1
 
             st = _alerted.setdefault(m.id, {"toner": False, "drum": False})
-            prev = _last_pct.setdefault(m.id, {"toner": None, "drum": None})
             for chave, pct, rotulo in (("toner", d.get("toner_pct"), "Toner"),
                                        ("drum", drum, "Cilindro")):
                 if pct is None:
                     continue
                 # Troca: o nível deu um salto grande p/ cima (>= salto) e chegou
-                # perto do cheio (>= alto) entre duas leituras -> baixa de 1 unidade
+                # perto do cheio (>= alto) desde a última leitura -> baixa de 1 unidade
                 # do material vinculado. Pega trocas feitas em 20%, 15% etc., não só
                 # abaixo do limite de alerta.
                 if (prev[chave] is not None and pct >= alto
                         and (pct - prev[chave]) >= salto):
                     _registrar_troca(m, chave, rotulo, prev[chave], pct)
-                prev[chave] = pct
                 if pct <= limite and not st[chave]:
                     st[chave] = True
                     avisos += 1
