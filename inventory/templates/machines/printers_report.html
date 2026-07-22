@@ -28,8 +28,13 @@
   .pc-share{ height:6px; border-radius:999px; background:#0f1a13; overflow:hidden; margin:.55rem 0 .5rem; }
   .pc-share i{ display:block; height:100%; background:linear-gradient(90deg,#00c853,#00e676); }
   .pc-chips{ display:flex; flex-wrap:wrap; gap:.35rem; }
-  .pc-chip{ font-size:.7rem; padding:.15rem .5rem; border-radius:999px; background:#0f1a13;
-    border:1px solid #243024; color:#9bb6a6; display:inline-flex; align-items:center; gap:.28rem; }
+  .pc-chip{ font-size:.72rem; padding:.18rem .55rem; border-radius:999px; background:#0f1a13;
+    border:1px solid #243024; color:#b6d0c1; display:inline-flex; align-items:center; gap:.3rem; font-weight:500; }
+  .pc-chip strong{ font-weight:700; color:inherit; }
+  /* Suprimentos por severidade — fundo tingido p/ legibilidade em ambos os temas */
+  .pc-chip.pc-crit{ background:rgba(244,67,54,.18); border-color:rgba(244,67,54,.45); color:#ffa79e; }
+  .pc-chip.pc-warn{ background:rgba(255,193,7,.16); border-color:rgba(255,193,7,.42); color:#ffdf7e; }
+  .pc-chip.pc-ok{ background:rgba(0,200,83,.15); border-color:rgba(0,200,83,.4); color:#79ffb0; }
   .pc-when{ color:#6f8a7b; font-size:.68rem; margin-top:.55rem; }
 
   /* ----- Tema claro ----- */
@@ -45,6 +50,9 @@
   html[data-theme="light"] .pc-pages small{ color:#5d7d6b; }
   html[data-theme="light"] .pc-share{ background:#e9efeb; }
   html[data-theme="light"] .pc-chip{ background:#f1f6f3; border-color:#dbe6df; color:#40614f; }
+  html[data-theme="light"] .pc-chip.pc-crit{ background:#fdecea; border-color:#f3bcb6; color:#b3261e; }
+  html[data-theme="light"] .pc-chip.pc-warn{ background:#fff5da; border-color:#ecd68f; color:#8a6d00; }
+  html[data-theme="light"] .pc-chip.pc-ok{ background:#e4f7ec; border-color:#aee2c1; color:#0f7a43; }
   html[data-theme="light"] .pc-when{ color:#7a9384; }
 </style>
 {% endblock %}
@@ -53,8 +61,8 @@
 {% macro num(n) %}{{ '{:,.0f}'.format(n).replace(',', '.') if n is not none else '—' }}{% endmacro %}
 {% macro supply_chip(rotulo, pct, icon) %}
   {% if pct is not none %}
-  {% set cls = 'text-danger-emphasis' if pct <= 10 else ('text-warning-emphasis' if pct <= 25 else 'text-success-emphasis') %}
-  <span class="pc-chip"><i class="bi {{ icon }} {{ cls }}"></i> {{ rotulo }} <strong class="{{ cls }}">{{ pct }}%</strong></span>
+  {% set sev = 'crit' if pct <= 10 else ('warn' if pct <= 25 else 'ok') %}
+  <span class="pc-chip pc-{{ sev }}"><i class="bi {{ icon }}"></i> {{ rotulo }} <strong>{{ pct }}%</strong></span>
   {% endif %}
 {% endmacro %}
 
