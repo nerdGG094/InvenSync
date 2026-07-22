@@ -1,6 +1,4 @@
 """Leitura SNMP de impressoras: decodificação e cálculo de percentuais."""
-import pytest
-
 from inventory.services import snmp_printer as sp
 
 
@@ -106,27 +104,6 @@ def test_ipp_alerts_decode():
     assert sp._ipp_alerts([]) == []
     r = {a["key"]: a["level"] for a in sp._ipp_alerts(["media-empty-error", "cover-open-warning"])}
     assert r.get("media-empty") == "danger" and r.get("cover-open") == "warning"
-
-
-def test_manual_reading_feeds_history(app, auth_client):
-    """Leitura manual grava no mesmo histórico usado pelo relatório de consumo."""
-    from inventory.extensions import db
-    from inventory.models.machine import Machine
-    from inventory.models.printer_reading import PrinterReading
-    with app.app_context():
-        m = Machine(kind="impressora", brand="Canon", model="PYTEST-CANON", ip_address="10.0.0.8")
-        db.session.add(m)
-        db.session.commit()
-        mid = m.id
-
-    r = auth_client.post(f"/machines/{mid}/leitura", data={"pages": "500"}, follow_redirects=True)
-    assert r.status_code == 200
-    with app.app_context():
-        leituras = PrinterReading.query.filter_by(machine_id=mid).all()
-        assert len(leituras) == 1 and leituras[0].pages == 500
-        PrinterReading.query.filter_by(machine_id=mid).delete()
-        Machine.query.filter_by(id=mid).delete()
-        db.session.commit()
 
 
 def test_query_sem_ip_nao_levanta():

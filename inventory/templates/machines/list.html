@@ -135,18 +135,11 @@
       {% if m.serial_number %}<span class="pchip mono" title="Nº de série"><i class="bi bi-upc-scan"></i> {{ m.serial_number }}</span>{% endif %}
     </div>
 
-    {# Impressora de rede: páginas/toner/cilindro ao vivo (SNMP, ou IPP p/ Canon) #}
+    {# Impressora de rede: páginas/toner/cilindro/estado ao vivo (SNMP, ou IPP p/ Canon) #}
     {% if m.kind == 'impressora' and m.ip_address %}
     <div class="prt-snmp" data-snmp-url="{{ url_for('machines.snmp_status', mid=m.id) }}">
       <span class="prt-loading text-muted small"><i class="bi bi-arrow-repeat"></i> consultando impressora…</span>
     </div>
-    {# Canon (tanque) não expõe contador por rede: leitura manual alimenta o consumo #}
-    {% if 'canon' in (m.brand or '')|lower %}
-    <form method="post" action="{{ url_for('machines.add_reading', mid=m.id) }}" class="d-flex gap-1 mt-2" title="Registrar o contador de páginas lido na impressora">
-      <input type="number" name="pages" min="0" class="form-control form-control-sm" placeholder="contador de páginas" required>
-      <button class="btn btn-sm btn-outline-light" title="Registrar leitura manual"><i class="bi bi-journal-plus"></i></button>
-    </form>
-    {% endif %}
     {% endif %}
 
     <div class="machine-foot">
