@@ -16,6 +16,31 @@ OID_SYSNAME = "1.3.6.1.2.1.1.5.0"
 OID_SERIAL = "1.3.6.1.2.1.43.5.1.1.17.1"
 OID_PAGES = "1.3.6.1.2.1.43.10.2.1.4.1.1"
 OID_SUPPLIES = "1.3.6.1.2.1.43.11.1.1"      # subárvore: .6=desc .8=max .9=nível
+OID_STATUS = "1.3.6.1.2.1.25.3.5.1.1.1"     # hrPrinterStatus
+OID_ERRSTATE = "1.3.6.1.2.1.25.3.5.1.2.1"   # hrPrinterDetectedErrorState (bitmap)
+OID_DISPLAY = "1.3.6.1.2.1.43.16.5.1.2.1.1"  # texto do painel
+
+# hrPrinterStatus: 1..5
+_STATUS = {1: "outro", 2: "desconhecido", 3: "em espera", 4: "imprimindo", 5: "aquecendo"}
+
+# hrPrinterDetectedErrorState: bitmap (bit 0 = mais significativo do 1º byte).
+_ERR_BITS = [
+    ("lowPaper", "Papel acabando", "warning"),
+    ("noPaper", "Sem papel", "danger"),
+    ("lowToner", "Toner acabando", "warning"),
+    ("noToner", "Sem toner", "danger"),
+    ("doorOpen", "Tampa aberta", "warning"),
+    ("jammed", "Papel atolado", "danger"),
+    ("offline", "Offline", "danger"),
+    ("serviceRequested", "Requer manutenção", "warning"),
+    ("inputTrayMissing", "Bandeja ausente", "warning"),
+    ("outputTrayMissing", "Bandeja de saída ausente", "warning"),
+    ("markerSupplyMissing", "Suprimento ausente", "warning"),
+    ("outputNearFull", "Saída quase cheia", "warning"),
+    ("outputFull", "Saída cheia", "danger"),
+    ("inputTrayEmpty", "Bandeja vazia", "warning"),
+    ("overduePreventMaint", "Manutenção atrasada", "warning"),
+]
 
 # ===== MIB privado Brother (fallback do toner) =====
 OID_BROTHER_MAINT = "1.3.6.1.4.1.2435.2.3.9.4.2.1.5.5.8.0"
@@ -29,6 +54,26 @@ def _texto(v) -> str:
     if isinstance(v, bytes):
         return v.decode("utf-8", "replace").strip()
     return str(v).strip() if v is not None else ""
+
+
+def _decode_errors(raw) -> list:
+    """hrPrinterDetectedErrorState -> lista de {key, label, level} ativos."""
+    if raw is None:
+        return []
+    if isinstance(raw, int):
+        raw = bytes([raw]) if raw else b"\x00"
+    if not isinstance(raw, (bytes, bytearray)) or not raw:
+        return []
+    valor = int.from_bytes(raw, "big")
+    total_bits = 8 * len(raw)
+    ativos = []
+    for i, (key, label, level) in enumerate(_ERR_BITS):
+        if i >= total_bits:
+            break
+        # bit i, contado do mais significativo do 1º byte (ordem do RFC)
+        if valor & (1 << (total_bits - 1 - i)):
+            ativos.append({"key": key, "label": label, "level": level})
+    return ativos
 
 
 def _decode_brother(blob: bytes) -> dict:
@@ -58,12 +103,16 @@ async def _coletar(ip: str, community: str, timeout: float) -> dict:
     if not modelo:
         raise TimeoutError("sem resposta SNMP")   # impressora fora/sem SNMP
 
+    st = await get(OID_STATUS)
     dados = {
         "ok": True, "error": None,
         "model": modelo,
         "name": _texto(await get(OID_SYSNAME)),
         "serial": _texto(await get(OID_SERIAL)),
         "pages": None, "toner_pct": None, "supplies": [],
+        "status": _STATUS.get(st) if isinstance(st, int) else None,
+        "display": _texto(await get(OID_DISPLAY)) or None,
+        "alerts": _decode_errors(await get(OID_ERRSTATE)),
     }
     pg = await get(OID_PAGES)
     if isinstance(pg, int):

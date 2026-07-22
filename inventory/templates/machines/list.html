@@ -29,6 +29,11 @@
     <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ totals.total }}</span>
   </h1>
   <div class="d-flex gap-2">
+    {% if kind == 'impressora' %}
+    <a href="{{ url_for('machines.printers_report') }}" class="btn btn-outline-light">
+      <i class="bi bi-graph-up"></i> Consumo
+    </a>
+    {% endif %}
     <a href="{{ url_for('machines.import_view') }}" class="btn btn-outline-light">
       <i class="bi bi-upload"></i> Importar
     </a>
@@ -179,7 +184,18 @@
                         + 'sem leitura SNMP</span>';
           return;
         }
+        function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];}); }
         var html = '';
+        // Alertas (papel/toner/tampa/atolo) — o que mais evita chamado
+        (d.alerts || []).forEach(function(a){
+          var bg = a.level === 'danger' ? 'bg-danger-subtle text-danger-emphasis' : 'bg-warning-subtle text-warning-emphasis';
+          html += '<span class="badge ' + bg + ' me-1 mb-1"><i class="bi bi-exclamation-triangle-fill"></i> ' + esc(a.label) + '</span>';
+        });
+        if (d.status) {
+          var on = /imprimindo|aquecendo/.test(d.status);
+          html += '<div class="prt-row"><span class="lbl">Estado</span>'
+                + '<span class="' + (on ? 'text-info' : 'text-muted') + '">' + esc(d.display || d.status) + '</span></div>';
+        }
         if (d.pages !== null && d.pages !== undefined) {
           html += '<div class="prt-row"><span class="lbl">Páginas</span>'
                 + '<strong class="text-info">' + d.pages.toLocaleString('pt-BR') + '</strong></div>';
