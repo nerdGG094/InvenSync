@@ -4,6 +4,7 @@ from sqlalchemy import or_
 
 from ..extensions import db
 from ..models.router import Router
+from ..services import crypto
 
 _ALLOWED = {
     "label", "brand", "model", "serial_number", "patrimony",
@@ -11,6 +12,9 @@ _ALLOWED = {
     "ssid", "wifi_password", "ssid_guest", "wifi_password_guest",
     "mac_filtering", "linked_macs", "location", "status", "notes", "label_applied",
 }
+
+# Segredos cifrados em repouso (VAULT_KEY). Ao editar, campo em branco = manter.
+_SECRET_FIELDS = ("admin_password", "wifi_password", "wifi_password_guest")
 
 
 def list_routers(search: Optional[str] = None, status: Optional[str] = None) -> List[Router]:
@@ -38,7 +42,10 @@ def get_router(rid: int) -> Router:
 
 
 def create_router(**kwargs) -> Router:
-    r = Router(**{k: kwargs.get(k) for k in _ALLOWED})
+    data = {k: kwargs.get(k) for k in _ALLOWED}
+    for f in _SECRET_FIELDS:
+        data[f] = crypto.encrypt(data.get(f)) or None
+    r = Router(**data)
     db.session.add(r)
     db.session.commit()
     return r
@@ -46,8 +53,15 @@ def create_router(**kwargs) -> Router:
 
 def update_router(r: Router, **kwargs) -> Router:
     for k in _ALLOWED:
+        if k in _SECRET_FIELDS:
+            continue
         if k in kwargs:
             setattr(r, k, kwargs[k])
+    # Senha em branco ao editar = manter a atual; se informada, cifra.
+    for f in _SECRET_FIELDS:
+        val = kwargs.get(f)
+        if val:
+            setattr(r, f, crypto.encrypt(val))
     db.session.commit()
     return r
 

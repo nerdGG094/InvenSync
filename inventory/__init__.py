@@ -250,6 +250,28 @@ def _encrypt_credentials():
         db.session.rollback()
 
 
+def _encrypt_router_secrets():
+    """Cifra as senhas dos roteadores (admin + Wi-Fi) ainda em texto puro.
+
+    Mesma estratégia idempotente do cofre: `looks_encrypted` (estrutural) impede
+    re-cifrar um valor que já é token, mesmo que a chave atual não o decifre."""
+    from .models.router import Router
+    from .services import crypto
+    fields = ("admin_password", "wifi_password", "wifi_password_guest")
+    try:
+        changed = False
+        for r in Router.query.all():
+            for f in fields:
+                v = getattr(r, f)
+                if v and not crypto.looks_encrypted(v):
+                    setattr(r, f, crypto.encrypt(v))
+                    changed = True
+        if changed:
+            db.session.commit()
+    except Exception:  # noqa: BLE001
+        db.session.rollback()
+
+
 # Endpoints liberados para usuários NÃO administradores (perfil "comum").
 # Eles só acessam Chamados, o próprio Perfil, autenticação e estáticos.
 NON_ADMIN_PREFIXES = ("tickets.", "profile.", "auth.", "kb.", "announcements.")
@@ -369,6 +391,8 @@ def create_app():
         _backfill_patrimony()
         # Cifra senhas do cofre que ainda estejam em texto puro.
         _encrypt_credentials()
+        # Cifra senhas dos roteadores (admin/Wi-Fi) ainda em texto puro.
+        _encrypt_router_secrets()
         db.session.commit()
 
     # Loader do usuário
