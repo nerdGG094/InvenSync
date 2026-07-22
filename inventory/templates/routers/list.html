@@ -25,6 +25,10 @@
   /* Ações de acesso (preenchidas por JS) */
   .rt-access{ display:flex; flex-wrap:wrap; gap:.4rem; margin:.55rem 0 .2rem; min-height:32px; }
   .rt-access .btn{ font-size:.78rem; }
+  /* Botão "Entrar direto": verde sólido com texto escuro (o CSS global pinta
+     links <a> de verde e sumiria no fundo verde) */
+  .rt-access .btn-enter{ background:#00c853; border-color:#00c853; color:#052b13 !important; font-weight:600; }
+  .rt-access .btn-enter:hover{ background:#00e676; border-color:#00e676; color:#052b13 !important; }
   .rt-hint{ font-size:.66rem; color:#6f8a7b; align-self:center; }
 
   html[data-theme="light"] .rt-status{ color:#5d7d6b; }
@@ -264,12 +268,25 @@
       return;
     }
     if (d.auth_kind === 'basic'){
-      // Auto-login real: abre já autenticado (credenciais no redirect, não no HTML).
-      var a = document.createElement('a');
-      a.className = 'btn btn-sm btn-success';
-      a.href = BASE + '/' + rid + '/entrar'; a.target = '_blank'; a.rel = 'noopener';
-      a.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> Entrar direto';
-      box.appendChild(a);
+      // Auto-login real: navegação iniciada pelo clique (o navegador aceita
+      // credenciais na URL só assim — num redirect 302 ele as descarta). Copia
+      // a senha como rede de segurança caso o navegador peça mesmo assim.
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'btn btn-sm btn-enter';
+      b.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> Entrar direto';
+      b.addEventListener('click', function(){
+        fetchSenha(rid, 'admin').then(function(dd){
+          if (dd && dd.error){ toast(dd.error, 'danger'); return; }
+          var scheme = /^https:\/\//i.test(ip) ? 'https' : 'http';
+          var host = ip.replace(/^[a-z]+:\/\//i, '');
+          var user = encodeURIComponent((dd && dd.user) || '');
+          var pass = (dd && dd.password) ? ':' + encodeURIComponent(dd.password) : '';
+          var url = user ? (scheme + '://' + user + pass + '@' + host) : (scheme + '://' + host);
+          if (dd && dd.password) copyText(dd.password, 'Senha copiada (cole se o navegador pedir).');
+          window.open(url, '_blank', 'noopener');
+        });
+      });
+      box.appendChild(b);
       box.insertAdjacentHTML('beforeend', '<span class="rt-hint">auto-login</span>');
     } else {
       // Formulário/desconhecido: abre o painel e copia a senha admin p/ colar.
