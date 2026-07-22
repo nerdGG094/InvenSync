@@ -18,10 +18,47 @@ _lock = threading.Lock()
 
 # Estado em memória do "já avisei": machine_id -> {"toner": bool, "drum": bool}.
 _alerted = {}
+# Último nível lido por suprimento: machine_id -> {"toner": pct|None, "drum": pct|None}.
+# Serve para detectar a TROCA (subiu de baixo p/ cheio entre duas leituras).
+_last_pct = {}
 
 
 def _limite(app):
     return int(app.config.get("PRINTER_SUPPLY_ALERT_PCT", 10) or 10)
+
+
+def _registrar_troca(m, chave, rotulo, prev_pct, pct):
+    """Troca detectada (nível subiu de baixo p/ cheio): dá baixa de 1 unidade do
+    material ligado à impressora e avisa a TI se o estoque estava zerado.
+    Retorna 1 se movimentou, 0 caso contrário."""
+    from ..models.product import Product
+    from ..models.movement import StockMovement
+    from ..repositories import product_repo
+    from . import mailer, audit
+
+    prod_id = m.toner_product_id if chave == "toner" else m.drum_product_id
+    if not prod_id:
+        return 0  # impressora sem material vinculado — nada a movimentar
+    prod = db.session.get(Product, prod_id)
+    if not prod:
+        return 0
+
+    saldo = product_repo.current_stock(prod)  # antes da baixa
+    db.session.add(StockMovement(
+        product_id=prod_id, movement_type="OUT", quantity=1,
+        note=(f"Troca automática ({rotulo.lower()}) detectada via SNMP na impressora "
+              f"'{m.model or m.name}' ({m.sector or 's/ setor'}): {prev_pct}% → {pct}%.")))
+    db.session.commit()
+    audit.record("update", "product", prod_id,
+                 f"Baixa automática de {rotulo.lower()} (troca na impressora "
+                 f"'{m.model or m.name}')")
+    if saldo <= 0:
+        mailer.notify_ti(
+            f"[InvenSync] 📦 Estoque zerado: {prod.name}",
+            f"A troca de {rotulo.lower()} na impressora '{m.model or m.name}' "
+            f"({m.sector or '—'}) deu baixa de 1 un de '{prod.name}' (SKU {prod.sku}), "
+            f"mas o saldo estava em {saldo}. Reponha o material.")
+    return 1
 
 
 def collect_once(app):
@@ -35,6 +72,7 @@ def collect_once(app):
         timeout = float(app.config.get("SNMP_TIMEOUT", 3))
         limite = _limite(app)
         folga = 5  # só re-arma o alerta quando subir acima de (limite + folga)
+        alto = int(app.config.get("PRINTER_REPLACE_PCT", 80) or 80)  # nível de "cheio" p/ troca
 
         impressoras = (Machine.query
                        .filter_by(kind="impressora", is_active=True)
@@ -58,10 +96,16 @@ def collect_once(app):
             lidas += 1
 
             st = _alerted.setdefault(m.id, {"toner": False, "drum": False})
+            prev = _last_pct.setdefault(m.id, {"toner": None, "drum": None})
             for chave, pct, rotulo in (("toner", d.get("toner_pct"), "Toner"),
                                        ("drum", drum, "Cilindro")):
                 if pct is None:
                     continue
+                # Troca: estava baixo (<= limite) e pulou p/ cheio (>= alto) entre
+                # duas leituras -> dá baixa de 1 unidade do material vinculado.
+                if prev[chave] is not None and prev[chave] <= limite and pct >= alto:
+                    _registrar_troca(m, chave, rotulo, prev[chave], pct)
+                prev[chave] = pct
                 if pct <= limite and not st[chave]:
                     st[chave] = True
                     avisos += 1

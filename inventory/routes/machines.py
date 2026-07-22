@@ -26,6 +26,29 @@ def _group_by_sector(items: list) -> list:
     return [{"name": s or None, "items": grupos_map[s]} for s in ordem]
 
 
+def _supply_choices():
+    """Materiais de suprimento (toner/cilindro) do Estoque, para os comboboxes."""
+    from ..models.product import Product
+    sup = (Product.query.filter(Product.segment == "suprimento")
+           .order_by(Product.name.asc()).all())
+    return [(0, "— nenhum —")] + [(p.id, f"{p.name} ({p.sku})") for p in sup]
+
+
+def _fill_supply_choices(form: MachineForm, m: "Machine | None" = None):
+    choices = _supply_choices()
+    form.toner_product_id.choices = list(choices)
+    form.drum_product_id.choices = list(choices)
+    # Garante que o material atual apareça mesmo se deixar de ser 'suprimento'.
+    if m is not None:
+        from ..models.product import Product
+        for fld, pid in (("toner_product_id", m.toner_product_id),
+                         ("drum_product_id", m.drum_product_id)):
+            if pid and pid not in [c[0] for c in getattr(form, fld).choices]:
+                p = db.session.get(Product, pid)
+                if p:
+                    getattr(form, fld).choices.append((p.id, f"{p.name} ({p.sku})"))
+
+
 def _form_to_kwargs(form: MachineForm) -> dict:
     def s(v):
         v = (v or "").strip()
@@ -46,6 +69,9 @@ def _form_to_kwargs(form: MachineForm) -> dict:
         patrimony=s(form.patrimony.data),
         serial_number=s(form.serial_number.data),
         notes=s(form.notes.data),
+        # Só faz sentido em impressora; 0 (= nenhum) vira None.
+        toner_product_id=(form.toner_product_id.data or None),
+        drum_product_id=(form.drum_product_id.data or None),
         is_active=bool(form.is_active.data),
         label_applied=bool(form.label_applied.data),
     )
@@ -79,6 +105,7 @@ def list_view():
 def new():
     form = MachineForm()
     form.assigned_user.choices = people.user_choices("— Selecione —")
+    _fill_supply_choices(form)
     if request.method == "GET":
         if not form.kind.data:
             form.kind.data = request.args.get("kind") or "computador"
@@ -99,6 +126,7 @@ def edit(mid):
     m = machine_repo.get_machine(mid)
     form = MachineForm(obj=m)
     form.assigned_user.choices = people.user_choices("— Selecione —")
+    _fill_supply_choices(form, m)
     # Garante que o responsável atual apareça mesmo se o colaborador foi removido/inativado.
     if m.assigned_user and m.assigned_user not in [c[0] for c in form.assigned_user.choices]:
         form.assigned_user.choices.append((m.assigned_user, m.assigned_user))

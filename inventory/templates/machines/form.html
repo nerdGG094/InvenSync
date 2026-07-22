@@ -86,6 +86,34 @@
           </div>
         </div>
 
+        <div class="row g-3 mt-1 printer-fields" id="printerFields">
+          <div class="col-12">
+            <div class="section-label"><i class="bi bi-printer"></i> Suprimentos da impressora</div>
+          </div>
+          <div class="col-12 col-md-6">
+            {{ form.toner_product_id.label(class="form-label fw-semibold") }}
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-droplet-half"></i></span>
+              {{ form.toner_product_id(class="form-select", id="tonerProd") }}
+            </div>
+          </div>
+          <div class="col-12 col-md-6">
+            {{ form.drum_product_id.label(class="form-label fw-semibold") }}
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-record-circle"></i></span>
+              {{ form.drum_product_id(class="form-select", id="drumProd") }}
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="form-text">
+              <i class="bi bi-magic me-1"></i>Ligue o toner/cilindro cadastrado no Estoque.
+              Quando o SNMP acusar que o nível subiu de <strong>baixo</strong> para
+              <strong>cheio</strong> (a troca foi feita), o sistema dá <strong>baixa
+              automática de 1 unidade</strong> do material aqui.
+            </div>
+          </div>
+        </div>
+
         <div class="mt-3">
           {{ form.notes.label(class="form-label fw-semibold") }}
           {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else ""), rows=2, placeholder="Observações (ex.: configuração, garantia, etc.)") }}
@@ -123,6 +151,16 @@
       if (setor !== undefined && setor !== '') sec.value = setor;  // usuário conhecido
     }
     usr.addEventListener('change', fill);
+  })();
+
+  // Campos de suprimento só aparecem para impressora.
+  (function(){
+    const kind = document.getElementById('kind');
+    const pf = document.getElementById('printerFields');
+    if (!pf) return;
+    function toggle(){ pf.style.display = (kind && kind.value === 'impressora') ? '' : 'none'; }
+    if (kind) kind.addEventListener('change', toggle);
+    toggle();
   })();
 </script>
 {% endblock %}

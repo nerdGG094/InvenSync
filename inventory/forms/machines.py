@@ -27,6 +27,11 @@ class MachineForm(FlaskForm):
     sector = StringField("Setor / Localização", validators=[Optional(), Length(max=120)])
     patrimony = StringField("Nº Patrimônio", validators=[Optional(), Length(max=60)])
     serial_number = StringField("Nº de Série", validators=[Optional(), Length(max=120)])
+    # Impressoras: material (Estoque) ligado — choices preenchidas na rota (0 = nenhum).
+    toner_product_id = SelectField("Toner (material do Estoque)", coerce=int, choices=[],
+                                   validate_choice=False, validators=[Optional()])
+    drum_product_id = SelectField("Cilindro (material do Estoque)", coerce=int, choices=[],
+                                  validate_choice=False, validators=[Optional()])
     notes = TextAreaField("Observações", validators=[Optional()])
     is_active = BooleanField("Em uso / ativo", default=True)
     label_applied = BooleanField("Etiqueta QR colada no aparelho", default=False)

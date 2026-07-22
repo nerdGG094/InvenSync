@@ -49,6 +49,9 @@ def _run_light_migrations():
         'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS department_id INTEGER REFERENCES department(id)',
         'ALTER TABLE machine ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES "user"(id)',
         'ALTER TABLE mobile_device ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES "user"(id)',
+        # Impressoras: material de toner/cilindro (Estoque) p/ baixa automática na troca.
+        'ALTER TABLE machine ADD COLUMN IF NOT EXISTS toner_product_id INTEGER REFERENCES product(id)',
+        'ALTER TABLE machine ADD COLUMN IF NOT EXISTS drum_product_id INTEGER REFERENCES product(id)',
         # Backfill idempotente (só onde ainda está NULL), casando por nome normalizado.
         'UPDATE "user" u SET department_id = d.id FROM department d '
         'WHERE u.department_id IS NULL AND u.sector IS NOT NULL '

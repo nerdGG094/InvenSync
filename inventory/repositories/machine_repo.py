@@ -8,6 +8,7 @@ from ..models.machine import Machine
 _ALLOWED = {
     "kind", "name", "brand", "model", "assigned_user", "user_id", "ip_address",
     "sector", "patrimony", "serial_number", "notes", "is_active", "label_applied",
+    "toner_product_id", "drum_product_id",
 }
 
 

@@ -24,6 +24,14 @@ class Machine(db.Model):
     serial_number = db.Column(db.String(120), nullable=True, index=True)
     notes = db.Column(db.Text, nullable=True)
 
+    # Impressoras: material (Estoque) de toner e cilindro ligados a este equipamento.
+    # Quando o SNMP acusa que o nível subiu de baixo p/ cheio (troca feita), o
+    # monitor dá baixa de 1 unidade do material correspondente.
+    toner_product_id = db.Column(db.Integer, db.ForeignKey("product.id"), nullable=True)
+    drum_product_id = db.Column(db.Integer, db.ForeignKey("product.id"), nullable=True)
+    toner_product = db.relationship("Product", foreign_keys=[toner_product_id])
+    drum_product = db.relationship("Product", foreign_keys=[drum_product_id])
+
     is_active = db.Column(db.Boolean, nullable=False, default=True,
                           server_default=db.text("true"))    # em uso / ativo
     # Etiqueta QR já colada no aparelho (marcada pelo analista na tela de Etiquetas).
