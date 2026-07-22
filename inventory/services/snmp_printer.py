@@ -159,14 +159,106 @@ async def _coletar(ip: str, community: str, timeout: float) -> dict:
     return dados
 
 
+# ===== IPP (fallback p/ impressoras sem SNMP: Canon, AirPrint) =====
+# Estado + alertas sempre; tinta só quando o hardware mede (tanque devolve -2).
+_IPP_STATE = {3: "em espera", 4: "imprimindo", 5: "parada"}
+_IPP_REASON = {
+    "media-empty": ("Sem papel", "danger"),
+    "media-needed": ("Sem papel", "danger"),
+    "media-low": ("Papel acabando", "warning"),
+    "media-jam": ("Papel atolado", "danger"),
+    "jam": ("Papel atolado", "danger"),
+    "cover-open": ("Tampa aberta", "warning"),
+    "door-open": ("Tampa aberta", "warning"),
+    "input-tray-missing": ("Bandeja ausente", "warning"),
+    "marker-supply-low": ("Tinta/toner acabando", "warning"),
+    "marker-supply-empty": ("Tinta/toner vazio", "danger"),
+    "toner-low": ("Toner acabando", "warning"),
+    "toner-empty": ("Sem toner", "danger"),
+    "offline": ("Offline", "danger"),
+    "shutdown": ("Desligada", "danger"),
+    "paused": ("Pausada", "warning"),
+    "spool-area-full": ("Fila cheia", "warning"),
+}
+
+
+def _ipp_alerts(reasons) -> list:
+    if not reasons:
+        return []
+    if isinstance(reasons, str):
+        reasons = [reasons]
+    out = []
+    for r in reasons:
+        r = str(r).strip().lower()
+        if not r or r == "none":
+            continue
+        for suf in ("-error", "-warning", "-report"):
+            if r.endswith(suf):
+                r = r[:-len(suf)]
+        info = _IPP_REASON.get(r)
+        if info:
+            out.append({"key": r, "label": info[0], "level": info[1]})
+    return out
+
+
+async def _coletar_ipp(ip: str, timeout: float) -> dict:
+    from pyipp import IPP
+    from pyipp.enums import IppOperation
+    ipp = IPP(host=ip, port=631, base_path="/ipp/print")
+    try:
+        res = await asyncio.wait_for(ipp.execute(
+            IppOperation.GET_PRINTER_ATTRIBUTES,
+            {"operation-attributes-tag": {"requested-attributes": [
+                "printer-make-and-model", "printer-state", "printer-state-reasons",
+                "marker-names", "marker-levels"]}}), timeout=timeout)
+    finally:
+        try:
+            await ipp.close()
+        except Exception:  # noqa: BLE001
+            pass
+
+    p = (res.get("printers") or [res])[0]
+    modelo = _texto(p.get("printer-make-and-model"))
+    if not modelo:
+        raise TimeoutError("sem resposta IPP")
+
+    st = p.get("printer-state")
+    dados = {
+        "ok": True, "error": None, "via": "ipp",
+        "model": modelo, "name": modelo, "serial": "",
+        "pages": None, "toner_pct": None, "supplies": [],
+        "status": _IPP_STATE.get(st) if isinstance(st, int) else None,
+        "display": None,
+        "alerts": _ipp_alerts(p.get("printer-state-reasons")),
+    }
+    nomes = p.get("marker-names") or []
+    niveis = p.get("marker-levels") or []
+    if isinstance(nomes, str):
+        nomes = [nomes]
+    if isinstance(niveis, int):
+        niveis = [niveis]
+    for nome, nv in zip(nomes, niveis):
+        pct = nv if isinstance(nv, int) and 0 <= nv <= 100 else None
+        dados["supplies"].append({"desc": _texto(nome), "level": nv, "max": 100, "pct": pct})
+        if pct is not None and dados["toner_pct"] is None:
+            dados["toner_pct"] = pct
+    return dados
+
+
 def query(ip: str, community: str = "public", timeout: float = 3.0) -> dict:
-    """Consulta uma impressora. Nunca levanta: em falha devolve ok=False."""
+    """Consulta uma impressora. Tenta SNMP (Brother/laser); se não responder,
+    tenta IPP (Canon/AirPrint). Nunca levanta: em falha devolve ok=False."""
     if not (ip or "").strip():
         return {"ok": False, "error": "sem IP"}
+    ip = ip.strip()
     try:
-        return asyncio.run(_coletar(ip.strip(), community, timeout))
-    except Exception as e:  # noqa: BLE001
-        nome = type(e).__name__
-        msg = "sem resposta (SNMP desligado, impressora fora ou community errada)" \
-            if nome in ("TimeoutError", "asyncio.TimeoutError") else f"{nome}"
-        return {"ok": False, "error": msg}
+        d = asyncio.run(_coletar(ip, community, timeout))
+        d["via"] = "snmp"
+        return d
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        return asyncio.run(_coletar_ipp(ip, timeout))
+    except Exception:  # noqa: BLE001
+        return {"ok": False,
+                "error": "sem resposta (SNMP/IPP indisponível ou impressora fora)"}

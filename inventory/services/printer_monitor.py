@@ -49,6 +49,10 @@ def collect_once(app):
             drum = next((s["pct"] for s in d.get("supplies", [])
                          if s.get("pct") is not None and "drum" in (s.get("desc") or "").lower()),
                         None)
+            # Sem nada mensurável (ex.: Canon de tanque via IPP)? Não grava linha
+            # vazia — o consumo dessas vem por leitura manual.
+            if d.get("pages") is None and d.get("toner_pct") is None and drum is None:
+                continue
             db.session.add(PrinterReading(
                 machine_id=m.id, pages=d.get("pages"),
                 toner_pct=d.get("toner_pct"), drum_pct=drum))

@@ -135,6 +135,35 @@ def snmp_status(mid):
     return jsonify(dados)
 
 
+@bp.route("/<int:mid>/leitura", methods=["POST"])
+@login_required
+def add_reading(mid):
+    """Leitura manual do contador de páginas — para impressoras que não expõem
+    o contador por rede (ex.: Canon de tanque). Alimenta o mesmo histórico, então
+    o relatório de consumo passa a funcionar para elas."""
+    from ..models.printer_reading import PrinterReading
+    m = machine_repo.get_machine(mid)
+    if m.kind != "impressora":
+        abort(400)
+    try:
+        pages = int(request.form.get("pages"))
+    except (TypeError, ValueError):
+        flash("Informe o contador de páginas (número inteiro).", "warning")
+        return redirect(url_for("machines.list_view", kind="impressora"))
+    if pages < 0:
+        flash("Contador inválido.", "warning")
+        return redirect(url_for("machines.list_view", kind="impressora"))
+    toner = request.form.get("toner", type=int)
+    db.session.add(PrinterReading(
+        machine_id=m.id, pages=pages,
+        toner_pct=toner if (toner is not None and 0 <= toner <= 100) else None))
+    db.session.commit()
+    audit.record("create", "machine", m.id,
+                 f"Leitura manual: {pages} páginas em '{m.model or m.name}'")
+    flash(f"Leitura registrada: {pages} páginas.", "success")
+    return redirect(url_for("machines.list_view", kind="impressora"))
+
+
 @bp.route("/impressoras/consumo")
 @login_required
 def printers_report():
