@@ -58,6 +58,77 @@ def test_troca_da_baixa_de_uma_unidade(app, monkeypatch):
         db.session.commit()
 
 
+def test_troca_de_20_para_100_dispara(app, monkeypatch):
+    """Cenário do RH: toner em 20% (acima do limite) trocado -> sobe p/ 100%.
+    Salto grande (+80) deve registrar a baixa."""
+    from inventory.extensions import db
+    from inventory.models.machine import Machine
+    from inventory.models.movement import StockMovement
+    from inventory.models.printer_reading import PrinterReading
+    from inventory.models.product import Product
+    from inventory.services import printer_monitor
+
+    with app.app_context():
+        _reset(printer_monitor)
+        toner = _mk_product(db, "TN-RH", stock_in=2)
+        m = Machine(kind="impressora", model="PR-RH", ip_address="10.0.0.30",
+                    sector="RH", is_active=True, toner_product_id=toner.id)
+        db.session.add(m)
+        db.session.commit()
+        mid, pid = m.id, toner.id
+
+        estado = {"toner": 20}
+        monkeypatch.setattr("inventory.services.snmp_printer.query",
+                            lambda ip, **k: {"ok": True, "pages": 10,
+                                             "toner_pct": estado["toner"], "supplies": []})
+        printer_monitor.collect_once(app)   # 20%
+        estado["toner"] = 100
+        printer_monitor.collect_once(app)   # trocou -> 100%
+
+        assert StockMovement.query.filter_by(product_id=pid, movement_type="OUT").count() == 1
+
+        StockMovement.query.filter_by(product_id=pid).delete()
+        PrinterReading.query.filter_by(machine_id=mid).delete()
+        db.session.delete(db.session.get(Machine, mid))
+        db.session.delete(db.session.get(Product, pid))
+        db.session.commit()
+
+
+def test_subida_pequena_nao_dispara(app, monkeypatch):
+    """Variação pequena (ex.: 60%->85%, salto 25 < 40) NÃO conta como troca."""
+    from inventory.extensions import db
+    from inventory.models.machine import Machine
+    from inventory.models.movement import StockMovement
+    from inventory.models.printer_reading import PrinterReading
+    from inventory.models.product import Product
+    from inventory.services import printer_monitor
+
+    with app.app_context():
+        _reset(printer_monitor)
+        toner = _mk_product(db, "TN-NOISE", stock_in=2)
+        m = Machine(kind="impressora", model="PR-NOISE", ip_address="10.0.0.31",
+                    sector="TI", is_active=True, toner_product_id=toner.id)
+        db.session.add(m)
+        db.session.commit()
+        mid, pid = m.id, toner.id
+
+        estado = {"toner": 60}
+        monkeypatch.setattr("inventory.services.snmp_printer.query",
+                            lambda ip, **k: {"ok": True, "pages": 10,
+                                             "toner_pct": estado["toner"], "supplies": []})
+        printer_monitor.collect_once(app)   # 60%
+        estado["toner"] = 85
+        printer_monitor.collect_once(app)   # +25 -> não é troca
+
+        assert StockMovement.query.filter_by(product_id=pid, movement_type="OUT").count() == 0
+
+        StockMovement.query.filter_by(product_id=pid).delete()
+        PrinterReading.query.filter_by(machine_id=mid).delete()
+        db.session.delete(db.session.get(Machine, mid))
+        db.session.delete(db.session.get(Product, pid))
+        db.session.commit()
+
+
 def test_troca_com_estoque_zero_avisa_ti(app, monkeypatch):
     from inventory.extensions import db
     from inventory.models.machine import Machine

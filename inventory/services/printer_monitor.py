@@ -72,7 +72,8 @@ def collect_once(app):
         timeout = float(app.config.get("SNMP_TIMEOUT", 3))
         limite = _limite(app)
         folga = 5  # só re-arma o alerta quando subir acima de (limite + folga)
-        alto = int(app.config.get("PRINTER_REPLACE_PCT", 80) or 80)  # nível de "cheio" p/ troca
+        alto = int(app.config.get("PRINTER_REPLACE_PCT", 80) or 80)   # nível de "cheio" p/ troca
+        salto = int(app.config.get("PRINTER_REPLACE_JUMP", 40) or 40)  # subida mínima p/ contar troca
 
         impressoras = (Machine.query
                        .filter_by(kind="impressora", is_active=True)
@@ -101,9 +102,12 @@ def collect_once(app):
                                        ("drum", drum, "Cilindro")):
                 if pct is None:
                     continue
-                # Troca: estava baixo (<= limite) e pulou p/ cheio (>= alto) entre
-                # duas leituras -> dá baixa de 1 unidade do material vinculado.
-                if prev[chave] is not None and prev[chave] <= limite and pct >= alto:
+                # Troca: o nível deu um salto grande p/ cima (>= salto) e chegou
+                # perto do cheio (>= alto) entre duas leituras -> baixa de 1 unidade
+                # do material vinculado. Pega trocas feitas em 20%, 15% etc., não só
+                # abaixo do limite de alerta.
+                if (prev[chave] is not None and pct >= alto
+                        and (pct - prev[chave]) >= salto):
                     _registrar_troca(m, chave, rotulo, prev[chave], pct)
                 prev[chave] = pct
                 if pct <= limite and not st[chave]:
