@@ -104,6 +104,10 @@ class Config:
     # Impressoras de rede via SNMP (páginas, toner, cilindro) — porta 161/UDP.
     SNMP_COMMUNITY = os.environ.get("SNMP_COMMUNITY", "public")
     SNMP_TIMEOUT = float(os.environ.get("SNMP_TIMEOUT", "3"))
+    # Coleta periódica (histórico + alerta de suprimento baixo).
+    PRINTER_MONITOR_ENABLED = os.environ.get("PRINTER_MONITOR_ENABLED", "1") in ("1", "true", "True")
+    PRINTER_MONITOR_MINUTES = int(os.environ.get("PRINTER_MONITOR_MINUTES", "60"))
+    PRINTER_SUPPLY_ALERT_PCT = int(os.environ.get("PRINTER_SUPPLY_ALERT_PCT", "10"))
 
     # Monitoramento de uptime (ping/HTTP em segundo plano).
     MONITORING_ENABLED = os.environ.get("MONITORING_ENABLED", "1") in ("1", "true", "True")

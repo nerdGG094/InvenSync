@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Consumo de Impressão{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="ph-title"><span class="ph-icon"><i class="bi bi-printer"></i></span> Consumo de Impressão</h1>
+  <div class="d-flex gap-2 align-items-center">
+    <form method="get" class="d-flex align-items-center gap-2">
+      <label class="small text-muted mb-0">Período (dias)</label>
+      <input type="number" name="dias" min="1" max="365" value="{{ dias }}" class="form-control form-control-sm" style="width:90px" data-autosubmit>
+    </form>
+    <a href="{{ url_for('machines.list_view', kind='impressora') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Impressoras</a>
+  </div>
+</div>
+
+{% if por_setor %}
+<div class="row g-3 mb-3">
+  <div class="col-12 col-lg-5">
+    <div class="table-card p-3">
+      <h2 class="h6 mb-3">Páginas por setor <span class="text-muted small">({{ dias }} dias · total {{ '{:,}'.format(total).replace(',', '.') }})</span></h2>
+      {% for setor, pgs in por_setor %}
+      {% set pct = (pgs / total * 100) if total else 0 %}
+      <div class="mb-2">
+        <div class="d-flex justify-content-between small"><span>{{ setor }}</span><strong>{{ '{:,}'.format(pgs).replace(',', '.') }}</strong></div>
+        <div class="prt-bar" style="height:8px"><i style="width:{{ pct }}%;background:#00c853"></i></div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="col-12 col-lg-7">
+    <div class="table-card p-3">
+      <h2 class="h6 mb-3">Por impressora</h2>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead><tr><th>Impressora</th><th>Setor</th><th class="text-end">Páginas ({{ dias }}d)</th><th class="text-end">Total</th><th>Toner</th><th>Cilindro</th></tr></thead>
+          <tbody>
+            {% for l in linhas %}
+            <tr>
+              <td>{{ l.machine.model or l.machine.name or '—' }}<div class="text-muted small font-monospace">{{ l.machine.ip_address }}</div></td>
+              <td class="small">{{ l.sector }}</td>
+              <td class="text-end">{% if l.pages_period is not none %}<strong>{{ '{:,}'.format(l.pages_period).replace(',', '.') }}</strong>{% else %}<span class="text-muted small" title="Precisa de ao menos 2 coletas no período">—</span>{% endif %}</td>
+              <td class="text-end small text-muted">{{ '{:,}'.format(l.pages_total).replace(',', '.') if l.pages_total is not none else '—' }}</td>
+              <td>{% if l.toner_pct is not none %}<span class="badge {{ 'bg-danger-subtle text-danger-emphasis' if l.toner_pct <= 10 else ('bg-warning-subtle text-warning-emphasis' if l.toner_pct <= 25 else 'bg-success-subtle text-success-emphasis') }}">{{ l.toner_pct }}%</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+              <td>{% if l.drum_pct is not none %}<span class="badge {{ 'bg-danger-subtle text-danger-emphasis' if l.drum_pct <= 10 else ('bg-warning-subtle text-warning-emphasis' if l.drum_pct <= 25 else 'bg-secondary-subtle text-secondary-emphasis') }}">{{ l.drum_pct }}%</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="empty-state">
+  <i class="bi bi-graph-up"></i>
+  <p>Ainda não há histórico suficiente para calcular o consumo.</p>
+  <p class="small text-muted">A coleta roda a cada {{ config.PRINTER_MONITOR_MINUTES }} min — o consumo aparece quando houver ao menos 2 leituras da mesma impressora no período.</p>
+</div>
+{% endif %}
+{% endblock %}

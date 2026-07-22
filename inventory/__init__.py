@@ -341,6 +341,7 @@ def create_app():
     from .models.asset_termo import AssetTermo
     from .models.smart_plug import SmartPlug
     from .models.smart_plug_schedule import SmartPlugSchedule
+    from .models.printer_reading import PrinterReading
 
     # Cria tabelas e semente inicial
     with app.app_context():
@@ -641,5 +642,13 @@ def create_app():
             plug_scheduler.start_scheduler(app)
         except Exception:  # noqa: BLE001
             app.logger.exception("Falha ao iniciar o agendador de tomadas")
+
+    # Coleta SNMP das impressoras (histórico + alerta de suprimento baixo)
+    if app.config.get("PRINTER_MONITOR_ENABLED", True):
+        try:
+            from .services import printer_monitor
+            printer_monitor.start_scheduler(app)
+        except Exception:  # noqa: BLE001
+            app.logger.exception("Falha ao iniciar o monitoramento de impressoras")
 
     return app
