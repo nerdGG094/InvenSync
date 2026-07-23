@@ -15,6 +15,7 @@
     #busca { margin-left:auto; background:#0d1117; color:#fff; border:1px solid #2e3d4d; border-radius:6px; padding:6px 10px; font-size:13px; width:180px; }
     #ranking { background:#3a2330; color:#ffd0d0; border:1px solid #5a2e3d; border-radius:6px; padding:5px 12px; cursor:pointer; font-size:13px; font-weight:600; }
     #todos { background:#20303a; color:#cfe3ff; border:1px solid #2e4d5a; border-radius:6px; padding:5px 12px; cursor:pointer; font-size:13px; font-weight:600; }
+    #auditoria { background:#2a2540; color:#d9d0ff; border:1px solid #443a6b; border-radius:6px; padding:5px 12px; cursor:pointer; font-size:13px; font-weight:600; }
     #sair { background:#1c2530; color:#cfe3ff; border:1px solid #2e3d4d; border-radius:6px; padding:5px 10px; cursor:pointer; font-size:13px; }
     #mapa { width: 100%; height: calc(100% - 46px); }
     .info { font-size: 13px; line-height: 1.5; }
@@ -54,6 +55,21 @@
     #todos-modal .st-ok { color:#7CFC98; font-weight:700; white-space:nowrap; }
     #todos-modal .st-off { color:#ff6b6b; font-weight:700; white-space:nowrap; }
     #todos-modal .sub { color:#9fb0c0; font-size:12px; }
+    /* Modal de auditoria */
+    #auditoria-modal { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:1100; }
+    #auditoria-modal .box { background:#161b22; color:#fff; border-radius:12px; width:min(780px,95vw); max-height:85vh; overflow:auto; box-shadow:0 8px 30px rgba(0,0,0,.6); }
+    #auditoria-modal h2 { margin:0; padding:15px 18px; font-size:17px; border-bottom:1px solid #2e3d4d; display:flex; align-items:center; gap:10px; position:sticky; top:0; background:#161b22; z-index:1; }
+    #auditoria-modal .fechar { margin-left:auto; background:#1c2530; color:#cfe3ff; border:1px solid #2e3d4d; border-radius:6px; padding:5px 12px; cursor:pointer; font-size:13px; }
+    #auditoria-modal .corpo { padding:16px 18px; }
+    #auditoria-modal .resumo { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px; }
+    #auditoria-modal .kpi { background:#0d1117; border:1px solid #222c38; border-radius:10px; padding:10px 14px; min-width:90px; }
+    #auditoria-modal .kpi b { display:block; font-size:22px; line-height:1.15; }
+    #auditoria-modal .kpi span { font-size:11px; color:#9fb0c0; text-transform:uppercase; letter-spacing:.03em; }
+    #auditoria-modal .sec { margin:16px 0 7px; font-size:13px; font-weight:700; display:flex; align-items:center; gap:8px; }
+    #auditoria-modal .item { padding:8px 11px; border-radius:8px; background:#0d1117; border:1px solid #1c2530; margin-bottom:6px; font-size:13px; cursor:pointer; }
+    #auditoria-modal .item:hover { background:#1c2530; }
+    #auditoria-modal .item .sub { color:#9fb0c0; font-size:12px; }
+    #auditoria-modal .ok { color:#7CFC98; } #auditoria-modal .warn { color:#ffb84a; } #auditoria-modal .bad { color:#ff6b6b; }
   </style>
 </head>
 <body>
@@ -73,6 +89,7 @@
     <input id="busca" type="text" placeholder="🔎 buscar aparelho..." />
     <button id="ranking" type="button">🔴 Ranking desligados</button>
     <button id="todos" type="button">📋 Todos os aparelhos</button>
+    <button id="auditoria" type="button">🔍 Auditoria</button>
     <button id="sair" type="button">Sair</button>
   </div>
   <div id="mapa"></div>
@@ -94,6 +111,16 @@
         <button class="fechar" id="todosFechar" type="button">Fechar</button>
       </h2>
       <div id="todosConteudo"></div>
+    </div>
+  </div>
+
+  <!-- Auditoria da frota: relatório de pendências (sem sinal, bateria, versão, etc.) -->
+  <div id="auditoria-modal">
+    <div class="box">
+      <h2>🔍 Auditoria da frota
+        <button class="fechar" id="auditoriaFechar" type="button">Fechar</button>
+      </h2>
+      <div class="corpo" id="auditoriaCorpo"></div>
     </div>
   </div>
 
@@ -286,7 +313,80 @@
     // Clicar numa linha da lista: fecha o modal e vai até o aparelho no mapa.
     function irParaAparelho(id) {
       document.getElementById('todos-modal').style.display = 'none';
+      document.getElementById('auditoria-modal').style.display = 'none';
       if (marcadores[id]) clusterGroup.zoomToShowLayer(marcadores[id], () => marcadores[id].openPopup());
+    }
+
+    // Auditoria da frota: relatório de pendências para o admin agir.
+    document.getElementById('auditoria').addEventListener('click', abrirAuditoria);
+    document.getElementById('auditoriaFechar').addEventListener('click', () => {
+      document.getElementById('auditoria-modal').style.display = 'none';
+    });
+    document.getElementById('auditoria-modal').addEventListener('click', (ev) => {
+      if (ev.target.id === 'auditoria-modal') ev.target.style.display = 'none';
+    });
+
+    // Compara versões "1.29" x "1.28" numericamente (retorna <0, 0 ou >0).
+    function cmpVersao(a, b) {
+      const pa = String(a || '').split('.').map((n) => parseInt(n, 10) || 0);
+      const pb = String(b || '').split('.').map((n) => parseInt(n, 10) || 0);
+      for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+        const x = pa[i] || 0, y = pb[i] || 0;
+        if (x !== y) return x - y;
+      }
+      return 0;
+    }
+
+    function abrirAuditoria() {
+      const arr = Object.keys(ultimos).map((id) => ({ id: id, d: ultimos[id] }));
+      const corpo = document.getElementById('auditoriaCorpo');
+      if (!arr.length) {
+        corpo.innerHTML = '<div class="sec">Nenhum aparelho no mapa ainda.</div>';
+        document.getElementById('auditoria-modal').style.display = 'flex';
+        return;
+      }
+      const offline = arr.filter((x) => estaOffline(x.d));
+      const online = arr.filter((x) => !estaOffline(x.d));
+      const versoes = arr.map((x) => x.d.versao).filter(Boolean);
+      const vTopo = versoes.length ? versoes.reduce((a, b) => cmpVersao(a, b) >= 0 ? a : b) : '';
+      const desatual = arr.filter((x) => x.d.versao && vTopo && cmpVersao(x.d.versao, vTopo) < 0);
+      const batBaixa = online.filter((x) => x.d.bateria != null && x.d.bateria <= 20);
+      const semNome = arr.filter((x) => !(x.d.nome && x.d.nome.trim()));
+      const suspeitos = offline.filter((x) => {
+        const dias = x.d.hora ? (Date.now() - x.d.hora) / 86400000 : 0;
+        const desligou = x.d.desligado_em && x.d.desligado_em >= (x.d.hora || 0) - 5 * 60000;
+        return dias >= 2 && !desligou;
+      });
+
+      const item = (x, sub) => '<div class="item" onclick="irParaAparelho(\'' + x.id + '\')"><b>' +
+        nomeDe(x.d, x.id) + '</b>' + (sub ? ' <span class="sub">· ' + sub + '</span>' : '') + '</div>';
+      const sec = (icone, titulo, cls, lista, subFn) => lista.length
+        ? '<div class="sec ' + cls + '">' + icone + ' ' + titulo + ' (' + lista.length + ')</div>' +
+          lista.map((x) => item(x, subFn(x))).join('')
+        : '';
+
+      let html = '<div class="resumo">' +
+        '<div class="kpi"><b>' + arr.length + '</b><span>Total</span></div>' +
+        '<div class="kpi"><b class="ok">' + online.length + '</b><span>Ligados</span></div>' +
+        '<div class="kpi"><b class="' + (offline.length ? 'bad' : 'ok') + '">' + offline.length + '</b><span>Sem sinal</span></div>' +
+        '<div class="kpi"><b class="' + (desatual.length ? 'warn' : 'ok') + '">' + desatual.length + '</b><span>Desatualiz.</span></div>' +
+        '</div>';
+      if (vTopo) html += '<div style="color:#9fb0c0;font-size:12px;margin-bottom:6px">Versão mais recente na frota: <b>' + vTopo + '</b></div>';
+
+      const corpoSecs =
+        sec('🚩', 'Verificar in loco (possível formatação)', 'bad', suspeitos, (x) =>
+          'sem sinal há ' + fmtHaQuanto(x.d.hora).replace('há ', '') + ', sem registro de desligamento') +
+        sec('📴', 'Sem sinal', 'warn', offline.filter((x) => suspeitos.indexOf(x) < 0), (x) => {
+          const desligou = x.d.desligado_em && x.d.desligado_em >= (x.d.hora || 0) - 5 * 60000;
+          return desligou ? 'desligado às ' + fmtHora(x.d.desligado_em) : 'sem sinal ' + fmtHaQuanto(x.d.hora);
+        }) +
+        sec('🔋', 'Bateria baixa', 'warn', batBaixa, (x) => x.d.bateria + '%' + (x.d.carregando ? ' (carregando)' : '')) +
+        sec('⬆️', 'Versão desatualizada', 'warn', desatual, (x) => 'v' + (x.d.versao || '?') + ' (frota: ' + vTopo + ')') +
+        sec('🏷️', 'Sem nome configurado', '', semNome, (x) => x.d.modelo || '');
+
+      html += corpoSecs || '<div class="sec ok">✓ Frota saudável — nada a sinalizar.</div>';
+      corpo.innerHTML = html;
+      document.getElementById('auditoria-modal').style.display = 'flex';
     }
 
     firebase.auth().onAuthStateChanged((user) => {
