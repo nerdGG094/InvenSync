@@ -217,7 +217,11 @@ def printers_report():
         primeira = ultima = None
         if len(leituras) >= 2:
             primeira, ultima = leituras[0], leituras[-1]
-            paginas = max(0, (ultima.pages or 0) - (primeira.pages or 0))
+            # Soma só as SUBIDAS entre leituras consecutivas — tolera o contador
+            # "cair" no meio do período (correção de IP no cadastro, troca de
+            # equipamento, reset). O simples fim−início ficaria negativo → 0.
+            paginas = sum(max(0, (dep.pages or 0) - (ant.pages or 0))
+                          for ant, dep in zip(leituras, leituras[1:]))
         elif leituras:
             ultima = leituras[-1]
         linhas.append({

@@ -98,6 +98,36 @@ def test_printers_report_computes_pages_in_date_range(app, auth_client):
         db.session.commit()
 
 
+def test_printers_report_tolera_queda_de_contador(app, auth_client):
+    """Contador que 'cai' no meio do período (IP corrigido / troca de aparelho):
+    o consumo soma só as subidas entre leituras consecutivas."""
+    from datetime import datetime, timedelta
+    from inventory.extensions import db
+    from inventory.models.machine import Machine
+    from inventory.models.printer_reading import PrinterReading
+
+    with app.app_context():
+        m = Machine(kind="impressora", model="PYTEST-DROP", ip_address="10.0.0.77", sector="TI")
+        db.session.add(m)
+        db.session.commit()
+        mid = m.id
+        base = datetime.now()
+        # aparelho errado (500000->543210), correção de IP, aparelho certo (1000->1467)
+        for d, pg in [(6, 500000), (5, 543210), (2, 1000), (1, 1467)]:
+            db.session.add(PrinterReading(machine_id=mid, pages=pg,
+                                          taken_at=base - timedelta(days=d)))
+        db.session.commit()
+
+    r = auth_client.get("/machines/impressoras/consumo?dias=7")
+    assert r.status_code == 200
+    assert "43.677".encode() in r.data     # 43210 + 467 (a queda não zera o total)
+
+    with app.app_context():
+        PrinterReading.query.filter_by(machine_id=mid).delete()
+        Machine.query.filter_by(id=mid).delete()
+        db.session.commit()
+
+
 def test_ipp_alerts_decode():
     """printer-state-reasons (IPP) -> alertas legíveis; 'none' e sufixos tratados."""
     assert sp._ipp_alerts("none") == []
