@@ -68,7 +68,7 @@
     #auditoria-modal .sec { margin:16px 0 7px; font-size:13px; font-weight:700; display:flex; align-items:center; gap:8px; }
     #auditoria-modal .item { padding:8px 11px; border-radius:8px; background:#0d1117; border:1px solid #1c2530; margin-bottom:6px; font-size:13px; cursor:pointer; }
     #auditoria-modal .item:hover { background:#1c2530; }
-    #auditoria-modal .item .sub { color:#9fb0c0; font-size:12px; }
+    #auditoria-modal .item .sub { color:#9fb0c0; font-size:12px; margin-top:3px; line-height:1.55; }
     #auditoria-modal .ok { color:#7CFC98; } #auditoria-modal .warn { color:#ffb84a; } #auditoria-modal .bad { color:#ff6b6b; }
   </style>
 </head>
@@ -358,8 +358,12 @@
         return dias >= 2 && !desligou;
       });
 
+      // Última situação conhecida quando o aparelho emitiu o último sinal.
+      const ultimaSituacao = (d) => '🔋 ' + (d.bateria == null ? '?' : d.bateria + '%') +
+        ' · ' + (d.carregando ? '⚡ estava na tomada' : 'estava na bateria') +
+        ' · último sinal ' + fmtHora(d.hora);
       const item = (x, sub) => '<div class="item" onclick="irParaAparelho(\'' + x.id + '\')"><b>' +
-        nomeDe(x.d, x.id) + '</b>' + (sub ? ' <span class="sub">· ' + sub + '</span>' : '') + '</div>';
+        nomeDe(x.d, x.id) + '</b>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>';
       const sec = (icone, titulo, cls, lista, subFn) => lista.length
         ? '<div class="sec ' + cls + '">' + icone + ' ' + titulo + ' (' + lista.length + ')</div>' +
           lista.map((x) => item(x, subFn(x))).join('')
@@ -375,10 +379,12 @@
 
       const corpoSecs =
         sec('🚩', 'Verificar in loco (possível formatação)', 'bad', suspeitos, (x) =>
-          'sem sinal há ' + fmtHaQuanto(x.d.hora).replace('há ', '') + ', sem registro de desligamento') +
+          'sem sinal há ' + fmtHaQuanto(x.d.hora).replace('há ', '') + ', sem registro de desligamento<br>' +
+          ultimaSituacao(x.d)) +
         sec('📴', 'Sem sinal', 'warn', offline.filter((x) => suspeitos.indexOf(x) < 0), (x) => {
           const desligou = x.d.desligado_em && x.d.desligado_em >= (x.d.hora || 0) - 5 * 60000;
-          return desligou ? 'desligado às ' + fmtHora(x.d.desligado_em) : 'sem sinal ' + fmtHaQuanto(x.d.hora);
+          const motivo = desligou ? 'desligado às ' + fmtHora(x.d.desligado_em) : 'sem sinal ' + fmtHaQuanto(x.d.hora);
+          return motivo + '<br>' + ultimaSituacao(x.d);
         }) +
         sec('🔋', 'Bateria baixa', 'warn', batBaixa, (x) => x.d.bateria + '%' + (x.d.carregando ? ' (carregando)' : '')) +
         sec('⬆️', 'Versão desatualizada', 'warn', desatual, (x) => 'v' + (x.d.versao || '?') + ' (frota: ' + vTopo + ')') +
