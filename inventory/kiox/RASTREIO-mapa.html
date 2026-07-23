@@ -425,6 +425,37 @@
       }
     }
 
+    // Diagnóstico do "sem sinal": cruza as pistas que o app envia (desligamento
+    // registrado, hora do boot, bateria, tempo fora) para dizer o que
+    // provavelmente houve com o aparelho — desligado x sem internet x formatado.
+    function diagnosticoHtml(d) {
+      const partes = [];
+      if (estaOffline(d)) {
+        // O desligamento explica o sumiço se aconteceu perto/depois do último sinal.
+        const desligadoAgora = d.desligado_em && d.desligado_em >= (d.hora || 0) - 5 * 60000;
+        if (desligadoAgora) {
+          partes.push('<b style="color:#b45309">🔌 DESLIGADO às ' + fmtHora(d.desligado_em) +
+            '</b> — desligamento normal registrado (não é queda de internet)');
+          if (d.bateria != null && d.bateria <= 10)
+            partes.push('🔋 bateria estava em ' + d.bateria + '% → provável bateria esgotada');
+        } else {
+          partes.push('📶 Sem registro de desligamento → ou está <b>ligado sem internet</b>, ' +
+            'ou desligou de forma abrupta (bateria removida / travou / reset)');
+          if (d.bateria != null && d.bateria <= 10)
+            partes.push('🔋 última bateria: ' + d.bateria + '% → pode ter apagado por bateria');
+        }
+        const dias = d.hora ? (Date.now() - d.hora) / 86400000 : 0;
+        if (dias >= 2) partes.push('<b style="color:#e53935">⚠ sem retorno há ' + Math.floor(dias) +
+          ' dia(s)</b> → verificar in loco (possível formatação ou aparelho guardado desligado)');
+      } else {
+        if (d.boot_em) partes.push('🟢 ligado (sem reiniciar) desde ' + fmtHora(d.boot_em));
+        if (d.ultimo_desligamento) partes.push('último desligamento: ' + fmtHora(d.ultimo_desligamento));
+      }
+      if (!partes.length) return '';
+      return '<div style="margin-top:7px;padding:7px 10px;background:#eef2f6;border-radius:8px;font-size:12px;line-height:1.65">' +
+        partes.join('<br>') + '</div>';
+    }
+
     // Monta o conteúdo do popup de um aparelho (usa o endereço em cache, se houver).
     function popupHtml(id) {
       const d = ultimos[id]; if (!d) return '';
@@ -446,6 +477,7 @@
         'Atualizado: ' + fmtHora(d.hora) + ' (' + fmtHaQuanto(d.hora) + ')<br>' +
         'ID: <code style="font-size:11px;color:#9fb0c0">' + id.slice(0, 14) + '…</code><br>' +
         '📍 ' + (enderecos[id] || '<i>buscando endereço…</i>') +
+        diagnosticoHtml(d) +
         '<div style="margin-top:9px;display:flex;gap:6px;flex-wrap:wrap">' +
         '<a class="gmaps" href="' + gmaps + '" target="_blank" rel="noopener">Abrir no Google Maps</a>' +
         btnRemover + '</div></div>';
@@ -559,14 +591,16 @@
 
     // Exporta a frota atual em CSV (abre no Excel).
     function exportarCsv() {
-      const linhas = [['Nome', 'Modelo', 'Status', 'Bateria_%', 'Na_tomada', 'Latitude', 'Longitude', 'Precisao_m', 'Versao', 'Ultima_atualizacao']];
+      const linhas = [['Nome', 'Modelo', 'Status', 'Bateria_%', 'Na_tomada', 'Latitude', 'Longitude', 'Precisao_m', 'Versao', 'Ultima_atualizacao', 'Ligado_desde', 'Ultimo_desligamento']];
       Object.keys(ultimos).forEach((id) => {
         const d = ultimos[id];
         linhas.push([
           nomeDe(d, id), d.modelo || '', estaOffline(d) ? 'SEM SINAL' : 'OK',
           (d.bateria == null ? '' : d.bateria), (d.carregando ? 'Sim' : 'Nao'), d.lat, d.lon,
           (d.precisao_m ? Math.round(d.precisao_m) : ''), d.versao || '',
-          d.hora ? new Date(d.hora).toLocaleString('pt-BR') : ''
+          d.hora ? new Date(d.hora).toLocaleString('pt-BR') : '',
+          d.boot_em ? new Date(d.boot_em).toLocaleString('pt-BR') : '',
+          d.ultimo_desligamento ? new Date(d.ultimo_desligamento).toLocaleString('pt-BR') : ''
         ]);
       });
       const csv = linhas.map((l) => l.map((c) => '"' + String(c).replace(/"/g, '""') + '"').join(';')).join('\r\n');
