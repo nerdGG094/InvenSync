@@ -56,3 +56,13 @@ def test_pagina_admin_e_bloqueio(app, auth_client, common_client):
     # sem credenciais configuradas, mostra o guia de configuração
     assert "Mercado Livre".encode() in r.data
     assert common_client.get("/cotacoes").status_code in (403, 302)
+
+
+def test_deep_link_sem_credenciais(app, auth_client):
+    """Sem API configurada, a busca oferece o link do SITE do ML ordenado por preço."""
+    with app.app_context():
+        app.config["MELI_CLIENT_ID"] = ""
+        app.config["MELI_CLIENT_SECRET"] = ""
+    r = auth_client.get("/cotacoes?q=toner+tn3492")
+    assert r.status_code == 200
+    assert b"https://lista.mercadolivre.com.br/toner-tn3492_OrderId_PRICE" in r.data

@@ -42,24 +42,6 @@
   </h1>
 </div>
 
-{% if not configurado %}
-<div class="table-card p-4">
-  <div class="d-flex align-items-start gap-3">
-    <i class="bi bi-key fs-2 text-warning"></i>
-    <div>
-      <h2 class="h6 mb-2">Falta configurar o acesso ao Mercado Livre (1x só)</h2>
-      <ol class="small mb-2">
-        <li>Acesse <strong>developers.mercadolivre.com.br</strong> e entre com a conta ML da empresa;</li>
-        <li>Em <em>Suas integrações → Criar aplicação</em>, crie um app (nome livre, ex.: <em>InvenSync Cotações</em>; redirect URI pode ser <code>https://localhost</code>);</li>
-        <li>Copie o <strong>APP ID</strong> e a <strong>Secret Key</strong>;</li>
-        <li>No <code>.env</code> do servidor, preencha <code>MELI_CLIENT_ID</code> e <code>MELI_CLIENT_SECRET</code> e reinicie o InvenSync.</li>
-      </ol>
-      <div class="small text-muted">A busca do ML exige aplicativo autenticado — a consulta anônima foi desativada por eles.</div>
-    </div>
-  </div>
-</div>
-{% else %}
-
 <div class="table-card p-3 mb-3">
   <form method="get" class="d-flex flex-wrap gap-2 align-items-center">
     <div class="input-group" style="max-width:480px">
@@ -73,8 +55,43 @@
       <label class="form-check-label small" for="swNovos">Somente novos</label>
     </div>
     <button class="btn btn-primary"><i class="bi bi-cash-coin"></i> Cotar</button>
+    {% if ml_url %}
+    <a class="btn btn-outline-light" href="{{ ml_url }}" target="_blank" rel="noopener"
+       title="Abre a busca no site do Mercado Livre, ordenada por menor preço">
+      <i class="bi bi-box-arrow-up-right"></i> Abrir no site do ML
+    </a>
+    {% endif %}
   </form>
 </div>
+
+{% if not configurado %}
+{% if q %}
+<div class="table-card p-4 mb-3 text-center">
+  <p class="mb-2"><i class="bi bi-box-arrow-up-right me-1 text-success"></i>
+    Sua cotação de “<strong>{{ q }}</strong>” abre no site do Mercado Livre
+    <strong>já ordenada por menor preço</strong>:</p>
+  <a class="btn btn-primary" href="{{ ml_url }}" target="_blank" rel="noopener">
+    <i class="bi bi-cash-coin"></i> Ver cotação no Mercado Livre
+  </a>
+</div>
+{% endif %}
+<div class="table-card p-4">
+  <div class="d-flex align-items-start gap-3">
+    <i class="bi bi-key fs-2 text-warning"></i>
+    <div>
+      <h2 class="h6 mb-2">Quer os preços aqui dentro, em cards? Configure a API (1x só)</h2>
+      <ol class="small mb-2">
+        <li>Acesse <strong>developers.mercadolivre.com.br</strong> e entre com a conta ML da empresa;</li>
+        <li>Em <em>Suas integrações → Criar aplicação</em>, crie um app (nome livre, ex.: <em>InvenSync Cotações</em>; redirect URI pode ser <code>https://localhost</code>);</li>
+        <li>Copie o <strong>APP ID</strong> e a <strong>Secret Key</strong>;</li>
+        <li>No <code>.env</code> do servidor, preencha <code>MELI_CLIENT_ID</code> e <code>MELI_CLIENT_SECRET</code> e reinicie o InvenSync.</li>
+      </ol>
+      <div class="small text-muted">Sem a API, o botão acima abre a busca no site do ML (o ML bloqueia
+        consultas anônimas do servidor — verificado; Google/Bing/DuckDuckGo também barram robôs).</div>
+    </div>
+  </div>
+</div>
+{% else %}
 
 {% if not q %}
 <div class="empty-state"><i class="bi bi-cash-coin"></i>

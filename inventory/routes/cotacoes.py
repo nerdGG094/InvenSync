@@ -20,10 +20,15 @@ def index():
     os melhores preços, do menor para o maior."""
     q = (request.args.get("q") or "").strip()
     novos = (request.args.get("novos", "1") != "0")
-    resultado = None
-    if q:
-        resultado = mercado_livre.search(current_app, q, novos=novos)
     configurado = bool((current_app.config.get("MELI_CLIENT_ID") or "").strip()
                        and (current_app.config.get("MELI_CLIENT_SECRET") or "").strip())
+    resultado = None
+    if q and configurado:
+        resultado = mercado_livre.search(current_app, q, novos=novos)
+    # Deep-link p/ abrir a mesma busca no SITE do ML, já ordenada por menor
+    # preço — funciona sem credenciais (o navegador do admin não é bloqueado).
+    ml_url = ("https://lista.mercadolivre.com.br/"
+              + q.replace(" ", "-") + "_OrderId_PRICE") if q else ""
     return render_template("cotacoes/list.html", q=q, novos=novos,
-                           resultado=resultado, configurado=configurado)
+                           resultado=resultado, configurado=configurado,
+                           ml_url=ml_url)
