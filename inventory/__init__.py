@@ -453,6 +453,7 @@ def create_app():
     from .routes.search import bp as search_bp  # ⬅️ NOVO: busca global (Ctrl+K)
     from .routes.errors import bp as errors_bp  # ⬅️ NOVO: log central de erros (admin)
     from .routes.smartplugs import bp as smartplugs_bp  # tomadas inteligentes Tuya/NeoAvant (admin)
+    from .routes.cotacoes import bp as cotacoes_bp      # cotações no Mercado Livre (admin)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -489,6 +490,7 @@ def create_app():
     app.register_blueprint(search_bp, url_prefix="/busca")  # ⬅️ NOVO: busca global (Ctrl+K)
     app.register_blueprint(errors_bp, url_prefix="/errors")  # ⬅️ NOVO: log de erros (admin)
     app.register_blueprint(smartplugs_bp, url_prefix="/tomadas")  # tomadas inteligentes (admin)
+    app.register_blueprint(cotacoes_bp, url_prefix="/cotacoes")   # cotações Mercado Livre (admin)
 
     # ===== Controle de acesso por módulo =====
     # Usuários comuns (não-admin) só acessam Chamados e o próprio Perfil.

@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Cotações{% endblock %}
+
+{% block extra_head %}
+<style>
+  .cot-grid{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); }
+  .cot-card{ position:relative; display:flex; flex-direction:column; gap:.5rem;
+    background:#15211a; border:1px solid #243024; border-radius:16px; padding:1rem;
+    transition:transform .14s, border-color .14s; }
+  .cot-card:hover{ transform:translateY(-3px); border-color:#2f6b46; }
+  .cot-card.best{ border-color:#1f7a4d; box-shadow:0 0 0 1px #1f7a4d; }
+  .cot-rank{ position:absolute; top:-10px; left:14px; font-size:.66rem; font-weight:700;
+    padding:.15rem .55rem; border-radius:999px; background:#0f5132; color:#8affb9;
+    border:1px solid #1f7a4d; letter-spacing:.06em; }
+  .cot-top{ display:flex; gap:.7rem; align-items:flex-start; }
+  .cot-foto{ width:64px; height:64px; object-fit:contain; background:#fff;
+    border-radius:10px; flex:none; }
+  .cot-titulo{ font-size:.83rem; color:#dceede; line-height:1.3; max-height:3.4em; overflow:hidden; }
+  .cot-preco{ font-size:1.45rem; font-weight:700; color:#79ffb0; line-height:1; }
+  .cot-parc{ font-size:.72rem; color:#8fb0a0; }
+  .cot-vend{ font-size:.74rem; color:#9bb6a6; display:flex; align-items:center; gap:.3rem; }
+  .cot-badges{ display:flex; flex-wrap:wrap; gap:.3rem; }
+  .cot-badges .badge{ font-size:.66rem; }
+  .cot-foot{ margin-top:auto; }
+
+  html[data-theme="light"] .cot-card{ background:#fff; border-color:#e6ece8; }
+  html[data-theme="light"] .cot-card:hover{ border-color:#8fd3a9; }
+  html[data-theme="light"] .cot-card.best{ border-color:#0f7a43; box-shadow:0 0 0 1px #0f7a43; }
+  html[data-theme="light"] .cot-rank{ background:#d6f5e2; color:#0f5132; border-color:#9fdcb8; }
+  html[data-theme="light"] .cot-titulo{ color:#173a28; }
+  html[data-theme="light"] .cot-preco{ color:#0f7a43; }
+  html[data-theme="light"] .cot-parc{ color:#5d7d6b; }
+  html[data-theme="light"] .cot-vend{ color:#40614f; }
+  html[data-theme="light"] .cot-foto{ border:1px solid #e6ece8; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="ph-title"><span class="ph-icon"><i class="bi bi-cash-coin"></i></span> Cotações
+    <span class="badge bg-warning-subtle text-warning-emphasis ph-count">Mercado Livre</span>
+  </h1>
+</div>
+
+{% if not configurado %}
+<div class="table-card p-4">
+  <div class="d-flex align-items-start gap-3">
+    <i class="bi bi-key fs-2 text-warning"></i>
+    <div>
+      <h2 class="h6 mb-2">Falta configurar o acesso ao Mercado Livre (1x só)</h2>
+      <ol class="small mb-2">
+        <li>Acesse <strong>developers.mercadolivre.com.br</strong> e entre com a conta ML da empresa;</li>
+        <li>Em <em>Suas integrações → Criar aplicação</em>, crie um app (nome livre, ex.: <em>InvenSync Cotações</em>; redirect URI pode ser <code>https://localhost</code>);</li>
+        <li>Copie o <strong>APP ID</strong> e a <strong>Secret Key</strong>;</li>
+        <li>No <code>.env</code> do servidor, preencha <code>MELI_CLIENT_ID</code> e <code>MELI_CLIENT_SECRET</code> e reinicie o InvenSync.</li>
+      </ol>
+      <div class="small text-muted">A busca do ML exige aplicativo autenticado — a consulta anônima foi desativada por eles.</div>
+    </div>
+  </div>
+</div>
+{% else %}
+
+<div class="table-card p-3 mb-3">
+  <form method="get" class="d-flex flex-wrap gap-2 align-items-center">
+    <div class="input-group" style="max-width:480px">
+      <span class="input-group-text"><i class="bi bi-search"></i></span>
+      <input class="form-control" type="search" name="q" value="{{ q }}"
+             placeholder="Ex.: toner TN3492, cilindro DR3440, HD 1TB..." autofocus>
+    </div>
+    <div class="form-check form-switch">
+      <input class="form-check-input" type="checkbox" role="switch" id="swNovos"
+             name="novos" value="1" {{ 'checked' if novos }} onchange="this.form.submit()">
+      <label class="form-check-label small" for="swNovos">Somente novos</label>
+    </div>
+    <button class="btn btn-primary"><i class="bi bi-cash-coin"></i> Cotar</button>
+  </form>
+</div>
+
+{% if not q %}
+<div class="empty-state"><i class="bi bi-cash-coin"></i>
+  <p>Digite o equipamento/suprimento acima para buscar os melhores preços.</p>
+</div>
+{% elif resultado and not resultado.ok %}
+<div class="table-card"><div class="empty-state"><i class="bi bi-wifi-off"></i>
+  <p>{{ resultado.error if resultado.error != 'nao-configurado' else 'Credenciais do Mercado Livre ausentes.' }}</p>
+</div></div>
+{% elif resultado and not resultado.itens %}
+<div class="table-card"><div class="empty-state"><i class="bi bi-emoji-neutral"></i>
+  <p>Nada encontrado para “{{ q }}”. Tente outra palavra-chave.</p>
+</div></div>
+{% elif resultado %}
+<div class="small text-muted mb-2">
+  <i class="bi bi-sort-numeric-down me-1"></i>{{ resultado.itens|length }} ofertas
+  (de {{ '{:,}'.format(resultado.total).replace(',', '.') }} no ML), da mais barata para a mais cara.
+</div>
+<div class="cot-grid">
+  {% for i in resultado.itens %}
+  <div class="cot-card {{ 'best' if loop.index <= 3 }}">
+    {% if loop.index <= 3 %}<span class="cot-rank">{{ loop.index }}º MELHOR PREÇO</span>{% endif %}
+    <div class="cot-top">
+      {% if i.foto %}<img class="cot-foto" src="{{ i.foto }}" alt="" loading="lazy">{% endif %}
+      <div class="cot-titulo">{{ i.titulo }}</div>
+    </div>
+    <div>
+      <div class="cot-preco">{{ i.preco_fmt }}</div>
+      {% if i.parcelas %}<div class="cot-parc">{{ i.parcelas }}</div>{% endif %}
+    </div>
+    <div class="cot-badges">
+      {% if i.loja_oficial %}<span class="badge bg-info-subtle text-info-emphasis"><i class="bi bi-patch-check"></i> {{ i.loja_oficial }}</span>{% endif %}
+      {% if i.full %}<span class="badge bg-success-subtle text-success-emphasis"><i class="bi bi-lightning-charge"></i> Full</span>{% endif %}
+      {% if i.frete_gratis %}<span class="badge bg-success-subtle text-success-emphasis"><i class="bi bi-truck"></i> Frete grátis</span>{% endif %}
+      {% if not i.novo %}<span class="badge bg-warning-subtle text-warning-emphasis">Usado</span>{% endif %}
+    </div>
+    {% if i.vendedor %}<div class="cot-vend"><i class="bi bi-shop"></i> {{ i.vendedor }}</div>{% endif %}
+    <div class="cot-foot">
+      <a class="btn btn-sm btn-outline-light w-100" href="{{ i.link }}" target="_blank" rel="noopener">
+        <i class="bi bi-box-arrow-up-right"></i> Ver no Mercado Livre
+      </a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}
