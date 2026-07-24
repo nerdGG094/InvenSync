@@ -33,7 +33,9 @@ setup\start_invensync.bat     # launches PyQt5 panel + waitress
 ## Architecture
 
 ### App factory & boot sequence (`inventory/__init__.py`)
-`create_app()` is the spine. On every boot, in order: (optional `ProxyFix` when `BEHIND_PROXY=1`) → init extensions (`db`, `login_manager`, `csrf`, `limiter`) → CSRF error handler → import **all** models → `db.create_all()` → `_run_light_migrations()` → seed functions → `user_loader` (parses `id:token`, see session-token below) → register ~36 blueprints → access-control `before_request` → context processors (`avatar_url`, `page_url`) / error handlers (incl. 429 → friendly redirect) → `/sw.js` route → start background **monitoring** and **alerts** schedulers.
+`create_app()` is the spine. On every boot, in order: (optional `ProxyFix` when `BEHIND_PROXY=1`) → init extensions (`db`, `login_manager`, `csrf`, `limiter`) → CSRF error handler → import **all** models → `db.create_all()` → `_run_light_migrations()` → seed/backfill functions (incl. `_encrypt_credentials` + `_encrypt_router_secrets`, which cipher any plaintext secrets at rest) → `user_loader` (parses `id:token`, see session-token below) → register ~35 blueprints → access-control `before_request` → context processors (`avatar_url`, `page_url`) / error handlers (incl. 429 → friendly redirect) → `/sw.js` route → start background schedulers: **monitoring** (uptime), **alerts** (proactive), **printer_monitor** (SNMP), **plug_scheduler** (smart plugs), **backup_scheduler** (DB backups).
+
+Background schedulers each run on their own daemon thread and are guarded by a `_started` flag + `WERKZEUG_RUN_MAIN` (so the Flask reloader doesn't double-start them in dev).
 
 When adding a model: **import it inside `create_app()`** (in the model-import block) or `create_all()` won't see it. When adding a blueprint: import + `register_blueprint(..., url_prefix=...)` in the same file.
 
@@ -62,12 +64,35 @@ There is no separate "employee" table anymore. `models/user.py` is the central r
 
 ### Services (`inventory/services/`)
 - `audit.py` — `audit.record(action, entity, entity_id, summary)`; best-effort, never raises, used across mutations.
-- `whatsapp.py` — outbound notifications via CallMeBot (`notify_user`, `notify_ti`); no-op unless `WHATSAPP_ENABLED=1`.
+- `mailer.py` — **outbound notifications by e-mail (SMTP)**; `notify_ti` / `notify_user`, no-op unless `MAIL_ENABLED=1`. This **replaced the old WhatsApp/CallMeBot** integration (removed). The `/wpp` blueprint is now the e-mail test/diagnostics page (kept the legacy `wpp` name).
 - `monitoring.py` — background uptime scheduler started in `create_app()` when `MONITORING_ENABLED`.
-- `alerts.py` — proactive-alerts scheduler (`ALERTS_ENABLED`): low stock, expiring licenses/warranties, stuck tickets. **Upserts a single auto-announcement** (title `AUTO_TITLE`) in Central de Avisos + daily WhatsApp digest. `alerts.publish(app)` is also triggerable from the announcements page button.
+- `alerts.py` — proactive-alerts scheduler (`ALERTS_ENABLED`): low stock, expiring licenses/warranties, stuck tickets. **Upserts a single auto-announcement** (title `AUTO_TITLE`) in Central de Avisos + daily **e-mail** digest. `alerts.publish(app)` is also triggerable from the announcements page button.
+- `crypto.py` — Fernet symmetric encryption for secrets at rest; key derived from `VAULT_KEY` (falls back to `SECRET_KEY`). `encrypt`/`decrypt` (tolerant of legacy plaintext), `looks_encrypted` (structural check — never re-ciphers a token). Used by the **credentials vault** and the **routers** module. **`VAULT_KEY` must never change** or existing ciphertext is unrecoverable.
+- `snmp_printer.py` — reads network printers via **SNMP** (Printer-MIB pages/supplies + Brother private toner OID) with an **IPP fallback** (`pyipp`) for Canon that only exposes state/alerts. `query(ip)` is best-effort → `{"ok": bool, ...}`.
+- `printer_monitor.py` — background scheduler (`PRINTER_MONITOR_ENABLED`): scans active network printers, writes `PrinterReading` history, **e-mails TI once per supply-low event**, and **auto-registers a stock OUT movement** when a supply jumps back up (toner/drum swap detected — compares to the last DB reading, robust to restarts).
+- `router_ctl.py` — probes a router's admin panel (online/latency + Basic-Auth vs form detection) for the routers control panel; `auth_url`/`base_url` helpers. Best-effort.
+- `net_scan.py` — ARP-based network discovery for the `/rede` module: reads `arp -a`, filters, reverse-DNS names in parallel; optional ping-sweep of known /24s. Best-effort.
+- `tuya.py` / `plug_scheduler.py` — smart-plug (Tuya/NeoAvant LAN) control + scheduled on/off, backing the `/tomadas` module.
+- `backup_scheduler.py` — periodic PostgreSQL dumps for the `/backups` module. `errorlog.py` — captured error log for `/errors`.
 - `pagination.py` — `paginate(items, per_page=20)` slices an in-memory list using `?page`/`?per_page` (20/50/100) and returns `(slice, meta)`; render with the `pager` macro in `templates/_macros.html` (uses the `page_url` context helper to preserve filters).
 - `patrimony.py` — company-wide `PAT-0001` sequence shared by machines & mobiles.
-- `exports.py` — `xlsx_response(...)` for Excel downloads. `people.py`, `assets.py`, `docs.py`, `twofa.py` (TOTP), `inventory_service.py`.
+- `exports.py` — `xlsx_response(...)` for Excel downloads. `people.py`, `assets.py`, `docs.py`, `twofa.py` (TOTP), `inventory_service.py`, `imports.py`.
+
+### Printer SNMP monitoring & supply auto-baixa
+Network printers (`Machine.kind == "impressora"` with an `ip_address`) are polled via `services/snmp_printer.py`. `services/printer_monitor.py` runs in the background and:
+- stores one `PrinterReading` per printer per cycle (pages/toner%/drum%) — the `models/printer_reading.py` history table;
+- e-mails TI when a supply crosses `PRINTER_SUPPLY_ALERT_PCT` (re-arms after recovery);
+- **auto-registers a stock OUT movement** of 1 unit when a supply level jumps up by ≥ `PRINTER_REPLACE_JUMP` (default 40) and reaches ≥ `PRINTER_REPLACE_PCT` (default 80) — i.e. a physical swap. The printer's linked supply is `Machine.toner_product_id` / `Machine.drum_product_id` (FK → `product.id`, added via light migration; the machine form shows two comboboxes filtered by the "Toner" / "Cilindro/Fotocondutor" **product categories**, only for printers). Emails TI if the material's stock was already ≤ 0.
+
+The consumption report (`/machines/impressoras/consumo`, `routes/machines.py::printers_report`) sums only the **rises** between consecutive readings, so a counter that "drops" mid-period (IP corrected, device swapped) never yields a negative total. It also shows a "Resma de papel" KPI (pages ÷ 500).
+
+### Router control panel (`/routers`, admin)
+Beyond CRUD, each router card shows a **live status** (AJAX to `routers.status` via `services/router_ctl.py`) and a smart access button. Note the hard constraint: browsers strip URL-embedded credentials, so there is **no reliable one-click auto-login** even for Basic-Auth panels — the button opens `http://IP` and copies the admin password to the clipboard. Router admin/Wi-Fi passwords are **encrypted at rest** (`crypto`, VAULT_KEY); revealed on demand via `routers.senha` with audit — never rendered raw into the page.
+
+### Admin utility modules
+- `/tomadas` (smart plugs) — Tuya/NeoAvant LAN plugs with on/off scheduling (`services/tuya.py` + `plug_scheduler.py`); plug local keys encrypted with `crypto`.
+- `/cotacoes` (Cotações) — type a model → **deep-link** to the Mercado Livre listing ordered by lowest price (opens in the admin's browser; ML blocks server-side search, so there is intentionally **no API/scraping**).
+- `/rede` (Rede/ARP) — on-demand network discovery via `net_scan`; the page opens instantly and scans only when the button is clicked (JSON endpoint `rede.scan`, with a CSS "radar" loading animation).
 
 ### Auth hardening
 - **Rate limiting** (`extensions.limiter`, Flask-Limiter, memory store): `auth.login` POST `10/min;40/h`, `auth.login_2fa` POST `10/min`. 429 → friendly flash + redirect.
@@ -82,7 +107,7 @@ Admin-only JSON endpoint scanning products/machines/mobiles/chips/tickets/users/
 `static/manifest.webmanifest` + `static/sw.js` (cache-first for `/static/` only) + `icon-192/512.png`. The service worker is served from root via the `/sw.js` route (scope `/`); registration + manifest link live in `base.html`.
 
 ### Domain modules (Blueprints)
-Estoque (products/movements/kanban/reports/categories/suppliers), Máquinas & submódulos (machines + cleanings/maintenance/mobile/chips/monitoring/routers/labels, all under `/machines/...` or related prefixes), Colaboradores/departments/assets, **Chamados** (`tickets` — helpdesk with comments timeline, attachments, status workflow, WhatsApp notifications), **Central de Avisos** (`announcements` — internal bulletin board; admins post, everyone reads), KB, Admin tools (credentials vault, audit, docs, **kiox**), profile, auth (with optional 2FA/TOTP).
+Estoque (products/movements/kanban/reports/categories/suppliers), Máquinas & submódulos (machines + cleanings/maintenance/mobile/chips/monitoring/routers/labels, all under `/machines/...` or related prefixes), Colaboradores/departments/assets, **Chamados** (`tickets` — helpdesk with comments timeline, attachments, status workflow, e-mail notifications), **Central de Avisos** (`announcements` — internal bulletin board; admins post, everyone reads), KB, Admin tools (credentials vault, audit, docs, **kiox**, **tomadas** smart plugs, **cotações** ML price deep-links, **rede** ARP discovery, e-mail test at `/wpp`, error log at `/errors`, DB backups), profile, auth (with optional 2FA/TOTP).
 
 The **kiox** module (`routes/kiox.py`) serves a self-contained fleet-tracking map (`inventory/kiox/RASTREIO-mapa.html`, Leaflet + Firebase) raw via `send_file` (bypassing Jinja); it's a copied snapshot — if the original under the external `KioX/` folder changes, the copy must be re-synced.
 
@@ -104,8 +129,10 @@ Quick navigation aid; for fields/endpoints read the module itself. Several "Máq
 | `/licenses` `/domains` | licenses/domains | | `/docs` | living docs (admin) |
 | `/machines` | machines | | `/kiox` | fleet map (admin) |
 | `/machines/mobile` | mobile devices | | `/backups` | DB backups (admin) |
-| `/machines/cleanings` | cleanings | | `/wpp` | WhatsApp test |
-| `/busca` | global search JSON (admin) | | `/backups` | DB backups + download |
+| `/machines/cleanings` | cleanings | | `/wpp` | e-mail test/diagnostics (admin) |
+| `/machines/impressoras/consumo` | printer consumption | | `/tomadas` | smart plugs (admin) |
+| `/busca` | global search JSON (admin) | | `/cotacoes` | ML price deep-links (admin) |
+| `/errors` | error log (admin) | | `/rede` | ARP network discovery (admin) |
 | (no prefix) | `auth` (login/2FA), `health` (/health), `/sw.js` (PWA) | | | |
 
 ## UI conventions
@@ -125,4 +152,11 @@ These are driven by markup conventions + global scripts; reuse them instead of r
 ## Configuration
 All secrets/config come from `.env` (see `.env.example`), loaded in `inventory/config.py`. DB is PostgreSQL via `psycopg` 3 (`postgresql+psycopg://...`); `DATABASE_URL` overrides the discrete `DB_*` vars. Timestamps use server-local time (`db.func.now()`), not UTC. Uploads (avatars, ticket attachments, NF files) go under `inventory/static/uploads/...` with a 16 MB cap.
 
-Notable optional toggles: `MONITORING_ENABLED`, `ALERTS_ENABLED`/`ALERTS_*`, `WHATSAPP_ENABLED`, `INACTIVITY_MINUTES` (0=off), and — for HTTPS behind a reverse proxy — `BEHIND_PROXY=1` + `SESSION_COOKIE_SECURE=1` (see `docs/HTTPS.md`).
+Secrets encrypted at rest (credentials vault, router passwords, smart-plug keys) use `VAULT_KEY` — **never change it** or existing ciphertext becomes unrecoverable.
+
+Notable optional toggles:
+- **E-mail** (replaces WhatsApp): `MAIL_ENABLED=1` + `SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASSWORD/SMTP_TLS`, `MAIL_FROM`, `MAIL_TI` (TI recipients, comma-separated).
+- **Printers/SNMP**: `SNMP_COMMUNITY`, `SNMP_TIMEOUT`, `PRINTER_MONITOR_ENABLED`, `PRINTER_MONITOR_MINUTES`, `PRINTER_SUPPLY_ALERT_PCT`, `PRINTER_REPLACE_PCT`/`PRINTER_REPLACE_JUMP` (swap-detection thresholds).
+- **Smart plugs**: `PLUG_SCHEDULER_ENABLED`, `PLUG_OFFLINE_*`.
+- **Schedulers/alerts**: `MONITORING_ENABLED`, `ALERTS_ENABLED`/`ALERTS_*`, `INACTIVITY_MINUTES` (0=off).
+- **HTTPS behind a reverse proxy**: `BEHIND_PROXY=1` + `SESSION_COOKIE_SECURE=1` (see `docs/HTTPS.md`).
