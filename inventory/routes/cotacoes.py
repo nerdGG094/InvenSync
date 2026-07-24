@@ -1,8 +1,6 @@
 # inventory/routes/cotacoes.py
-from flask import Blueprint, render_template, request, current_app, abort
+from flask import Blueprint, render_template, request, abort
 from flask_login import login_required, current_user
-
-from ..services import mercado_livre
 
 bp = Blueprint("cotacoes", __name__)
 
@@ -16,19 +14,9 @@ def _only_admin():
 
 @bp.route("")
 def index():
-    """Cotações do Mercado Livre: digite uma palavra-chave (ex.: TN3492) e veja
-    os melhores preços, do menor para o maior."""
+    """Cotações: digite o modelo/equipamento e abra a lista completa no Mercado
+    Livre, já ordenada por menor preço (deep-link — não precisa de API)."""
     q = (request.args.get("q") or "").strip()
-    novos = (request.args.get("novos", "1") != "0")
-    configurado = bool((current_app.config.get("MELI_CLIENT_ID") or "").strip()
-                       and (current_app.config.get("MELI_CLIENT_SECRET") or "").strip())
-    resultado = None
-    if q and configurado:
-        resultado = mercado_livre.search(current_app, q, novos=novos)
-    # Deep-link p/ abrir a mesma busca no SITE do ML, já ordenada por menor
-    # preço — funciona sem credenciais (o navegador do admin não é bloqueado).
     ml_url = ("https://lista.mercadolivre.com.br/"
               + q.replace(" ", "-") + "_OrderId_PRICE") if q else ""
-    return render_template("cotacoes/list.html", q=q, novos=novos,
-                           resultado=resultado, configurado=configurado,
-                           ml_url=ml_url)
+    return render_template("cotacoes/list.html", q=q, ml_url=ml_url)

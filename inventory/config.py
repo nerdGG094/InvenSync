@@ -109,10 +109,6 @@ class Config:
     PRINTER_MONITOR_MINUTES = int(os.environ.get("PRINTER_MONITOR_MINUTES", "60"))
     PRINTER_SUPPLY_ALERT_PCT = int(os.environ.get("PRINTER_SUPPLY_ALERT_PCT", "10"))
 
-    # Cotações no Mercado Livre (API oficial; app criado no DevCenter do ML).
-    MELI_CLIENT_ID = os.environ.get("MELI_CLIENT_ID", "")
-    MELI_CLIENT_SECRET = os.environ.get("MELI_CLIENT_SECRET", "")
-
     # Monitoramento de uptime (ping/HTTP em segundo plano).
     MONITORING_ENABLED = os.environ.get("MONITORING_ENABLED", "1") in ("1", "true", "True")
     MONITORING_INTERVAL = int(os.environ.get("MONITORING_INTERVAL", "120"))  # segundos
