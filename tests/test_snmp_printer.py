@@ -91,6 +91,7 @@ def test_printers_report_computes_pages_in_date_range(app, auth_client):
     r = auth_client.get("/machines/impressoras/consumo?dias=7")
     assert r.status_code == 200
     assert b"12.345" in r.data          # 112345 - 100000 = 12345 (pt-BR)
+    assert "Maços de papel".encode() in r.data   # card de maços (500 folhas = 1)
 
     with app.app_context():
         PrinterReading.query.filter_by(machine_id=mid).delete()

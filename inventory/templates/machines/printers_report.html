@@ -112,26 +112,35 @@
 
 {% if por_setor %}
 {# ---- KPIs ---- #}
-<div class="row g-3 mb-3">
-  <div class="col-6 col-lg-3">
+{% set macos = total / 500 %}
+{% set macos_fmt = '{:,.1f}'.format(macos).replace(',', '@').replace('.', ',').replace('@', '.') %}
+<div class="row g-3 mb-3 row-cols-2 row-cols-lg-5">
+  <div class="col">
     <div class="card stat-card h-100"><div class="card-body d-flex align-items-center justify-content-between">
       <div><div class="text-muted small">Páginas no período</div><div class="h3 mb-0 number">{{ num(total) }}</div></div>
       <i class="bi bi-files fs-2 text-success"></i>
     </div></div>
   </div>
-  <div class="col-6 col-lg-3">
+  <div class="col">
+    <div class="card stat-card h-100" style="border-left-color:#a78bfa"><div class="card-body d-flex align-items-center justify-content-between">
+      <div><div class="text-muted small">Maços de papel</div><div class="h3 mb-0 number" style="color:#c4b5fd">{{ macos_fmt }}</div>
+        <div class="text-muted" style="font-size:.66rem">1 maço = 500 folhas</div></div>
+      <i class="bi bi-stack fs-2" style="color:#a78bfa"></i>
+    </div></div>
+  </div>
+  <div class="col">
     <div class="card stat-card h-100" style="border-left-color:#0dcaf0"><div class="card-body d-flex align-items-center justify-content-between">
       <div><div class="text-muted small">Impressoras com consumo</div><div class="h3 mb-0 number text-info">{{ ns.com_dados }}</div></div>
       <i class="bi bi-printer fs-2 text-info"></i>
     </div></div>
   </div>
-  <div class="col-6 col-lg-3">
+  <div class="col">
     <div class="card stat-card h-100" style="border-left-color:#ffc107"><div class="card-body d-flex align-items-center justify-content-between">
       <div><div class="text-muted small">Média por impressora</div><div class="h3 mb-0 number text-warning">{{ num(media) }}</div></div>
       <i class="bi bi-bar-chart fs-2 text-warning"></i>
     </div></div>
   </div>
-  <div class="col-6 col-lg-3">
+  <div class="col">
     <div class="card stat-card h-100" style="border-left-color:{{ '#f44336' if ns.criticos else '#198754' }}"><div class="card-body d-flex align-items-center justify-content-between">
       <div><div class="text-muted small">Suprimento crítico</div><div class="h3 mb-0 number {{ 'text-danger' if ns.criticos else 'text-success' }}">{{ ns.criticos }}</div></div>
       <i class="bi {{ 'bi-exclamation-octagon text-danger' if ns.criticos else 'bi-check-circle text-success' }} fs-2"></i>
