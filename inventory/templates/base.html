@@ -373,7 +373,7 @@
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('cotacoes.') %}active{% endif %}" href="{{ url_for('cotacoes.index') }}"><i class="bi bi-cash-coin me-2"></i> Cotações</a></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('rede.') %}active{% endif %}" href="{{ url_for('rede.index') }}"><i class="bi bi-diagram-3 me-2"></i> Rede (ARP)</a></li>
             <li><a class="dropdown-item" href="{{ url_for('kiox.index') }}" target="_blank" rel="noopener"><i class="bi bi-geo-alt me-2"></i> Kiox <span class="text-muted small">(mapa)</span></a></li>
-            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('smartplugs.') %}active{% endif %}" href="{{ url_for('smartplugs.list_view') }}"><i class="bi bi-plug me-2 text-success"></i> Tomadas Inteligentes</a></li>
+            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('smartplugs.') %}active{% endif %}" href="{{ url_for('smartplugs.list_view') }}"><i class="bi bi-plug me-2"></i> Tomadas Inteligentes</a></li>
             <li><hr class="dropdown-divider"></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('docs.') %}active{% endif %}" href="{{ url_for('docs.index') }}"><i class="bi bi-journal-code me-2"></i> Documentação</a></li>
           </ul>

@@ -1,5 +1,6 @@
 # inventory/routes/rede.py
-from flask import Blueprint, render_template, request, current_app, abort
+from flask import (Blueprint, render_template, request, current_app, abort,
+                   jsonify, url_for)
 from flask_login import login_required, current_user
 
 from ..models.machine import Machine
@@ -31,19 +32,27 @@ def _match_maps():
 
 @bp.route("")
 def index():
+    # Página abre instantânea; o scan (lento) roda por AJAX ao clicar no botão.
+    return render_template("rede/list.html")
+
+
+@bp.route("/scan")
+def scan():
+    """Executa a descoberta e devolve JSON. Chamado por AJAX ao clicar no botão."""
     sweep = request.args.get("sweep") == "1"
     dispositivos = net_scan.scan(current_app, sweep=sweep)
     por_ip, por_nome = _match_maps()
 
+    out = []
     for d in dispositivos:
-        host_curto = (d["name"].split(".")[0] if d["name"] else "").lower()
-        m = por_ip.get(d["ip"]) or (por_nome.get(host_curto) if host_curto else None)
-        d["machine"] = m
-        d["machine_label"] = (m.model or m.name) if m else ""
-        d["machine_id"] = m.id if m else None
-
-    total = len(dispositivos)
-    cadastrados = sum(1 for d in dispositivos if d["machine"])
-    return render_template("rede/list.html", dispositivos=dispositivos,
-                           total=total, cadastrados=cadastrados,
-                           desconhecidos=total - cadastrados, sweep=sweep)
+        host = (d["name"].split(".")[0] if d["name"] else "")
+        m = por_ip.get(d["ip"]) or (por_nome.get(host.lower()) if host else None)
+        out.append({
+            "ip": d["ip"], "mac": d["mac"], "name": d["name"], "host": host,
+            "machine_label": (m.model or m.name) if m else "",
+            "machine_url": url_for("machines.edit", mid=m.id) if m else "",
+        })
+    total = len(out)
+    cadastrados = sum(1 for d in out if d["machine_url"])
+    return jsonify(total=total, cadastrados=cadastrados,
+                   desconhecidos=total - cadastrados, dispositivos=out)

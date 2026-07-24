@@ -11,98 +11,125 @@
   html[data-theme="light"] .net-mac{ color:#5d7d6b; }
   html[data-theme="light"] .net-name{ color:#173a28; }
   html[data-theme="light"] .net-name .sub{ color:#7a9384; }
+
+  /* Animação de "escaneando" — radar com anéis expandindo */
+  .scan-wrap{ display:flex; flex-direction:column; align-items:center; gap:1rem; padding:2.5rem 1rem; }
+  .radar{ position:relative; width:96px; height:96px; }
+  .radar .ring{ position:absolute; inset:0; border:2px solid #00e676; border-radius:50%;
+    opacity:0; animation:radar 1.8s ease-out infinite; }
+  .radar .ring:nth-child(2){ animation-delay:.6s; }
+  .radar .ring:nth-child(3){ animation-delay:1.2s; }
+  .radar .core{ position:absolute; inset:38px; border-radius:50%; background:#00e676;
+    box-shadow:0 0 14px rgba(0,230,118,.7); }
+  @keyframes radar{ 0%{ transform:scale(.35); opacity:.9 } 100%{ transform:scale(1); opacity:0 } }
+  .scan-txt{ color:#9bb6a6; font-size:.9rem; }
+  .scan-txt .dots::after{ content:''; animation:dots 1.2s steps(4,end) infinite; }
+  @keyframes dots{ 0%{content:''} 25%{content:'.'} 50%{content:'..'} 75%{content:'...'} }
+  html[data-theme="light"] .scan-txt{ color:#5d7d6b; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="page-header">
   <h1 class="ph-title"><span class="ph-icon"><i class="bi bi-diagram-3"></i></span> Rede
-    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ total }} ativos</span>
+    <span class="badge bg-secondary-subtle text-secondary-emphasis ph-count" id="hdrCount">ARP</span>
   </h1>
   <div class="d-flex gap-2">
-    <a href="{{ url_for('rede.index') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-clockwise"></i> Atualizar</a>
-    <a href="{{ url_for('rede.index', sweep=1) }}" class="btn btn-primary btn-sm" id="btnSweep"><i class="bi bi-broadcast"></i> Varredura completa</a>
+    <button class="btn btn-primary btn-sm" id="btnScan"><i class="bi bi-search"></i> Escanear rede</button>
+    <button class="btn btn-outline-light btn-sm" id="btnSweep"><i class="bi bi-broadcast"></i> Varredura completa</button>
   </div>
 </div>
 
-<div class="row g-3 mb-3 row-cols-2 row-cols-lg-4">
+<div class="row g-3 mb-3 row-cols-2 row-cols-lg-4" id="kpis">
   <div class="col">
     <div class="card stat-card h-100"><div class="card-body d-flex align-items-center justify-content-between">
-      <div><div class="text-muted small">Ativos na rede</div><div class="h3 mb-0 number">{{ total }}</div></div>
+      <div><div class="text-muted small">Ativos na rede</div><div class="h3 mb-0 number" id="kTotal">—</div></div>
       <i class="bi bi-pc-display-horizontal fs-2 text-success"></i>
     </div></div>
   </div>
   <div class="col">
     <div class="card stat-card h-100" style="border-left-color:#0dcaf0"><div class="card-body d-flex align-items-center justify-content-between">
-      <div><div class="text-muted small">Cadastrados</div><div class="h3 mb-0 number text-info">{{ cadastrados }}</div></div>
+      <div><div class="text-muted small">Cadastrados</div><div class="h3 mb-0 number text-info" id="kCad">—</div></div>
       <i class="bi bi-check2-circle fs-2 text-info"></i>
     </div></div>
   </div>
   <div class="col">
     <div class="card stat-card h-100" style="border-left-color:#ffc107"><div class="card-body d-flex align-items-center justify-content-between">
-      <div><div class="text-muted small">Desconhecidos</div><div class="h3 mb-0 number text-warning">{{ desconhecidos }}</div></div>
+      <div><div class="text-muted small">Desconhecidos</div><div class="h3 mb-0 number text-warning" id="kDesc">—</div></div>
       <i class="bi bi-question-circle fs-2 text-warning"></i>
     </div></div>
   </div>
   <div class="col">
     <div class="card stat-card h-100" style="border-left-color:#a78bfa"><div class="card-body d-flex align-items-center justify-content-between">
-      <div><div class="text-muted small">Faixas</div><div class="h6 mb-0" style="color:#c4b5fd">ARP + DNS</div>
-        <div class="text-muted" style="font-size:.66rem">dispositivos vistos agora</div></div>
+      <div><div class="text-muted small">Método</div><div class="h6 mb-0" style="color:#c4b5fd">ARP + DNS</div>
+        <div class="text-muted" style="font-size:.66rem" id="kQuando">clique para escanear</div></div>
       <i class="bi bi-hdd-network fs-2" style="color:#a78bfa"></i>
     </div></div>
   </div>
 </div>
 
 <div class="table-card p-2">
-  <div class="d-flex justify-content-between align-items-center px-2 py-1">
-    <span class="small text-muted"><i class="bi bi-info-circle me-1"></i>
-      Dispositivos ativos na rede agora (tabela ARP + nome via DNS).
-      {% if not sweep %}Use <strong>Varredura completa</strong> para procurar quem ainda não apareceu.{% endif %}
-    </span>
+  <div id="resultado">
+    <div class="empty-state"><i class="bi bi-diagram-3"></i>
+      <p>Clique em <strong>Escanear rede</strong> para descobrir os dispositivos ativos agora.</p>
+      <p class="small text-muted"><strong>Varredura completa</strong> procura na rede inteira (mais lenta, pega até quem bloqueia ping).</p>
+    </div>
   </div>
-  {% if dispositivos %}
-  <div class="table-responsive">
-    <table class="table table-sm align-middle mb-0">
-      <thead><tr>
-        <th style="width:32px"></th><th>IP</th><th>Nome (DNS)</th><th>MAC</th><th>Cadastro</th>
-      </tr></thead>
-      <tbody>
-        {% for d in dispositivos %}
-        <tr>
-          <td><span class="net-dot" title="ativo"></span></td>
-          <td class="font-monospace">{{ d.ip }}</td>
-          <td class="net-name">
-            {% if d.name %}{{ d.name.split('.')[0] }}<div class="sub">{{ d.name }}</div>
-            {% else %}<span class="text-muted">—</span>{% endif %}
-          </td>
-          <td class="net-mac">{{ d.mac }}</td>
-          <td>
-            {% if d.machine %}
-              <a href="{{ url_for('machines.edit', mid=d.machine_id) }}" class="badge bg-success-subtle text-success-emphasis text-decoration-none">
-                <i class="bi bi-pc-display"></i> {{ d.machine_label }}
-              </a>
-            {% else %}
-              <span class="badge bg-warning-subtle text-warning-emphasis"><i class="bi bi-question-circle"></i> não cadastrado</span>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  <div class="empty-state"><i class="bi bi-diagram-3"></i>
-    <p>Nenhum dispositivo na tabela ARP ainda.</p>
-    <p class="small text-muted">Clique em <strong>Varredura completa</strong> para procurar na rede.</p>
-  </div>
-  {% endif %}
 </div>
 
 <script nonce="{{ csp_nonce() }}">
-  var b = document.getElementById('btnSweep');
-  if (b) b.addEventListener('click', function(){
-    b.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Varrendo…';
-    b.classList.add('disabled');
-  });
+(function(){
+  var SCAN_URL = "{{ url_for('rede.scan') }}";
+  var box = document.getElementById('resultado');
+  var btnScan = document.getElementById('btnScan');
+  var btnSweep = document.getElementById('btnSweep');
+
+  function esc(s){ var d=document.createElement('div'); d.textContent=(s==null?'':String(s)); return d.innerHTML; }
+
+  function loading(txt){
+    box.innerHTML = '<div class="scan-wrap">'
+      + '<div class="radar"><span class="ring"></span><span class="ring"></span><span class="ring"></span><span class="core"></span></div>'
+      + '<div class="scan-txt">' + esc(txt) + ' <span class="dots"></span></div></div>';
+  }
+
+  function render(d){
+    document.getElementById('kTotal').textContent = d.total;
+    document.getElementById('kCad').textContent = d.cadastrados;
+    document.getElementById('kDesc').textContent = d.desconhecidos;
+    document.getElementById('hdrCount').textContent = d.total + ' ativos';
+    document.getElementById('kQuando').textContent = 'agora mesmo';
+    if (!d.dispositivos.length){
+      box.innerHTML = '<div class="empty-state"><i class="bi bi-diagram-3"></i><p>Nenhum dispositivo encontrado.</p></div>';
+      return;
+    }
+    var linhas = d.dispositivos.map(function(x){
+      var nome = x.host ? (esc(x.host) + '<div class="sub">' + esc(x.name) + '</div>') : '<span class="text-muted">—</span>';
+      var cad = x.machine_url
+        ? '<a href="' + esc(x.machine_url) + '" class="badge bg-success-subtle text-success-emphasis text-decoration-none"><i class="bi bi-pc-display"></i> ' + esc(x.machine_label) + '</a>'
+        : '<span class="badge bg-warning-subtle text-warning-emphasis"><i class="bi bi-question-circle"></i> não cadastrado</span>';
+      return '<tr><td><span class="net-dot"></span></td>'
+        + '<td class="font-monospace">' + esc(x.ip) + '</td>'
+        + '<td class="net-name">' + nome + '</td>'
+        + '<td class="net-mac">' + esc(x.mac) + '</td>'
+        + '<td>' + cad + '</td></tr>';
+    }).join('');
+    box.innerHTML = '<div class="table-responsive"><table class="table table-sm align-middle mb-0">'
+      + '<thead><tr><th style="width:32px"></th><th>IP</th><th>Nome (DNS)</th><th>MAC</th><th>Cadastro</th></tr></thead>'
+      + '<tbody>' + linhas + '</tbody></table></div>';
+  }
+
+  function run(sweep){
+    btnScan.classList.add('disabled'); btnSweep.classList.add('disabled');
+    loading(sweep ? 'Varrendo a rede inteira (pode levar ~15s)' : 'Escaneando a rede');
+    fetch(SCAN_URL + (sweep ? '?sweep=1' : ''), {credentials:'same-origin'})
+      .then(function(r){ return r.json(); })
+      .then(render)
+      .catch(function(){ box.innerHTML = '<div class="empty-state"><i class="bi bi-wifi-off"></i><p>Falha ao escanear. Tente de novo.</p></div>'; })
+      .finally(function(){ btnScan.classList.remove('disabled'); btnSweep.classList.remove('disabled'); });
+  }
+
+  btnScan.addEventListener('click', function(){ run(false); });
+  btnSweep.addEventListener('click', function(){ run(true); });
+})();
 </script>
 {% endblock %}

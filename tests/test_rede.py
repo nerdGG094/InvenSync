@@ -37,9 +37,16 @@ def test_scan_monta_dispositivos(app, monkeypatch):
     assert devs[0]["ip"] == "192.168.0.10" and devs[0]["name"].startswith("Comercial1")
 
 
-def test_pagina_rede_admin_e_bloqueio(app, auth_client, common_client, monkeypatch):
+def test_pagina_rede_abre_instantanea(app, auth_client):
+    """A página abre sem escanear (o scan é sob demanda por AJAX)."""
+    r = auth_client.get("/rede")
+    assert r.status_code == 200 and b"Escanear rede" in r.data
+
+
+def test_scan_endpoint_json_e_bloqueio(app, auth_client, common_client, monkeypatch):
     monkeypatch.setattr(net_scan, "scan", lambda app, sweep=False: [
         {"ip": "192.168.0.10", "mac": "1c-39-47-0e-11-99", "name": "Comercial1.palazzo.local"}])
-    r = auth_client.get("/rede")
-    assert r.status_code == 200 and b"192.168.0.10" in r.data
-    assert common_client.get("/rede").status_code in (403, 302)
+    j = auth_client.get("/rede/scan").get_json()
+    assert j["total"] == 1 and j["dispositivos"][0]["ip"] == "192.168.0.10"
+    assert j["dispositivos"][0]["host"] == "Comercial1"
+    assert common_client.get("/rede/scan").status_code in (403, 302)
