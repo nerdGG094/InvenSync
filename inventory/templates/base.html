@@ -370,8 +370,8 @@
           <ul class="dropdown-menu" aria-labelledby="ddAdmin">
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('credentials.') %}active{% endif %}" href="{{ url_for('credentials.list_view') }}"><i class="bi bi-key me-2"></i> Cofre</a></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('audit.') %}active{% endif %}" href="{{ url_for('audit.list_view') }}"><i class="bi bi-shield-lock me-2"></i> Auditoria</a></li>
-            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('cotacoes.') %}active{% endif %}" href="{{ url_for('cotacoes.index') }}"><i class="bi bi-cash-coin me-2 text-warning"></i> Cotações</a></li>
-            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('rede.') %}active{% endif %}" href="{{ url_for('rede.index') }}"><i class="bi bi-diagram-3 me-2 text-info"></i> Rede (ARP)</a></li>
+            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('cotacoes.') %}active{% endif %}" href="{{ url_for('cotacoes.index') }}"><i class="bi bi-cash-coin me-2"></i> Cotações</a></li>
+            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('rede.') %}active{% endif %}" href="{{ url_for('rede.index') }}"><i class="bi bi-diagram-3 me-2"></i> Rede (ARP)</a></li>
             <li><a class="dropdown-item" href="{{ url_for('kiox.index') }}" target="_blank" rel="noopener"><i class="bi bi-geo-alt me-2"></i> Kiox <span class="text-muted small">(mapa)</span></a></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('smartplugs.') %}active{% endif %}" href="{{ url_for('smartplugs.list_view') }}"><i class="bi bi-plug me-2 text-success"></i> Tomadas Inteligentes</a></li>
             <li><hr class="dropdown-divider"></li>
