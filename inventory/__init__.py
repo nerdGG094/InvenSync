@@ -52,6 +52,9 @@ def _run_light_migrations():
         # Impressoras: material de toner/cilindro (Estoque) p/ baixa automática na troca.
         'ALTER TABLE machine ADD COLUMN IF NOT EXISTS toner_product_id INTEGER REFERENCES product(id)',
         'ALTER TABLE machine ADD COLUMN IF NOT EXISTS drum_product_id INTEGER REFERENCES product(id)',
+        # Identidade de rede estável (DHCP): MAC + hostname p/ o módulo Rede/ARP.
+        'ALTER TABLE machine ADD COLUMN IF NOT EXISTS mac_address VARCHAR(20)',
+        'ALTER TABLE machine ADD COLUMN IF NOT EXISTS hostname VARCHAR(120)',
         # Backfill idempotente (só onde ainda está NULL), casando por nome normalizado.
         'UPDATE "user" u SET department_id = d.id FROM department d '
         'WHERE u.department_id IS NULL AND u.sector IS NOT NULL '

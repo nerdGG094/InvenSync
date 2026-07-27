@@ -61,9 +61,29 @@
             {{ form.ip_address.label(class="form-label fw-semibold") }}
             <div class="input-group">
               <span class="input-group-text"><i class="bi bi-hdd-network"></i></span>
-              {{ form.ip_address(class="form-control number" + (" is-invalid" if form.ip_address.errors else ""), placeholder="Ex.: 192.168.0.50") }}
+              {{ form.ip_address(class="form-control number" + (" is-invalid" if form.ip_address.errors else ""), placeholder="Ex.: 192.168.0.50 (ou DHCP)") }}
             </div>
             {{ field_error(form.ip_address) }}
+          </div>
+        </div>
+
+        <div class="row g-3 mt-1">
+          <div class="col-12 col-md-6">
+            {{ form.mac_address.label(class="form-label fw-semibold") }}
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-ethernet"></i></span>
+              {{ form.mac_address(class="form-control" + (" is-invalid" if form.mac_address.errors else ""), placeholder="Ex.: 1c-39-47-0e-11-99") }}
+            </div>
+            <div class="form-text">Identidade fixa na rede — casa 100% no módulo Rede mesmo com DHCP.</div>
+            {{ field_error(form.mac_address) }}
+          </div>
+          <div class="col-12 col-md-6">
+            {{ form.hostname.label(class="form-label fw-semibold") }}
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-tag"></i></span>
+              {{ form.hostname(class="form-control" + (" is-invalid" if form.hostname.errors else ""), placeholder="Ex.: COMERCIAL1") }}
+            </div>
+            {{ field_error(form.hostname) }}
           </div>
         </div>
 

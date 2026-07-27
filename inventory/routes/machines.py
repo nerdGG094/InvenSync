@@ -10,7 +10,7 @@ from ..extensions import db
 from ..repositories import machine_repo
 from ..forms.machines import MachineForm
 from ..models.machine import Machine
-from ..services import people, patrimony, imports, audit, snmp_printer
+from ..services import people, patrimony, imports, audit, snmp_printer, net_scan
 
 bp = Blueprint("machines", __name__)
 
@@ -56,6 +56,14 @@ def _fill_supply_choices(form: MachineForm, m: "Machine | None" = None):
                     getattr(form, fld).choices.append((p.id, f"{p.name} ({p.sku})"))
 
 
+def _norm_mac(v):
+    """Normaliza MAC p/ minúsculo com hífens (aceita ':' ou '-' ou solto)."""
+    hexd = "".join(c for c in (v or "").lower() if c in "0123456789abcdef")
+    if len(hexd) != 12:
+        return ((v or "").strip().lower().replace(":", "-")) or None
+    return "-".join(hexd[i:i + 2] for i in range(0, 12, 2))
+
+
 def _form_to_kwargs(form: MachineForm) -> dict:
     def s(v):
         v = (v or "").strip()
@@ -72,6 +80,8 @@ def _form_to_kwargs(form: MachineForm) -> dict:
         assigned_user=s(form.assigned_user.data),
         user_id=people.user_id_for(form.assigned_user.data),   # mantém a FK em dia
         ip_address=s(form.ip_address.data),
+        mac_address=_norm_mac(form.mac_address.data),
+        hostname=s(form.hostname.data),
         sector=sector,
         patrimony=s(form.patrimony.data),
         serial_number=s(form.serial_number.data),
@@ -168,6 +178,15 @@ def snmp_status(mid):
         timeout=float(current_app.config.get("SNMP_TIMEOUT", 3)),
     )
     return jsonify(dados)
+
+
+@bp.route("/rede-ativos")
+@login_required
+def rede_ativos():
+    """MACs e IPs ativos agora na rede (tabela ARP, sem DNS — rápido). Usado por
+    AJAX na lista de máquinas p/ marcar online/offline (casa por MAC ou IP)."""
+    macs, ips = net_scan.active_set()
+    return jsonify(macs=sorted(macs), ips=sorted(ips))
 
 
 @bp.route("/impressoras/consumo")

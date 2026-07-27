@@ -111,7 +111,9 @@
 <div class="machine-grid" id="machGrid">
   {% for g in grupos %}{% for m in g['items'] %}
   {% set km = kinds.get(m.kind, ('bi-hdd','—','secondary')) %}
-  <article class="machine-card {{ 'dim' if not m.is_active }}" data-dept="{{ g.name or '__none__' }}" style="border-left-color:{{ '#5c6b5c' if not m.is_active else kind_color.get(m.kind,'#5c6b5c') }}">
+  <article class="machine-card {{ 'dim' if not m.is_active }}" data-dept="{{ g.name or '__none__' }}"
+           data-kind="{{ m.kind }}" data-mac="{{ (m.mac_address or '')|lower }}" data-ipaddr="{{ m.ip_address or '' }}"
+           style="border-left-color:{{ '#5c6b5c' if not m.is_active else kind_color.get(m.kind,'#5c6b5c') }}">
     <div class="machine-top">
       <span class="machine-avatar"><i class="bi {{ km[0] }}"></i></span>
       <div class="flex-grow-1 min-w-0">
@@ -133,6 +135,9 @@
       {% if m.ip_address %}<span class="pchip blue mono"><i class="bi bi-hdd-network"></i> {{ m.ip_address }}</span>{% endif %}
       {% if m.patrimony %}<span class="pchip amber" title="Patrimônio"><i class="bi bi-tag"></i> {{ m.patrimony }}</span>{% endif %}
       {% if m.serial_number %}<span class="pchip mono" title="Nº de série"><i class="bi bi-upc-scan"></i> {{ m.serial_number }}</span>{% endif %}
+      {% if m.kind != 'impressora' and (m.mac_address or (m.ip_address and m.ip_address|upper != 'DHCP')) %}
+      <span class="pchip net-live" data-role="live" title="Status na rede"><i class="bi bi-arrow-repeat"></i> …</span>
+      {% endif %}
     </div>
 
     {# Impressora de rede: páginas/toner/cilindro/estado ao vivo (SNMP, ou IPP p/ Canon) #}
@@ -212,6 +217,28 @@
         box.innerHTML = '<span class="text-muted small"><i class="bi bi-exclamation-triangle"></i> erro na consulta</span>';
       });
   });
+
+  // Status ao vivo dos PCs/notebooks: 1 consulta lê o ARP e marca cada card
+  // (casa por MAC ou IP). Rápido — não faz DNS.
+  var vivos = document.querySelectorAll('.machine-card [data-role="live"]');
+  if (vivos.length){
+    fetch("{{ url_for('machines.rede_ativos') }}")
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        var macs = new Set(d.macs || []), ips = new Set(d.ips || []);
+        vivos.forEach(function(chip){
+          var card = chip.closest('.machine-card');
+          var mac = (card.dataset.mac || '').trim();
+          var ip = (card.dataset.ipaddr || '').trim();
+          var online = (mac && macs.has(mac)) || (ip && ip.toUpperCase() !== 'DHCP' && ips.has(ip));
+          if (online){ chip.className = 'pchip green net-live'; chip.innerHTML = '<i class="bi bi-broadcast"></i> online'; }
+          else { chip.className = 'pchip net-live'; chip.innerHTML = '<i class="bi bi-plug"></i> offline'; }
+        });
+      })
+      .catch(function(){
+        vivos.forEach(function(chip){ chip.style.display = 'none'; });
+      });
+  }
 })();
 </script>
 {% endblock %}

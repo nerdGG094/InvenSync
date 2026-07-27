@@ -104,9 +104,17 @@
     }
     var linhas = d.dispositivos.map(function(x){
       var nome = x.host ? (esc(x.host) + '<div class="sub">' + esc(x.name) + '</div>') : '<span class="text-muted">—</span>';
-      var cad = x.machine_url
-        ? '<a href="' + esc(x.machine_url) + '" class="badge bg-success-subtle text-success-emphasis text-decoration-none"><i class="bi bi-pc-display"></i> ' + esc(x.machine_label) + '</a>'
-        : '<span class="badge bg-warning-subtle text-warning-emphasis"><i class="bi bi-question-circle"></i> não cadastrado</span>';
+      var cad;
+      if (x.machine_url){
+        cad = '<a href="' + esc(x.machine_url) + '" class="badge bg-success-subtle text-success-emphasis text-decoration-none"><i class="bi bi-pc-display"></i> ' + esc(x.machine_label) + '</a>';
+        if (!x.mac_salvo){
+          cad += ' <button type="button" class="btn btn-sm btn-outline-light btn-vinc" '
+               + 'data-mid="' + x.machine_id + '" data-mac="' + esc(x.mac) + '" data-host="' + esc(x.host) + '" '
+               + 'title="Salvar este MAC/hostname no cadastro"><i class="bi bi-link-45deg"></i> salvar MAC</button>';
+        }
+      } else {
+        cad = '<span class="badge bg-warning-subtle text-warning-emphasis"><i class="bi bi-question-circle"></i> não cadastrado</span>';
+      }
       return '<tr><td><span class="net-dot"></span></td>'
         + '<td class="font-monospace">' + esc(x.ip) + '</td>'
         + '<td class="net-name">' + nome + '</td>'
@@ -116,6 +124,25 @@
     box.innerHTML = '<div class="table-responsive"><table class="table table-sm align-middle mb-0">'
       + '<thead><tr><th style="width:32px"></th><th>IP</th><th>Nome (DNS)</th><th>MAC</th><th>Cadastro</th></tr></thead>'
       + '<tbody>' + linhas + '</tbody></table></div>';
+    ligarVincular();
+  }
+
+  var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+  function ligarVincular(){
+    box.querySelectorAll('.btn-vinc').forEach(function(b){
+      b.addEventListener('click', function(){
+        var body = new URLSearchParams({machine_id: b.dataset.mid, mac: b.dataset.mac, host: b.dataset.host});
+        b.classList.add('disabled'); b.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        fetch("{{ url_for('rede.vincular') }}", {method:'POST', credentials:'same-origin',
+              headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':CSRF}, body:body})
+          .then(function(r){ return r.json(); })
+          .then(function(j){
+            if (j.ok){ b.className = 'badge bg-info-subtle text-info-emphasis'; b.innerHTML = '<i class="bi bi-check2"></i> vinculado'; }
+            else { b.classList.remove('disabled'); b.innerHTML = 'erro'; }
+          })
+          .catch(function(){ b.classList.remove('disabled'); b.innerHTML = 'erro'; });
+      });
+    });
   }
 
   function run(sweep){

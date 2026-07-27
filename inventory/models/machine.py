@@ -19,6 +19,10 @@ class Machine(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
     user = db.relationship("User")
     ip_address = db.Column(db.String(45), nullable=True, index=True)      # IP (IPv4/IPv6)
+    # Identidade estável na rede (para DHCP): MAC casa 100% no módulo Rede/ARP;
+    # hostname ajuda a casar pelo nome do domínio (ex.: Comercial1).
+    mac_address = db.Column(db.String(20), nullable=True, index=True)
+    hostname = db.Column(db.String(120), nullable=True, index=True)
     sector = db.Column(db.String(120), nullable=True)        # setor/localização
     patrimony = db.Column(db.String(60), nullable=True, index=True)
     serial_number = db.Column(db.String(120), nullable=True, index=True)

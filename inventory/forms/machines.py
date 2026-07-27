@@ -24,6 +24,8 @@ class MachineForm(FlaskForm):
     assigned_user = SelectField("Usuário / Responsável", validators=[Optional()], choices=[])
     ip_address = StringField("IP da máquina", validators=[Optional(), Length(max=45),
                                                           Regexp(IP_REGEX, message="IP inválido.")])
+    mac_address = StringField("MAC", validators=[Optional(), Length(max=20)])
+    hostname = StringField("Hostname (nome na rede)", validators=[Optional(), Length(max=120)])
     sector = StringField("Setor / Localização", validators=[Optional(), Length(max=120)])
     patrimony = StringField("Nº Patrimônio", validators=[Optional(), Length(max=60)])
     serial_number = StringField("Nº de Série", validators=[Optional(), Length(max=120)])

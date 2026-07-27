@@ -61,6 +61,40 @@ def _rdns(ip):
         return ""
 
 
+_NB_RE = re.compile(r"^\s*([^\s<]+)\s+<00>\s+UNIQUE", re.M)
+
+
+def _netbios(ip):
+    """Nome NetBIOS via nbtstat (pega Windows sem PTR no DNS). Lento -> só no deep."""
+    try:
+        out = subprocess.run(["nbtstat", "-A", ip], capture_output=True, timeout=3).stdout
+    except Exception:  # noqa: BLE001
+        return ""
+    m = _NB_RE.search(out.decode("latin-1", "replace"))
+    nome = m.group(1).strip() if m else ""
+    return "" if nome in ("", "__MSBROWSE__") else nome
+
+
+def _nome(ip, deep=False):
+    n = _rdns(ip)
+    if not n and deep:
+        n = _netbios(ip)
+    return n
+
+
+def active_set():
+    """(macs, ips) ativos agora na tabela ARP — sem DNS, rápido. Best-effort."""
+    macs, ips = set(), set()
+    try:
+        for ip, mac in _read_arp():
+            if _e_dispositivo(ip, mac):
+                macs.add(mac)
+                ips.add(ip)
+    except Exception:  # noqa: BLE001
+        pass
+    return macs, ips
+
+
 def _ping(ip):
     """1 pacote, 400 ms — só p/ disparar o ARP (não importa se ICMP é bloqueado)."""
     try:
@@ -119,10 +153,10 @@ def scan(app, sweep=False):
 
         nomes = {}
         with ThreadPoolExecutor(max_workers=32) as ex:
-            futs = {ip: ex.submit(_rdns, ip) for ip in ips}
+            futs = {ip: ex.submit(_nome, ip, sweep) for ip in ips}
             for ip, f in futs.items():
                 try:
-                    nomes[ip] = f.result(timeout=2.5)
+                    nomes[ip] = f.result(timeout=(4.0 if sweep else 2.5))
                 except (FTimeout, Exception):  # noqa: BLE001
                     nomes[ip] = ""
 
