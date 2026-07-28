@@ -123,12 +123,27 @@
         else { dot.classList.add('off'); txt.textContent='offline'; } }
       var box=card.querySelector('[data-role="access"]'); if(!box) return;
       if(!dd.online){ box.innerHTML='<span class="rt-hint"><i class="bi bi-plug"></i> painel indisponível agora</span>'; return; }
-      var b=document.createElement('a'); b.className='btn btn-sm btn-enter'; b.target='_blank'; b.rel='noopener';
+      var url = card.dataset.url || (/:\/\//.test(ip)? ip : 'http://'+ip);
+      var b=document.createElement('a'); b.className='btn btn-sm btn-enter'; b.target='_blank'; b.rel='noopener'; b.href=url;
       b.innerHTML='<i class="bi bi-box-arrow-up-right"></i> Abrir painel';
-      b.href = card.dataset.url || (/:\/\//.test(ip)? ip : 'http://'+ip);
-      b.addEventListener('click', function(){ fetchSenha(did).then(function(s){ if(s&&s.error){toast(s.error,'danger');return;} if(s&&s.password) copyText(s.password,'Senha copiada — cole no login do DVR.'); }); });
+      // Prepara a senha ao passar o mouse/focar (fica em cache). No clique, copia
+      // JÁ pronta e o link abre — assim a cópia acontece ANTES de a aba nova roubar
+      // o foco (senão o navegador bloqueia o clipboard).
+      var cache=null, buscando=false;
+      function prime(){ if(cache||buscando) return; buscando=true;
+        fetchSenha(did).then(function(s){ buscando=false; if(s&&!s.error){ cache=s; if(s.url) b.href=s.url; } }); }
+      b.addEventListener('mouseenter', prime);
+      b.addEventListener('focus', prime);
+      b.addEventListener('click', function(ev){
+        if(cache){ if(cache.password) copyText(cache.password,'Senha copiada — cole (Ctrl+V) no login do DVR.'); return; }
+        // Sem cache (sem hover): busca, copia e abre manualmente.
+        ev.preventDefault();
+        fetchSenha(did).then(function(s){ if(s&&s.error){toast(s.error,'danger');}
+          else if(s&&s.password){ copyText(s.password,'Senha copiada — cole (Ctrl+V) no login do DVR.'); }
+          window.open((s&&s.url)||url,'_blank','noopener'); });
+      });
       box.appendChild(b);
-      box.insertAdjacentHTML('beforeend','<span class="rt-hint">senha copiada ao abrir</span>');
+      box.insertAdjacentHTML('beforeend','<span class="rt-hint">senha copiada ao abrir · cole com Ctrl+V</span>');
     }).catch(function(){});
   });
 })();
