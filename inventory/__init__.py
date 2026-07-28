@@ -370,6 +370,7 @@ def create_app():
     from .models.smart_plug import SmartPlug
     from .models.smart_plug_schedule import SmartPlugSchedule
     from .models.printer_reading import PrinterReading
+    from .models.dvr import Dvr
 
     # Cria tabelas e semente inicial
     with app.app_context():
@@ -458,6 +459,7 @@ def create_app():
     from .routes.smartplugs import bp as smartplugs_bp  # tomadas inteligentes Tuya/NeoAvant (admin)
     from .routes.cotacoes import bp as cotacoes_bp      # cotações no Mercado Livre (admin)
     from .routes.rede import bp as rede_bp              # descoberta de rede via ARP (admin)
+    from .routes.dvr import bp as dvr_bp                # CFTV / DVRs (admin)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -496,6 +498,7 @@ def create_app():
     app.register_blueprint(smartplugs_bp, url_prefix="/tomadas")  # tomadas inteligentes (admin)
     app.register_blueprint(cotacoes_bp, url_prefix="/cotacoes")   # cotações Mercado Livre (admin)
     app.register_blueprint(rede_bp, url_prefix="/rede")          # descoberta de rede (admin)
+    app.register_blueprint(dvr_bp, url_prefix="/cftv")           # CFTV / DVRs (admin)
 
     # ===== Controle de acesso por módulo =====
     # Usuários comuns (não-admin) só acessam Chamados e o próprio Perfil.

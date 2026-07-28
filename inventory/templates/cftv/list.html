@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}CFTV / DVRs{% endblock %}
+
+{% block extra_head %}
+<style>
+  .dvr-grid{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); }
+  .dvr-card{ background:#15211a; border:1px solid #243024; border-left:4px solid #00c853;
+    border-radius:16px; padding:1rem 1.1rem; transition:transform .14s, border-color .14s; }
+  .dvr-card:hover{ transform:translateY(-3px); border-color:#2f6b46; }
+  .dvr-card.dim{ opacity:.6; border-left-color:#5c6b5c; }
+  .dvr-top{ display:flex; align-items:flex-start; gap:.6rem; }
+  .dvr-name{ font-weight:600; color:#eafff0; }
+  .dvr-sub{ color:#6f8a7b; font-size:.75rem; }
+  .rt-status{ display:flex; align-items:center; gap:.45rem; font-size:.78rem; color:#9bb6a6; margin:.55rem 0 .3rem; }
+  .rt-dot{ width:9px; height:9px; border-radius:50%; background:#5c6b5c; flex:none; }
+  .rt-dot.on{ background:#00e676; box-shadow:0 0 0 3px rgba(0,230,118,.18); }
+  .rt-dot.off{ background:#f0616d; box-shadow:0 0 0 3px rgba(240,97,109,.16); }
+  .rt-dot.chk{ background:#ffc107; animation:rtpulse 1s infinite; }
+  @keyframes rtpulse{ 0%,100%{opacity:.35} 50%{opacity:1} }
+  .dvr-chips{ display:flex; flex-wrap:wrap; gap:.35rem; margin:.2rem 0 .5rem; }
+  .dvr-foot{ display:flex; align-items:center; justify-content:space-between; margin-top:.6rem; }
+  .rt-hint{ font-size:.66rem; color:#6f8a7b; align-self:center; margin-left:.4rem; }
+  .btn-enter{ background:#00c853; border-color:#00c853; color:#052b13 !important; font-weight:600; }
+  .btn-enter:hover{ background:#00e676; border-color:#00e676; color:#052b13 !important; }
+  html[data-theme="light"] .dvr-card{ background:#fff; border-color:#e6ece8; }
+  html[data-theme="light"] .dvr-name{ color:#173a28; }
+  html[data-theme="light"] .rt-status{ color:#5d7d6b; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set st_meta = {'em_uso':('Em uso','success'),'manutencao':('Manutenção','warning'),'inativo':('Inativo','secondary')} %}
+<div class="page-header">
+  <h1 class="ph-title"><span class="ph-icon"><i class="bi bi-camera-video"></i></span> CFTV / DVRs
+    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ totals.total }}</span>
+  </h1>
+  <a href="{{ url_for('dvr.new') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Novo DVR</a>
+</div>
+
+<div class="table-card mb-3">
+  <div class="table-card-tools d-flex flex-wrap align-items-center gap-2">
+    <form class="d-flex gap-2" method="get" role="search">
+      <div class="input-group search-box">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input class="form-control" type="search" placeholder="Local, modelo, IP..." name="q" value="{{ q }}">
+      </div>
+      <select class="form-select" name="status" style="max-width:160px" data-autosubmit>
+        <option value="">Status: todos</option>
+        {% for k,mt in st_meta.items() %}<option value="{{ k }}" {{ 'selected' if status==k }}>{{ mt[0] }}</option>{% endfor %}
+      </select>
+      <button class="btn btn-primary btn-icon" type="submit"><i class="bi bi-search"></i></button>
+      {% if q or status %}<a href="{{ url_for('dvr.list_view') }}" class="btn btn-outline-light btn-icon"><i class="bi bi-x-lg"></i></a>{% endif %}
+    </form>
+  </div>
+</div>
+
+{% if items %}
+<div class="dvr-grid">
+  {% for d in items %}
+  {% set sm = st_meta.get(d.status, ('—','secondary')) %}
+  <article class="dvr-card {{ 'dim' if d.status=='inativo' }}" data-did="{{ d.id }}" data-ip="{{ d.ip_address or '' }}"
+           data-url="{% if d.ip_address %}{% if '://' in d.ip_address %}{{ d.ip_address }}{% else %}http://{{ d.ip_address }}{% endif %}{% if d.web_port and d.web_port != 80 %}:{{ d.web_port }}{% endif %}{% endif %}">
+    <div class="dvr-top">
+      <span class="machine-avatar"><i class="bi bi-camera-video"></i></span>
+      <div class="flex-grow-1 min-w-0">
+        <div class="dvr-name text-truncate">{% if d.location %}{{ d.location }}{% else %}{{ d.brand or '' }} {{ d.model }}{% endif %}</div>
+        <div class="dvr-sub">{{ d.brand or '' }} {{ d.model }}{% if d.label %} · {{ d.label }}{% endif %}</div>
+      </div>
+      <span class="badge bg-{{ sm[1] }}-subtle text-{{ sm[1] }}-emphasis">{{ sm[0] }}</span>
+    </div>
+
+    {% if d.ip_address %}<div class="rt-status" data-role="status"><span class="rt-dot chk"></span><span class="rt-txt">verificando…</span></div>{% endif %}
+
+    <div class="dvr-chips">
+      {% if d.ip_address %}<span class="pchip blue mono"><i class="bi bi-hdd-network"></i> {{ d.ip_address }}{% if d.web_port and d.web_port != 80 %}:{{ d.web_port }}{% endif %}</span>{% endif %}
+      {% if d.channels %}<span class="pchip"><i class="bi bi-grid-3x3"></i> {{ d.channels }} canais</span>{% endif %}
+      {% if d.patrimony %}<span class="pchip mono" title="Patrimônio"><i class="bi bi-tag"></i> {{ d.patrimony }}</span>{% endif %}
+    </div>
+
+    {% if d.ip_address %}<div class="rt-access" data-role="access"></div>{% endif %}
+
+    <div class="dvr-foot">
+      <span></span>
+      <div class="d-flex gap-1">
+        <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('dvr.edit', did=d.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
+        <form action="{{ url_for('dvr.delete', did=d.id) }}" method="post" class="d-inline" onsubmit="return confirm('Excluir o DVR “{{ d.location or d.model }}”?');">
+          <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
+        </form>
+      </div>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<div class="table-card"><div class="empty-state"><i class="bi bi-camera-video"></i>
+  {% if q or status %}Nenhum DVR para o filtro.{% else %}Nenhum DVR cadastrado ainda.{% endif %}
+</div></div>
+{% endif %}
+
+<script nonce="{{ csp_nonce() }}">
+(function(){
+  var BASE = "{{ url_for('dvr.list_view') }}".replace(/\/$/, "");
+  function toast(msg, kind){
+    var s=document.getElementById('toastStack'); if(!s){ s=document.createElement('div'); s.className='toast-stack'; s.id='toastStack'; document.body.appendChild(s); }
+    var d=document.createElement('div'); d.className='toastmsg toast-'+(kind||'success');
+    var i=document.createElement('i'); i.className='bi '+(kind==='danger'?'bi-exclamation-triangle-fill':'bi-check-circle-fill');
+    var t=document.createElement('span'); t.className='t-text'; t.textContent=msg; d.appendChild(i); d.appendChild(t); s.appendChild(d);
+    setTimeout(function(){ d.classList.add('hide'); setTimeout(function(){ d.remove(); },260); },3200);
+  }
+  function copyText(txt, ok){
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(function(){toast(ok);},function(){toast('Não foi possível copiar.','danger');}); }
+    else { var a=document.createElement('textarea'); a.value=txt; document.body.appendChild(a); a.select(); try{document.execCommand('copy');toast(ok);}catch(e){toast('Copie manualmente.','danger');} document.body.removeChild(a); }
+  }
+  function fetchSenha(did){ return fetch(BASE+'/'+did+'/senha',{credentials:'same-origin'}).then(function(r){return r.json();}); }
+
+  document.querySelectorAll('.dvr-card[data-ip]').forEach(function(card){
+    var ip=(card.dataset.ip||'').trim(); if(!ip) return;
+    var did=card.dataset.did;
+    fetch(BASE+'/'+did+'/status',{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(dd){
+      var st=card.querySelector('[data-role="status"]');
+      if(st){ var dot=st.querySelector('.rt-dot'), txt=st.querySelector('.rt-txt'); dot.classList.remove('chk','on','off');
+        if(dd.online){ dot.classList.add('on'); txt.textContent='online'+(dd.latency_ms!=null?(' · '+dd.latency_ms+' ms'):''); }
+        else { dot.classList.add('off'); txt.textContent='offline'; } }
+      var box=card.querySelector('[data-role="access"]'); if(!box) return;
+      if(!dd.online){ box.innerHTML='<span class="rt-hint"><i class="bi bi-plug"></i> painel indisponível agora</span>'; return; }
+      var b=document.createElement('a'); b.className='btn btn-sm btn-enter'; b.target='_blank'; b.rel='noopener';
+      b.innerHTML='<i class="bi bi-box-arrow-up-right"></i> Abrir painel';
+      b.href = card.dataset.url || (/:\/\//.test(ip)? ip : 'http://'+ip);
+      b.addEventListener('click', function(){ fetchSenha(did).then(function(s){ if(s&&s.error){toast(s.error,'danger');return;} if(s&&s.password) copyText(s.password,'Senha copiada — cole no login do DVR.'); }); });
+      box.appendChild(b);
+      box.insertAdjacentHTML('beforeend','<span class="rt-hint">senha copiada ao abrir</span>');
+    }).catch(function(){});
+  });
+})();
+</script>
+{% endblock %}
