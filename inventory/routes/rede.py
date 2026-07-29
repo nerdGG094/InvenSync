@@ -18,22 +18,35 @@ def _only_admin():
 
 
 def _match_maps():
-    """Mapas p/ casar dispositivo -> máquina: por MAC (certeiro), hostname, IP e nome."""
+    """Mapas p/ casar dispositivo -> cadastro. Máquinas casam por MAC (certeiro),
+    hostname, IP e nome; celulares casam só por MAC (Wi-Fi). Valor = dict de info."""
+    from ..models.mobile import MobileDevice
     por_mac, por_host, por_ip, por_nome = {}, {}, {}, {}
     for m in Machine.query.all():
+        info = {"label": m.model or m.name or "—",
+                "url": url_for("machines.edit", mid=m.id),
+                "machine_id": m.id,
+                "mac_salvo": bool((m.mac_address or "").strip())}
         mac = (m.mac_address or "").strip().lower()
         if mac:
-            por_mac.setdefault(mac, m)
+            por_mac.setdefault(mac, info)
         host = (m.hostname or "").strip().lower()
         if host:
-            por_host.setdefault(host, m)
+            por_host.setdefault(host, info)
         ip = (m.ip_address or "").strip()
         if ip and ip.upper() != "DHCP":
-            por_ip.setdefault(ip, m)
+            por_ip.setdefault(ip, info)
         for campo in (m.name, m.model):
             c = (campo or "").strip().lower()
             if c:
-                por_nome.setdefault(c, m)
+                por_nome.setdefault(c, info)
+    # Celulares: só por MAC do Wi-Fi (não têm IP/hostname no cadastro).
+    for mb in MobileDevice.query.filter(MobileDevice.mac_address.isnot(None)).all():
+        mac = (mb.mac_address or "").strip().lower()
+        if mac:
+            por_mac.setdefault(mac, {"label": (mb.model or mb.brand or "Celular"),
+                                     "url": url_for("mobile.edit", mid=mb.id),
+                                     "machine_id": None, "mac_salvo": True})
     return por_mac, por_host, por_ip, por_nome
 
 
@@ -54,18 +67,17 @@ def scan():
     for d in dispositivos:
         host = (d["name"].split(".")[0] if d["name"] else "")
         hl = host.lower()
-        m = (por_mac.get(d["mac"]) or (por_host.get(hl) if hl else None)
-             or por_ip.get(d["ip"]) or (por_nome.get(hl) if hl else None))
+        info = (por_mac.get(d["mac"]) or (por_host.get(hl) if hl else None)
+                or por_ip.get(d["ip"]) or (por_nome.get(hl) if hl else None))
         out.append({
             "ip": d["ip"], "mac": d["mac"], "name": d["name"], "host": host,
-            "machine_id": m.id if m else None,
-            "machine_label": (m.model or m.name) if m else "",
-            "machine_url": url_for("machines.edit", mid=m.id) if m else "",
-            # já tem MAC salvo? (p/ esconder o botão "salvar")
-            "mac_salvo": bool(m and (m.mac_address or "").strip()) if m else False,
+            "machine_id": info["machine_id"] if info else None,
+            "machine_label": info["label"] if info else "",
+            "machine_url": info["url"] if info else "",
+            "mac_salvo": info["mac_salvo"] if info else False,
         })
     total = len(out)
-    cadastrados = sum(1 for d in out if d["machine_id"])
+    cadastrados = sum(1 for d in out if d["machine_url"])
     return jsonify(total=total, cadastrados=cadastrados,
                    desconhecidos=total - cadastrados, dispositivos=out)
 

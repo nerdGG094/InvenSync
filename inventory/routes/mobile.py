@@ -30,6 +30,14 @@ def _group_by_sector(items: list) -> list:
     return [{"name": s or None, "items": grupos_map[s]} for s in ordem]
 
 
+def _norm_mac(v):
+    """MAC minúsculo com hífens (aceita ':' , '-' ou solto)."""
+    hexd = "".join(c for c in (v or "").lower() if c in "0123456789abcdef")
+    if len(hexd) != 12:
+        return ((v or "").strip().lower().replace(":", "-")) or None
+    return "-".join(hexd[i:i + 2] for i in range(0, 12, 2))
+
+
 def _to_kwargs(form: MobileForm) -> dict:
     def s(v):
         v = (v or "").strip()
@@ -49,6 +57,7 @@ def _to_kwargs(form: MobileForm) -> dict:
         carrier=s(form.carrier.data),
         plan=s(form.plan.data),
         imei=s(form.imei.data),
+        mac_address=_norm_mac(form.mac_address.data),
         serial_number=s(form.serial_number.data),
         assigned_employee=s(form.assigned_employee.data),
         user_id=people.user_id_for(form.assigned_employee.data),   # mantém a FK em dia

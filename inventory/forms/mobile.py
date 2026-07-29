@@ -17,6 +17,7 @@ class MobileForm(FlaskForm):
     carrier = StringField("Operadora", validators=[Optional(), Length(max=40)])
     plan = StringField("Plano / Pacote", validators=[Optional(), Length(max=80)])
     imei = StringField("IMEI", validators=[Optional(), Length(max=40)])
+    mac_address = StringField("MAC (Wi-Fi)", validators=[Optional(), Length(max=20)])
     serial_number = StringField("Nº de Série", validators=[Optional(), Length(max=120)])
     # choices preenchidas na rota com os usuários cadastrados em Máquinas
     assigned_employee = SelectField("Funcionário", validators=[Optional()], choices=[])

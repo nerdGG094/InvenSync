@@ -55,6 +55,7 @@ def _run_light_migrations():
         # Identidade de rede estável (DHCP): MAC + hostname p/ o módulo Rede/ARP.
         'ALTER TABLE machine ADD COLUMN IF NOT EXISTS mac_address VARCHAR(20)',
         'ALTER TABLE machine ADD COLUMN IF NOT EXISTS hostname VARCHAR(120)',
+        'ALTER TABLE mobile_device ADD COLUMN IF NOT EXISTS mac_address VARCHAR(20)',
         # Backfill idempotente (só onde ainda está NULL), casando por nome normalizado.
         'UPDATE "user" u SET department_id = d.id FROM department d '
         'WHERE u.department_id IS NULL AND u.sector IS NOT NULL '

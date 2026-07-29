@@ -69,6 +69,27 @@ def test_rede_match_por_mac_e_vincular(app, auth_client, monkeypatch):
         db.session.commit()
 
 
+def test_celular_casa_por_mac(app, auth_client, monkeypatch):
+    """Celular com MAC de Wi-Fi cadastrado casa no módulo Rede e aponta p/ mobile.edit."""
+    from inventory.extensions import db
+    from inventory.models.mobile import MobileDevice
+    with app.app_context():
+        mb = MobileDevice(model="PYTEST-FONE", mac_address="a4-50-46-11-22-33")
+        db.session.add(mb)
+        db.session.commit()
+        mid = mb.id
+    monkeypatch.setattr(net_scan, "scan", lambda app, sweep=False: [
+        {"ip": "192.168.0.77", "mac": "a4-50-46-11-22-33", "name": ""}])
+    j = auth_client.get("/rede/scan").get_json()
+    dev = j["dispositivos"][0]
+    assert j["cadastrados"] == 1 and dev["machine_label"] == "PYTEST-FONE"
+    assert f"/machines/mobile/{mid}/edit" in dev["machine_url"]
+    assert dev["machine_id"] is None and dev["mac_salvo"] is True   # sem botão "salvar"
+    with app.app_context():
+        db.session.delete(db.session.get(MobileDevice, mid))
+        db.session.commit()
+
+
 def test_rede_ativos_endpoint(app, auth_client, monkeypatch):
     monkeypatch.setattr(net_scan, "active_set",
                         lambda: ({"1c-39-47-0e-11-99"}, {"192.168.0.10"}))

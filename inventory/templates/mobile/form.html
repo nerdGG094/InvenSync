@@ -112,6 +112,18 @@
         </div>
 
         <div class="row g-3 mt-1">
+          <div class="col-12 col-md-5">
+            {{ form.mac_address.label(class="form-label fw-semibold") }}
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-wifi"></i></span>
+              {{ form.mac_address(class="form-control" + (" is-invalid" if form.mac_address.errors else ""), placeholder="Ex.: 1c-39-47-0e-11-99") }}
+            </div>
+            <div class="form-text">MAC do Wi-Fi — casa o aparelho no módulo Rede (ARP).</div>
+            {{ field_error(form.mac_address) }}
+          </div>
+        </div>
+
+        <div class="row g-3 mt-1">
           <div class="col-6 col-md-4">
             {{ form.status.label(class="form-label fw-semibold") }}
             {{ form.status(class="form-select") }}

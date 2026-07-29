@@ -6,7 +6,7 @@ from ..extensions import db
 from ..models.mobile import MobileDevice
 
 _ALLOWED = {
-    "brand", "model", "imei", "serial_number", "phone_number", "carrier",
+    "brand", "model", "imei", "mac_address", "serial_number", "phone_number", "carrier",
     "plan", "assigned_employee", "user_id", "assigned_employee_2", "assigned_employee_3",
     "sector", "patrimony", "status", "handed_at", "notes", "label_applied",
     "kiox_installed",

@@ -10,6 +10,7 @@ class MobileDevice(db.Model):
     brand = db.Column(db.String(80), nullable=True)            # marca (Samsung, Motorola...)
     model = db.Column(db.String(120), nullable=False)          # modelo do aparelho
     imei = db.Column(db.String(40), nullable=True, index=True)
+    mac_address = db.Column(db.String(20), nullable=True, index=True)   # Wi-Fi MAC (p/ rede/ARP)
     serial_number = db.Column(db.String(120), nullable=True)
     phone_number = db.Column(db.String(30), nullable=True, index=True)   # linha/número
     carrier = db.Column(db.String(40), nullable=True)          # operadora

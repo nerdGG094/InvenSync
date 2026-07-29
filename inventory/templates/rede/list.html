@@ -107,7 +107,7 @@
       var cad;
       if (x.machine_url){
         cad = '<a href="' + esc(x.machine_url) + '" class="badge bg-success-subtle text-success-emphasis text-decoration-none"><i class="bi bi-pc-display"></i> ' + esc(x.machine_label) + '</a>';
-        if (!x.mac_salvo){
+        if (!x.mac_salvo && x.machine_id){
           cad += ' <button type="button" class="btn btn-sm btn-outline-light btn-vinc" '
                + 'data-mid="' + x.machine_id + '" data-mac="' + esc(x.mac) + '" data-host="' + esc(x.host) + '" '
                + 'title="Salvar este MAC/hostname no cadastro"><i class="bi bi-link-45deg"></i> salvar MAC</button>';
