@@ -137,7 +137,11 @@ def snap(did, ch):
         pw = crypto.decrypt(d.admin_password) or ""
     except crypto.DecryptError:
         abort(500)
-    ttl = float(current_app.config.get("DVR_SNAP_TTL", 5))
+    # modo "live" (câmera ampliada): cache mínimo p/ frames o mais atuais possível.
+    if request.args.get("live") == "1":
+        ttl = float(current_app.config.get("DVR_SNAP_TTL_LIVE", 0.4))
+    else:
+        ttl = float(current_app.config.get("DVR_SNAP_TTL", 3))
     data = dvr_cam.snapshot(d, pw, ch, ttl=ttl)
     if not data:
         return Response(status=503)   # sem sinal / DVR indisponível

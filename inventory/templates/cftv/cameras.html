@@ -48,53 +48,54 @@
 
 <script nonce="{{ csp_nonce() }}">
 (function(){
-  var REFRESH = 6000;   // ms entre atualizações de cada câmera
+  var REFRESH = 3000;   // grade: ms entre atualizações de cada miniatura
   var cams = Array.prototype.slice.call(document.querySelectorAll('.cam'));
   var modal = document.getElementById('camModal');
   var modalImg = modal.querySelector('img');
   var info = document.getElementById('camInfo');
-  var modalCh = null, timers = [];
 
   function carregar(cam){
     var img = cam.querySelector('img');
-    var url = cam.dataset.src + '?t=' + Date.now();
     img.onerror = function(){ cam.classList.add('semsinal'); };
     img.onload  = function(){ cam.classList.remove('semsinal'); };
-    img.src = url;
+    img.src = cam.dataset.src + '?t=' + Date.now();
   }
 
-  function iniciar(){
-    // Escalona o 1º carregamento (não dispara as N câmeras de uma vez).
-    cams.forEach(function(cam, i){
-      setTimeout(function(){
-        carregar(cam);
-        timers.push(setInterval(function(){
-          if (document.hidden) return;          // pausa quando a aba não está visível
-          carregar(cam);
-        }, REFRESH));
-      }, i * 200);
-    });
-    info.innerHTML = '<i class="bi bi-broadcast"></i> ao vivo (~6s)';
-  }
-
-  // Ampliar ao clicar
-  cams.forEach(function(cam){
-    cam.addEventListener('click', function(){
-      modalCh = cam;
-      modalImg.src = cam.dataset.src + '?t=' + Date.now();
-      modal.classList.add('on');
-    });
+  // ---- Grade (miniaturas) ----
+  cams.forEach(function(cam, i){
+    setTimeout(function(){                       // escalona o 1º load
+      carregar(cam);
+      setInterval(function(){ if (!document.hidden) carregar(cam); }, REFRESH);
+    }, i * 180);
   });
-  function fecharModal(){ modal.classList.remove('on'); modalCh = null; }
-  modal.addEventListener('click', fecharModal);
-  document.addEventListener('keydown', function(e){ if(e.key==='Escape') fecharModal(); });
-  // refresh mais rápido na ampliada
-  setInterval(function(){
-    if (modalCh && modal.classList.contains('on') && !document.hidden)
-      modalImg.src = modalCh.dataset.src + '?t=' + Date.now();
-  }, 2500);
+  info.innerHTML = '<i class="bi bi-broadcast"></i> grade ~3s · ampliada tempo real';
 
-  iniciar();
+  // ---- Ampliada: polling ENCADEADO + double-buffer (fluido, sem piscar) ----
+  var liveCam = null, liveOn = false, MIN = 200;   // ms mínimo entre frames
+  function proximoFrame(){
+    if (!liveOn || !liveCam) return;
+    if (document.hidden){ setTimeout(proximoFrame, 400); return; }
+    var t0 = Date.now();
+    var next = new Image();
+    next.onload = function(){
+      if (!liveOn) return;
+      modalImg.src = next.src;                    // troca só quando já carregou
+      var gasto = Date.now() - t0;
+      setTimeout(proximoFrame, Math.max(0, MIN - gasto));
+    };
+    next.onerror = function(){ if (liveOn) setTimeout(proximoFrame, 600); };
+    next.src = liveCam.dataset.src + '?live=1&t=' + Date.now();
+  }
+  function abrir(cam){
+    liveCam = cam; liveOn = true;
+    modalImg.src = cam.dataset.src + '?live=1&t=' + Date.now();
+    modal.classList.add('on');
+    proximoFrame();
+  }
+  function fechar(){ liveOn = false; liveCam = null; modal.classList.remove('on'); modalImg.src=''; }
+  cams.forEach(function(cam){ cam.addEventListener('click', function(){ abrir(cam); }); });
+  modal.addEventListener('click', fechar);
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') fechar(); });
 })();
 </script>
 {% endblock %}
