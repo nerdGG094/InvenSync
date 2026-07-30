@@ -37,6 +37,7 @@ def index():
         last=last,
         age_hours=age_hours,
         backup_dir=str(backup_db.backup_dir()),
+        mirror=backup_db.mirror_status(),
     )
 
 

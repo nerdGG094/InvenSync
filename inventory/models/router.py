@@ -17,13 +17,14 @@ class Router(db.Model):
     ip_address = db.Column(db.String(45), nullable=True, index=True)   # IP de gerência (admin)
     mac_address = db.Column(db.String(20), nullable=True)             # MAC do próprio roteador
     admin_user = db.Column(db.String(80), nullable=True)
-    admin_password = db.Column(db.String(120), nullable=True)
+    # Cifrado (VAULT_KEY): 255 comporta o token Fernet de senhas longas.
+    admin_password = db.Column(db.String(255), nullable=True)
 
     # Rede Wi-Fi
     ssid = db.Column(db.String(80), nullable=True, index=True)        # nome da rede principal
-    wifi_password = db.Column(db.String(120), nullable=True)
+    wifi_password = db.Column(db.String(255), nullable=True)
     ssid_guest = db.Column(db.String(80), nullable=True)             # rede de visitantes (opcional)
-    wifi_password_guest = db.Column(db.String(120), nullable=True)
+    wifi_password_guest = db.Column(db.String(255), nullable=True)
 
     # Controle de acesso por MAC (vínculo dos telefones/dispositivos)
     mac_filtering = db.Column(db.Boolean, nullable=False, default=False,

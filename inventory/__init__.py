@@ -56,6 +56,11 @@ def _run_light_migrations():
         'ALTER TABLE machine ADD COLUMN IF NOT EXISTS mac_address VARCHAR(20)',
         'ALTER TABLE machine ADD COLUMN IF NOT EXISTS hostname VARCHAR(120)',
         'ALTER TABLE mobile_device ADD COLUMN IF NOT EXISTS mac_address VARCHAR(20)',
+        # Senhas cifradas dos routers: alarga p/ 255 (token Fernet de senha longa
+        # estourava VARCHAR(120) e truncava). Idempotente (no-op se já é 255).
+        'ALTER TABLE router ALTER COLUMN admin_password TYPE VARCHAR(255)',
+        'ALTER TABLE router ALTER COLUMN wifi_password TYPE VARCHAR(255)',
+        'ALTER TABLE router ALTER COLUMN wifi_password_guest TYPE VARCHAR(255)',
         # Backfill idempotente (só onde ainda está NULL), casando por nome normalizado.
         'UPDATE "user" u SET department_id = d.id FROM department d '
         'WHERE u.department_id IS NULL AND u.sector IS NOT NULL '

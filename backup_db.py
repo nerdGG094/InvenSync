@@ -113,6 +113,36 @@ def _mirror(out: Path):
         return None
 
 
+def list_mirror():
+    """Lista os backups no destino offsite. None = configurado mas inacessível."""
+    md = _mirror_dir()
+    if not md:
+        return None
+    try:
+        items = []
+        for p in md.glob("*.dump"):
+            st = p.stat()
+            items.append({"name": p.name, "size": st.st_size,
+                          "mtime": datetime.datetime.fromtimestamp(st.st_mtime)})
+        items.sort(key=lambda i: i["mtime"], reverse=True)
+        return items
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def mirror_status():
+    """Estado do backup offsite p/ a tela de Backups.
+    {configured, dir?, reachable?, count?, last?}."""
+    md = _mirror_dir()
+    if not md:
+        return {"configured": False}
+    lst = list_mirror()
+    if lst is None:
+        return {"configured": True, "dir": str(md), "reachable": False}
+    return {"configured": True, "dir": str(md), "reachable": True,
+            "count": len(lst), "last": (lst[0]["mtime"] if lst else None)}
+
+
 def run_backup(timestamp: str = None):
     """Gera um backup. Retorna (ok: bool, mensagem: str, caminho|None)."""
     host = os.environ.get("DB_HOST", "127.0.0.1")
