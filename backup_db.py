@@ -143,6 +143,25 @@ def mirror_status():
             "count": len(lst), "last": (lst[0]["mtime"] if lst else None)}
 
 
+def _upload(out: Path):
+    """Envia o dump para a nuvem via um comando externo (BACKUP_UPLOAD_CMD), ex.:
+    rclone p/ Google Drive. Placeholders {path} e {name}. Vazio = desligado.
+    Best-effort: True=enviou, False=falhou, None=não configurado."""
+    cmd = (os.environ.get("BACKUP_UPLOAD_CMD") or "").strip()
+    if not cmd:
+        return None
+    try:
+        full = cmd.replace("{path}", str(out)).replace("{name}", out.name)
+        r = subprocess.run(full, shell=True, capture_output=True, text=True, timeout=1800)
+        return r.returncode == 0
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def upload_configured() -> bool:
+    return bool((os.environ.get("BACKUP_UPLOAD_CMD") or "").strip())
+
+
 def run_backup(timestamp: str = None):
     """Gera um backup. Retorna (ok: bool, mensagem: str, caminho|None)."""
     host = os.environ.get("DB_HOST", "127.0.0.1")
@@ -179,6 +198,11 @@ def run_backup(timestamp: str = None):
     msg = f"Backup gerado: {out.name} ({size/1024/1024:.1f} MB)"
     if _mirror_dir():
         msg += " · espelhado" if _mirror(out) else " · ESPELHO FALHOU (confira BACKUP_MIRROR_DIR)"
+    up = _upload(out)
+    if up is True:
+        msg += " · enviado à nuvem"
+    elif up is False:
+        msg += " · UPLOAD FALHOU (confira BACKUP_UPLOAD_CMD/rclone)"
     return True, msg, str(out)
 
 

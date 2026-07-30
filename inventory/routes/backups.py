@@ -38,6 +38,7 @@ def index():
         age_hours=age_hours,
         backup_dir=str(backup_db.backup_dir()),
         mirror=backup_db.mirror_status(),
+        upload_on=backup_db.upload_configured(),
     )
 
 
