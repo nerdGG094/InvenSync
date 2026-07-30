@@ -159,9 +159,14 @@ def list_and_new():
     out_sum = func.coalesce(
         func.sum(case((StockMovement.movement_type != "IN", StockMovement.quantity), else_=0)), 0
     )
-    # Valor unitário da saída: custo informado na movimentação ou, na falta, o preço do produto
+    # Valor unitário da saída: custo informado na movimentação ou, na falta, o preço do produto.
+    # correlate(StockMovement): quando a busca faz join(Product) no query externo, sem isto o
+    # subquery correlacionaria AS DUAS tabelas e ficaria sem FROM ("no FROM clauses") -> 500.
     price_subq = (
-        select(Product.price).where(Product.id == StockMovement.product_id).scalar_subquery()
+        select(Product.price)
+        .where(Product.id == StockMovement.product_id)
+        .correlate(StockMovement)
+        .scalar_subquery()
     )
     unit_value = func.coalesce(StockMovement.unit_cost, price_subq, 0)
     out_money_sum = func.coalesce(
