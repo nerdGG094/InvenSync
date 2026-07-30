@@ -109,6 +109,32 @@ class Config:
     PRINTER_MONITOR_MINUTES = int(os.environ.get("PRINTER_MONITOR_MINUTES", "60"))
     PRINTER_SUPPLY_ALERT_PCT = int(os.environ.get("PRINTER_SUPPLY_ALERT_PCT", "10"))
 
+    # CFTV — câmeras dos DVRs.
+    # Snapshot (fallback sempre disponível): cache da grade e da ampliada.
+    DVR_SNAP_TTL = float(os.environ.get("DVR_SNAP_TTL", "3"))
+    DVR_SNAP_TTL_LIVE = float(os.environ.get("DVR_SNAP_TTL_LIVE", "0.4"))
+    # Tempo real (WebRTC) via go2rtc — serviço externo. Vazio = desligado
+    # (a página de câmeras continua funcionando só com snapshot, ~1 fps).
+    GO2RTC_URL = os.environ.get("GO2RTC_URL", "").strip()
+    GO2RTC_TIMEOUT = float(os.environ.get("GO2RTC_TIMEOUT", "3"))
+    # Player embutido: webrtc (sub-segundo) com MSE de reserva (ex.: H.265).
+    GO2RTC_PLAYER_MODE = os.environ.get("GO2RTC_PLAYER_MODE", "webrtc,mse")
+    # Arquivo go2rtc.yaml gerado a partir dos DVRs cadastrados (contém senhas).
+    GO2RTC_CONFIG = os.environ.get(
+        "GO2RTC_CONFIG", os.path.join(PROJECT_ROOT, "go2rtc", "go2rtc.yaml"))
+    # RTSP dos DVRs: porta, stream e molde da URL. subtype=0 é o principal (HD
+    # 720p); o sub-stream (1) é CIF 352x240 — leve, mas imagem ruim.
+    GO2RTC_RTSP_PORT = int(os.environ.get("GO2RTC_RTSP_PORT", "554"))
+    GO2RTC_SUBTYPE = int(os.environ.get("GO2RTC_SUBTYPE", "0"))
+    GO2RTC_RTSP_TEMPLATE = os.environ.get("GO2RTC_RTSP_TEMPLATE", "")
+    # O stream HD destes DVRs é H.265 e o WebRTC não transporta H.265. Com o
+    # transcode ligado, cada canal ganha uma 2ª fonte ffmpeg que converte para
+    # H.264 SOB DEMANDA (só enquanto alguém assiste). Custa CPU: desligue com
+    # GO2RTC_TRANSCODE=0 (aí só navegador com H.265 vê o HD).
+    GO2RTC_TRANSCODE = os.environ.get("GO2RTC_TRANSCODE", "1") in ("1", "true", "True")
+    # Caminho do ffmpeg.exe; vazio = procura ao lado do go2rtc.yaml e no PATH.
+    GO2RTC_FFMPEG = os.environ.get("GO2RTC_FFMPEG", "")
+
     # Monitoramento de uptime (ping/HTTP em segundo plano).
     MONITORING_ENABLED = os.environ.get("MONITORING_ENABLED", "1") in ("1", "true", "True")
     MONITORING_INTERVAL = int(os.environ.get("MONITORING_INTERVAL", "120"))  # segundos

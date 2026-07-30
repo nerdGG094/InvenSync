@@ -96,7 +96,17 @@ Beyond CRUD, each router card shows a **live status** (AJAX to `routers.status` 
 DVRs de câmera (Intelbras/Dahua). Same pattern as routers: encrypted `admin_password` (VAULT_KEY, `String(255)`), live status (`router_ctl.probe`), "Abrir painel" (open + copy password). Plus **live camera view**:
 - `services/dvr_cam.py` proxies the **snapshot CGI** (`/cgi-bin/snapshot.cgi?channel=N`, **Digest auth**) — the JPEG is served **in-memory (never written to disk)**, with a short per-(dvr,channel) cache shared across viewers; the Digest opener is reused.
 - `dvr.cameras` renders a grid of `Dvr.channels` thumbnails; `dvr.snap/<ch>` is the proxy (accepts `?live=1` → minimal cache for the enlarged view). The camera page refreshes the grid every ~3s and the enlarged view does **chained double-buffered polling** (`?live=1`).
-- **Latency ceiling:** these DVRs' snapshot.cgi takes ~0.9s → ~1 fps max. True real-time needs a media gateway (**go2rtc** — see "Próximos passos" at the end; RTSP 554 is open on both DVRs). MJPEG CGI on these units is weak (sub-stream is H.264).
+- **Latency ceiling of the snapshot:** these DVRs' snapshot.cgi takes ~0.9s → ~1 fps max. Real-time comes from **go2rtc** (below); the snapshot stays as the always-available fallback.
+
+**Real-time video (go2rtc / WebRTC)** — `services/go2rtc.py`, `templates/cftv/go2rtc.html`, `docs/GO2RTC.md`:
+- go2rtc is an **external process** (single MIT binary) that reads the DVRs' RTSP (port 554) and serves the browser over **WebRTC in passthrough** (no transcoding → low CPU, nothing on disk). The app never embeds or supervises it.
+- `/cftv/go2rtc` (admin) is the control page: live service probe (`/api/streams` + `/api`), masked preview of the config, and a **"Gerar go2rtc.yaml"** button (`POST /cftv/go2rtc/gerar`, audited) that writes one stream per channel — `dvr<id>_ch<N>` — built from the DVR's IP + the vault-decrypted password, percent-encoded. Only **active DVRs with IP and channel count** are included (`go2rtc.eligible`). The generated file holds credentials in plaintext (go2rtc's format) → `go2rtc/` is gitignored; regenerate + restart go2rtc after editing a DVR.
+- The camera page keeps the **grid on snapshot** (16-18 WebRTC sessions would be far heavier than 18 JPEGs/3s) and the **enlarged view opens the go2rtc player in an `<iframe>`**, with a button to fall back to snapshot (choice kept in `localStorage`). WebRTC is only offered for channels the probe reports as published; with go2rtc off/down the page degrades silently to the old snapshot behavior.
+- **CSP:** `create_app()` adds the `GO2RTC_URL` origin (plus its `ws://`) to `frame-src`/`connect-src` — without it the browser blocks the iframe.
+- **What these DVRs actually serve — measured (RTSP `DESCRIBE` + CGI `Encode`), don't guess again:** path is `/cam/realmonitor` (**singular**; `/cams/...` → 404). `subtype=0` (main) = **1280x720 H.265** @15fps; `subtype=1` (sub) = **352x240 CIF H.264** @7fps — and the sub-stream **cannot be raised** (`ExtraFormat.ResolutionTypes=CIF`). So HD only exists as H.265, which WebRTC cannot carry.
+- **Transcode on demand** is how HD reaches the browser: each channel is generated with two sources — the main RTSP plus `ffmpeg:<stream>#video=h264`. go2rtc picks by codec negotiation: an H.265-capable browser gets passthrough (zero CPU), everyone else triggers the ffmpeg conversion, **one process per viewer, killed when they close**. Measured on this server (Xeon E5530): HEVC decode alone 19% of a core, full transcode **47% of a core per viewer**. `GO2RTC_TRANSCODE=0` or `GO2RTC_SUBTYPE=1` are the escape hatches if CPU gets tight. Needs `ffmpeg.exe` next to the yaml (declared as `ffmpeg: bin:`).
+- Grid snapshots stay at whatever the DVR's `Snap` config gives (704x480 on `.134`, 352x240 on `.136`) — no URL parameter changes it (`type=`/`subtype=` are ignored); only the DVR's own config would.
+- Config: `GO2RTC_URL` (empty = feature off), `GO2RTC_CONFIG`, `GO2RTC_RTSP_PORT`, `GO2RTC_SUBTYPE` (0=HD), `GO2RTC_TRANSCODE`, `GO2RTC_FFMPEG`, `GO2RTC_RTSP_TEMPLATE`, `GO2RTC_PLAYER_MODE`, `GO2RTC_TIMEOUT`. Install/service/firewall/troubleshooting: `docs/GO2RTC.md`.
 
 ### Admin utility modules
 - `/tomadas` (smart plugs) — Tuya/NeoAvant LAN plugs with on/off scheduling (`services/tuya.py` + `plug_scheduler.py`); plug local keys encrypted with `crypto`.
@@ -180,20 +190,16 @@ Notable optional toggles:
 `atualizar.bat` (repo root) is the update flow: `git pull` → `pip install -r requirements.txt` → boot-check (`create_app()`) → **reminder to restart**. Always restart after pulling so `.py` code and templates load together (a template that references a not-yet-registered endpoint/form field errors every page until restart — most historical `/errors` entries were exactly this).
 
 ## Próximos passos / TODO
-### Câmeras em tempo real via go2rtc (WebRTC) — HANDOFF para novo chat
-**Estado atual:** o módulo CFTV mostra câmeras por **snapshot** (`services/dvr_cam.py` + `templates/cftv/cameras.html`), com teto de **~1 fps** (snapshot.cgi do DVR leva ~0,9s). Isso NÃO é tempo real.
+### Câmeras em tempo real (go2rtc) — no ar; falta reiniciar o InvenSync
+Implantado neste servidor: serviço **`go2rtc`** (NSSM, início automático, log em
+`go2rtc\go2rtc.log` rotacionando em 5 MB) rodando o go2rtc v1.9.14 + ffmpeg 8.1.2
+em `InventarioAlmox\go2rtc\`; `go2rtc.yaml` com **34 câmeras** em **720p**;
+regras de firewall 1984/TCP e 8555/TCP+UDP restritas a `192.168.0.0/24`;
+`GO2RTC_URL` no `.env`.
 
-**Objetivo:** vídeo fluido sub-segundo no navegador, sem transcodificar.
-
-**Fatos já confirmados (deste ambiente):**
-- 2 DVRs cadastrados na tabela `dvr`: **INDUSTRIA3** `192.168.0.134` (16 canais) e **MHDX1216** `192.168.0.136` (18 canais). user `admin`, senha cifrada (VAULT_KEY) — decifra com `crypto.decrypt(d.admin_password)`.
-- **RTSP porta 554 ABERTA** nos dois. URL padrão Intelbras/Dahua: `rtsp://user:senha@IP:554/cams/realmonitor?channel=N&subtype=0` (main) / `subtype=1` (sub).
-- Câmeras analógicas são **H.264** → go2rtc faz **passthrough p/ WebRTC** (CPU baixa). Canais IP (ch17-18 do MHDX) podem ser H.265 → checar (HEVC não passa direto no WebRTC).
-
-**Plano proposto:**
-1. Rodar **go2rtc** (binário único, grátis/MIT, ~20-40 MB) no mesmo servidor, como serviço. Download: github.com/AlexxIT/go2rtc.
-2. **Gerar `go2rtc.yaml`** a partir da tabela `dvr` (um stream por canal, com a URL RTSP montada da credencial decifrada). Cuidar da permissão do arquivo (leva user:senha em texto).
-3. Na página `cftv/cameras.html`, trocar (ou dar opção) o `<img>` snapshot pelo **player WebRTC do go2rtc** (iframe `http://SERVIDOR:1984/webrtc.html?src=<cam>` ou o webcomponent do go2rtc). Grade pode seguir em snapshot (leve) e a **ampliada** vira WebRTC.
-4. Config sugerida: `GO2RTC_URL` no `.env`; endpoint/rota no InvenSync que devolve a URL do player por DVR/canal.
-
-**Custo:** R$ 0 (open-source), CPU baixa (passthrough, só transmite quando alguém assiste), nada em disco. Único ônus: mais um processo pra manter no ar (se cair, o snapshot ~1s continua de reserva).
+Pendências:
+1. **Reiniciar o InvenSync** para ele ler o `GO2RTC_URL` (o serviço go2rtc já está no ar).
+2. Regerar o `go2rtc.yaml` (CFTV → Tempo real) e `Restart-Service go2rtc` sempre que
+   cadastrar/alterar um DVR.
+3. Opcional: subir a resolução dos **snapshots** da grade mexendo na config `Snap`
+   dos DVRs (hoje 704x480 no `.134` e 352x240 no `.136`) — mexe no aparelho, não no app.

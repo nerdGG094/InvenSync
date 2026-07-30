@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Tempo real (go2rtc) — CFTV{% endblock %}
+
+{% block extra_head %}
+<style>
+  .g2-yaml{ background:#0d1410; border:1px solid #243024; border-radius:12px; padding:.8rem 1rem;
+    max-height:340px; overflow:auto; font-size:.76rem; line-height:1.45; color:#cfe8d8; white-space:pre; }
+  .g2-step{ display:flex; gap:.7rem; padding:.55rem 0; border-bottom:1px dashed #243024; }
+  .g2-step:last-child{ border-bottom:0; }
+  .g2-num{ flex:none; width:1.6rem; height:1.6rem; border-radius:50%; background:#12301f; color:#00e676;
+    display:flex; align-items:center; justify-content:center; font-size:.78rem; font-weight:700; }
+  .g2-dot{ width:10px; height:10px; border-radius:50%; display:inline-block; }
+  .g2-dot.on{ background:#00e676; box-shadow:0 0 0 3px rgba(0,230,118,.18); }
+  .g2-dot.off{ background:#f0616d; box-shadow:0 0 0 3px rgba(240,97,109,.16); }
+  .g2-dot.na{ background:#5c6b5c; }
+  html[data-theme="light"] .g2-yaml{ background:#f4f7f5; color:#1d3a2a; border-color:#e6ece8; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="ph-title"><span class="ph-icon"><i class="bi bi-broadcast"></i></span>
+    Câmeras em tempo real (go2rtc)
+  </h1>
+  <a href="{{ url_for('dvr.list_view') }}" class="btn btn-outline-light btn-sm">
+    <i class="bi bi-arrow-left"></i> DVRs</a>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="table-card p-3 mb-3">
+      <div class="section-label">Serviço</div>
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="g2-dot {{ 'on' if info.online else ('off' if info.enabled else 'na') }}"></span>
+        <strong>
+          {% if not info.enabled %}Desligado
+          {% elif info.online %}No ar
+          {% else %}Fora do ar{% endif %}
+        </strong>
+        {% if info.version %}<span class="badge bg-secondary-subtle text-secondary-emphasis">v{{ info.version }}</span>{% endif %}
+      </div>
+      {% if info.enabled %}
+        <div class="small text-muted mb-1">
+          <i class="bi bi-hdd-network"></i>
+          <a href="{{ info.url }}" target="_blank" rel="noopener" class="mono">{{ info.url }}</a>
+        </div>
+        {% if info.online %}
+          <div class="small text-muted"><i class="bi bi-camera-video"></i>
+            {{ info.streams }} stream(s) publicados</div>
+        {% else %}
+          <div class="small text-danger"><i class="bi bi-exclamation-triangle"></i>
+            Não respondeu. Verifique se o processo está rodando e se a porta está liberada.</div>
+        {% endif %}
+      {% else %}
+        <div class="small text-muted">Defina <span class="mono">GO2RTC_URL</span> no
+          <span class="mono">.env</span> (ex.: <span class="mono">http://192.168.0.54:1984</span>)
+          e reinicie o InvenSync.</div>
+      {% endif %}
+    </div>
+
+    <div class="table-card p-3 mb-3">
+      <div class="section-label">Arquivo go2rtc.yaml</div>
+      <div class="small text-muted mono text-break mb-2">{{ arquivo.path or '—' }}</div>
+      {% if arquivo.exists %}
+        <div class="small mb-2"><i class="bi bi-check-circle text-success"></i>
+          {{ arquivo.streams }} câmera(s) · gerado em {{ arquivo.mtime or '—' }}</div>
+      {% else %}
+        <div class="small mb-2 text-warning"><i class="bi bi-exclamation-circle"></i>
+          Ainda não gerado.</div>
+      {% endif %}
+      <form method="post" action="{{ url_for('dvr.go2rtc_gerar') }}"
+            onsubmit="return confirm('Regravar o go2rtc.yaml com {{ n_streams }} câmera(s)?');">
+        <button class="btn btn-primary btn-sm" {{ 'disabled' if erro }}>
+          <i class="bi bi-file-earmark-code"></i> Gerar go2rtc.yaml</button>
+      </form>
+      <div class="small text-muted mt-2">
+        <i class="bi bi-shield-lock"></i> O arquivo leva usuário e senha dos DVRs em
+        texto puro (exigência do go2rtc). Fica fora do Git — restrinja o acesso à pasta.
+      </div>
+    </div>
+
+    <div class="table-card p-3">
+      <div class="section-label">DVRs incluídos</div>
+      {% if alvos %}
+        <ul class="list-unstyled mb-0 small">
+          {% for d in alvos %}
+          <li class="d-flex justify-content-between gap-2 py-1">
+            <span class="text-truncate">{{ d.location or d.label or d.model }}</span>
+            <span class="text-muted mono text-nowrap">{{ d.ip_address }} · {{ d.channels }} ch</span>
+          </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="small text-muted">Nenhum DVR ativo com IP e nº de canais cadastrados
+          ({{ total_dvrs }} DVR(s) no total).</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="table-card p-3 mb-3">
+      <div class="section-label">Como instalar (uma vez)</div>
+      <div class="g2-step"><span class="g2-num">1</span><div class="small">
+        Baixe o <strong>go2rtc</strong> (binário único, grátis/MIT) em
+        <a href="https://github.com/AlexxIT/go2rtc/releases" target="_blank" rel="noopener">github.com/AlexxIT/go2rtc</a>
+        — arquivo <span class="mono">go2rtc_win64.zip</span>. Coloque o
+        <span class="mono">go2rtc.exe</span> na mesma pasta do arquivo acima.
+      </div></div>
+      <div class="g2-step"><span class="g2-num">2</span><div class="small">
+        Clique em <strong>Gerar go2rtc.yaml</strong> aqui ao lado (um stream por canal,
+        montado com a senha do DVR guardada no cofre).
+      </div></div>
+      <div class="g2-step"><span class="g2-num">3</span><div class="small">
+        Rode <span class="mono">go2rtc.exe -config go2rtc.yaml</span> para testar e abra
+        <span class="mono">http://IP-DO-SERVIDOR:1984</span>. Para deixar fixo, registre
+        como serviço do Windows (ex.: <span class="mono">nssm install go2rtc</span>).
+      </div></div>
+      <div class="g2-step"><span class="g2-num">4</span><div class="small">
+        No <span class="mono">.env</span>: <span class="mono">GO2RTC_URL=http://IP-DO-SERVIDOR:1984</span>
+        e reinicie o InvenSync. A câmera ampliada passa a abrir em WebRTC.
+      </div></div>
+      <div class="g2-step"><span class="g2-num">5</span><div class="small">
+        Sempre que cadastrar/alterar um DVR, gere o arquivo de novo e reinicie o go2rtc.
+      </div></div>
+      <div class="small text-muted mt-2">
+        <i class="bi bi-info-circle"></i> Detalhes e solução de problemas em
+        <span class="mono">docs/GO2RTC.md</span>.
+      </div>
+    </div>
+
+    <div class="table-card p-3">
+      <div class="section-label d-flex justify-content-between align-items-center">
+        <span>Prévia do go2rtc.yaml{% if n_streams %} · {{ n_streams }} câmera(s){% endif %}</span>
+        <span class="badge bg-secondary-subtle text-secondary-emphasis">senha oculta</span>
+      </div>
+      {% if erro %}
+        <div class="alert alert-danger py-2 px-3 small mb-0">{{ erro }}</div>
+      {% else %}
+        <div class="g2-yaml mono">{{ preview }}</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

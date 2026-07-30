@@ -34,7 +34,11 @@
   <h1 class="ph-title"><span class="ph-icon"><i class="bi bi-camera-video"></i></span> CFTV / DVRs
     <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ totals.total }}</span>
   </h1>
-  <a href="{{ url_for('dvr.new') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Novo DVR</a>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('dvr.go2rtc_page') }}" class="btn btn-outline-light" title="Câmeras em tempo real (WebRTC)">
+      <i class="bi bi-broadcast"></i> Tempo real</a>
+    <a href="{{ url_for('dvr.new') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Novo DVR</a>
+  </div>
 </div>
 
 <div class="table-card mb-3">

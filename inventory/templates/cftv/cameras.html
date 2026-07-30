@@ -9,20 +9,29 @@
   .cam img{ width:100%; height:100%; object-fit:cover; display:block; background:#0a0f0c; }
   .cam .lbl{ position:absolute; left:6px; bottom:6px; font-size:.7rem; padding:.05rem .4rem; border-radius:6px;
     background:rgba(0,0,0,.6); color:#d0ffd6; }
+  .cam .rt{ position:absolute; right:6px; top:6px; font-size:.6rem; padding:.05rem .35rem; border-radius:6px;
+    background:rgba(0,200,83,.85); color:#052b13; font-weight:700; letter-spacing:.02em; }
   .cam .off{ position:absolute; inset:0; display:none; align-items:center; justify-content:center;
     color:#6f8a7b; font-size:.78rem; flex-direction:column; gap:.3rem; }
   .cam.semsinal .off{ display:flex; }
   .cam.semsinal img{ opacity:.15; }
   /* Ampliação */
   .cam-modal{ position:fixed; inset:0; z-index:1090; background:rgba(0,0,0,.9); display:none;
-    align-items:center; justify-content:center; }
+    align-items:center; justify-content:center; flex-direction:column; gap:.5rem; }
   .cam-modal.on{ display:flex; }
-  .cam-modal img{ max-width:96vw; max-height:92vh; border-radius:10px; }
-  .cam-modal .x{ position:absolute; top:14px; right:18px; color:#fff; font-size:1.8rem; cursor:pointer; }
+  .cam-stage{ position:relative; width:96vw; height:86vh; display:flex; align-items:center; justify-content:center; }
+  .cam-stage img{ max-width:100%; max-height:100%; border-radius:10px; display:none; }
+  .cam-stage iframe{ width:100%; height:100%; border:0; border-radius:10px; background:#000; display:none; }
+  .cam-modal.modo-snap  .cam-stage img{ display:block; }
+  .cam-modal.modo-live  .cam-stage iframe{ display:block; }
+  .cam-modal .x{ position:absolute; top:14px; right:18px; color:#fff; font-size:1.8rem; cursor:pointer; z-index:2; }
+  .cam-bar{ display:flex; align-items:center; gap:.6rem; color:#9bb6a6; font-size:.8rem; }
+  .cam-bar .badge{ font-size:.66rem; }
 </style>
 {% endblock %}
 
 {% block content %}
+{% set live_ok = players|length > 0 %}
 <div class="page-header">
   <h1 class="ph-title"><span class="ph-icon"><i class="bi bi-camera-video"></i></span>
     Câmeras — {{ d.label or d.model }}
@@ -34,25 +43,68 @@
   </div>
 </div>
 
+{% if not live_ok %}
+<div class="alert alert-secondary py-2 px-3 small d-flex align-items-center gap-2">
+  <i class="bi bi-info-circle"></i>
+  <div>
+    Modo <strong>snapshot</strong> (~1 quadro/s).
+    {% if not go2rtc_info.enabled %}
+      Para vídeo em tempo real, configure o go2rtc.
+    {% elif not go2rtc_info.online %}
+      O serviço go2rtc não respondeu em <span class="mono">{{ go2rtc_info.url }}</span>.
+    {% else %}
+      O go2rtc está no ar, mas não conhece as câmeras deste DVR — gere o <span class="mono">go2rtc.yaml</span>.
+    {% endif %}
+    <a href="{{ url_for('dvr.go2rtc_page') }}">Abrir configuração do tempo real</a>.
+  </div>
+</div>
+{% endif %}
+
 <div class="cam-grid">
   {% for ch in canais %}
-  <div class="cam" data-ch="{{ ch }}" data-src="{{ url_for('dvr.snap', did=d.id, ch=ch) }}">
+  <div class="cam" data-ch="{{ ch }}" data-src="{{ url_for('dvr.snap', did=d.id, ch=ch) }}"
+       {% if players.get(ch) %}data-live="{{ players.get(ch) }}"{% endif %}>
     <img alt="Canal {{ ch }}" loading="lazy">
     <span class="lbl">CH {{ ch }}</span>
+    {% if players.get(ch) %}<span class="rt" title="Tempo real (WebRTC) disponível">AO VIVO</span>{% endif %}
     <div class="off"><i class="bi bi-camera-video-off fs-4"></i> sem sinal</div>
   </div>
   {% endfor %}
 </div>
 
-<div class="cam-modal" id="camModal"><span class="x">&times;</span><img alt=""></div>
+<div class="cam-modal" id="camModal">
+  <span class="x" title="Fechar (Esc)">&times;</span>
+  <div class="cam-stage">
+    <img alt="">
+    <iframe title="Câmera ao vivo" allow="autoplay; fullscreen; picture-in-picture"
+            referrerpolicy="no-referrer"></iframe>
+  </div>
+  <div class="cam-bar">
+    <span id="camTitulo">CH —</span>
+    <span class="badge bg-success-subtle text-success-emphasis" id="camModo">tempo real</span>
+    <button class="btn btn-sm btn-outline-light" id="camTrocar" type="button" hidden>
+      <i class="bi bi-arrow-left-right"></i> <span>usar snapshot</span>
+    </button>
+    <a class="btn btn-sm btn-outline-light" id="camNovaAba" target="_blank" rel="noopener" hidden>
+      <i class="bi bi-box-arrow-up-right"></i> nova aba
+    </a>
+  </div>
+</div>
 
 <script nonce="{{ csp_nonce() }}">
 (function(){
   var REFRESH = 3000;   // grade: ms entre atualizações de cada miniatura
+  var LIVE_OK = {{ 'true' if live_ok else 'false' }};
+  var CHAVE   = 'cftvModoAmpliada';           // preferência do usuário
   var cams = Array.prototype.slice.call(document.querySelectorAll('.cam'));
   var modal = document.getElementById('camModal');
-  var modalImg = modal.querySelector('img');
+  var modalImg = modal.querySelector('.cam-stage img');
+  var frame = modal.querySelector('.cam-stage iframe');
   var info = document.getElementById('camInfo');
+  var titulo = document.getElementById('camTitulo');
+  var chipModo = document.getElementById('camModo');
+  var btnTrocar = document.getElementById('camTrocar');
+  var linkAba = document.getElementById('camNovaAba');
 
   function carregar(cam){
     var img = cam.querySelector('img');
@@ -61,40 +113,90 @@
     img.src = cam.dataset.src + '?t=' + Date.now();
   }
 
-  // ---- Grade (miniaturas) ----
+  // ---- Grade (miniaturas) — sempre snapshot: 16+ players ao vivo pesariam ----
   cams.forEach(function(cam, i){
     setTimeout(function(){                       // escalona o 1º load
       carregar(cam);
       setInterval(function(){ if (!document.hidden) carregar(cam); }, REFRESH);
     }, i * 180);
   });
-  info.innerHTML = '<i class="bi bi-broadcast"></i> grade ~3s · ampliada tempo real';
+  info.innerHTML = LIVE_OK
+    ? '<i class="bi bi-broadcast"></i> grade ~3s · ampliada em tempo real (WebRTC)'
+    : '<i class="bi bi-broadcast"></i> grade ~3s · ampliada snapshot encadeado';
 
-  // ---- Ampliada: polling ENCADEADO + double-buffer (fluido, sem piscar) ----
-  var liveCam = null, liveOn = false, MIN = 200;   // ms mínimo entre frames
+  // ---- Snapshot ampliado: polling ENCADEADO + double-buffer (sem piscar) ----
+  var liveCam = null, snapOn = false, MIN = 200;   // ms mínimo entre frames
   function proximoFrame(){
-    if (!liveOn || !liveCam) return;
+    if (!snapOn || !liveCam) return;
     if (document.hidden){ setTimeout(proximoFrame, 400); return; }
     var t0 = Date.now();
     var next = new Image();
     next.onload = function(){
-      if (!liveOn) return;
+      if (!snapOn) return;
       modalImg.src = next.src;                    // troca só quando já carregou
       var gasto = Date.now() - t0;
       setTimeout(proximoFrame, Math.max(0, MIN - gasto));
     };
-    next.onerror = function(){ if (liveOn) setTimeout(proximoFrame, 600); };
+    next.onerror = function(){ if (snapOn) setTimeout(proximoFrame, 600); };
     next.src = liveCam.dataset.src + '?live=1&t=' + Date.now();
   }
-  function abrir(cam){
-    liveCam = cam; liveOn = true;
-    modalImg.src = cam.dataset.src + '?live=1&t=' + Date.now();
-    modal.classList.add('on');
+  function pararSnap(){ snapOn = false; modalImg.src = ''; }
+  function iniciarSnap(){
+    if (!liveCam) return;
+    snapOn = true;
+    modalImg.src = liveCam.dataset.src + '?live=1&t=' + Date.now();
     proximoFrame();
   }
-  function fechar(){ liveOn = false; liveCam = null; modal.classList.remove('on'); modalImg.src=''; }
+
+  // ---- Troca de modo (WebRTC <-> snapshot) ----
+  function pararLive(){ frame.src = 'about:blank'; }   // encerra a sessão WebRTC
+  function aplicarModo(modo){
+    var comLive = !!(liveCam && liveCam.dataset.live);
+    if (modo === 'live' && !comLive) modo = 'snap';
+    modal.classList.toggle('modo-live', modo === 'live');
+    modal.classList.toggle('modo-snap', modo !== 'live');
+    if (modo === 'live'){
+      pararSnap();
+      frame.src = liveCam.dataset.live;
+      chipModo.textContent = 'tempo real (WebRTC)';
+      chipModo.className = 'badge bg-success-subtle text-success-emphasis';
+      linkAba.href = liveCam.dataset.live; linkAba.hidden = false;
+      btnTrocar.querySelector('span').textContent = 'usar snapshot';
+    } else {
+      pararLive();
+      iniciarSnap();
+      chipModo.textContent = comLive ? 'snapshot (~1 fps)' : 'snapshot (~1 fps) · sem go2rtc';
+      chipModo.className = 'badge bg-secondary-subtle text-secondary-emphasis';
+      linkAba.hidden = true;
+      btnTrocar.querySelector('span').textContent = 'usar tempo real';
+    }
+    btnTrocar.hidden = !comLive;
+    try { localStorage.setItem(CHAVE, modo); } catch(e){}
+  }
+
+  function abrir(cam){
+    liveCam = cam;
+    titulo.textContent = 'CH ' + (cam.dataset.ch || '—');
+    modal.classList.add('on');
+    var pref = 'live';
+    try { pref = localStorage.getItem(CHAVE) || 'live'; } catch(e){}
+    aplicarModo(cam.dataset.live ? pref : 'snap');
+  }
+  function fechar(){
+    pararSnap(); pararLive();
+    liveCam = null;
+    modal.classList.remove('on', 'modo-live', 'modo-snap');
+  }
+
   cams.forEach(function(cam){ cam.addEventListener('click', function(){ abrir(cam); }); });
-  modal.addEventListener('click', fechar);
+  // Fecha só pelo fundo/X — cliques na barra e no player não devem fechar.
+  modal.addEventListener('click', function(ev){
+    if (ev.target === modal || ev.target.classList.contains('x')
+        || ev.target.classList.contains('cam-stage')) fechar();
+  });
+  btnTrocar.addEventListener('click', function(){
+    aplicarModo(modal.classList.contains('modo-live') ? 'snap' : 'live');
+  });
   document.addEventListener('keydown', function(e){ if(e.key==='Escape') fechar(); });
 })();
 </script>

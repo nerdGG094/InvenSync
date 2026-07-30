@@ -49,6 +49,12 @@ inventory/kiox/*.apk
 # (ancorado com "/" p/ não ignorar inventory/templates/backups/)
 /backups/
 
+# === go2rtc (CFTV tempo real) — o .yaml gerado contém usuário/senha dos DVRs,
+# e o binário é grande; nada disso vai para o Git.
+go2rtc/
+go2rtc.yaml
+go2rtc.exe
+
 # === Logs ===
 *.log
 flask_output.log

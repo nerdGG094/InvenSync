@@ -576,6 +576,16 @@ def create_app():
 
     # Cabeçalhos de segurança em toda resposta
     if app.config.get("SECURITY_HEADERS", True):
+        # Câmeras em tempo real: o player do go2rtc roda num <iframe> apontando
+        # para o serviço externo (outra porta) — sem liberar essa origem no
+        # frame-src/connect-src o CSP bloqueia o vídeo.
+        _g2 = (app.config.get("GO2RTC_URL") or "").strip().rstrip("/")
+        if _g2 and "://" not in _g2:
+            _g2 = "http://" + _g2
+        _g2_srcs = ""
+        if _g2:
+            _g2_srcs = " " + _g2 + " " + _g2.replace("https://", "wss://").replace("http://", "ws://")
+
         def _csp(nonce):
             return (
                 "default-src 'self'; "
@@ -583,7 +593,8 @@ def create_app():
                 f"script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net https://unpkg.com https://www.gstatic.com https://*.firebaseio.com; "
                 "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; "
                 "font-src 'self' data: https://cdn.jsdelivr.net; "
-                "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com wss://*.firebaseio.com; "
+                f"connect-src 'self' https://*.firebaseio.com https://*.googleapis.com wss://*.firebaseio.com{_g2_srcs}; "
+                f"frame-src 'self'{' ' + _g2 if _g2 else ''}; "
                 "object-src 'none'; "
                 "frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
             )

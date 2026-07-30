@@ -8,7 +8,7 @@ from ..extensions import db
 from ..repositories import dvr_repo
 from ..forms.dvr import DvrForm
 from ..models.dvr import Dvr
-from ..services import audit, crypto, router_ctl, dvr_cam
+from ..services import audit, crypto, router_ctl, dvr_cam, go2rtc
 
 bp = Blueprint("dvr", __name__)
 
@@ -122,11 +122,60 @@ def senha(did):
 
 @bp.route("/<int:did>/cameras")
 def cameras(did):
-    """Grade de câmeras (snapshots ao vivo) do DVR."""
+    """Grade de câmeras (snapshots ao vivo) do DVR.
+
+    A miniatura da grade é sempre snapshot (leve). A câmera ampliada usa o
+    player WebRTC do go2rtc quando ele está configurado E no ar — senão cai
+    automaticamente no snapshot encadeado (~1 fps)."""
     d = dvr_repo.get_dvr(did)
     n = d.channels or 1
+    canais = list(range(1, n + 1))
     audit.record("access", "dvr", d.id, f"Abriu câmeras do DVR '{d.label or d.model}'")
-    return render_template("cftv/cameras.html", d=d, canais=list(range(1, n + 1)))
+    g = go2rtc.probe(ttl=15) if go2rtc.enabled() else {"enabled": False, "online": False}
+    players = go2rtc.player_urls(d, canais, g.get("names")) if g.get("online") else {}
+    return render_template("cftv/cameras.html", d=d, canais=canais,
+                           go2rtc_info=g, players=players)
+
+
+@bp.route("/go2rtc")
+def go2rtc_page():
+    """Painel do tempo real (WebRTC): estado do serviço + geração do go2rtc.yaml."""
+    dvrs = dvr_repo.list_dvrs()
+    info = go2rtc.probe()
+    erro = None
+    try:
+        preview, n = go2rtc.build_config(dvrs, mask=True)
+    except crypto.DecryptError:
+        preview, n = "", 0
+        erro = "Não foi possível decifrar a senha de algum DVR (VAULT_KEY incorreta?)."
+    return render_template(
+        "cftv/go2rtc.html", info=info, preview=preview, n_streams=n, erro=erro,
+        arquivo=go2rtc.config_status(), alvos=go2rtc.eligible(dvrs),
+        total_dvrs=len(dvrs))
+
+
+@bp.route("/go2rtc/gerar", methods=["POST"])
+def go2rtc_gerar():
+    """(Re)grava o go2rtc.yaml a partir dos DVRs cadastrados."""
+    try:
+        path, n = go2rtc.write_config(dvr_repo.list_dvrs())
+    except crypto.DecryptError:
+        flash("Falha ao decifrar a senha de um DVR (VAULT_KEY incorreta?). "
+              "Arquivo não gerado.", "danger")
+        return redirect(url_for("dvr.go2rtc_page"))
+    except (OSError, ValueError) as e:
+        flash(f"Não foi possível gravar o arquivo: {e}", "danger")
+        return redirect(url_for("dvr.go2rtc_page"))
+    audit.record("update", "dvr", None, f"Gerou go2rtc.yaml ({n} câmeras) em {path}")
+    flash(f"go2rtc.yaml gerado com {n} câmera(s). Reinicie o serviço go2rtc "
+          "para aplicar.", "success")
+    return redirect(url_for("dvr.go2rtc_page"))
+
+
+@bp.route("/go2rtc/status")
+def go2rtc_status():
+    """Estado do serviço go2rtc (AJAX)."""
+    return jsonify(go2rtc.probe())
 
 
 @bp.route("/<int:did>/snap/<int:ch>")
