@@ -62,6 +62,15 @@
     }
     .btn-outline-light { border-color: #2e4b3b; color: #e7ffe9; }
     .btn-outline-light:hover { background: #1a3427; border-color: #3c6b52; }
+    /* Título do painel do submenu — na barra lateral o rótulo do ícone some,
+       então o nome do módulo aparece no topo do painel (estilo Senior). */
+    .dropdown-menu .dd-title {
+      padding: .55rem .9rem .4rem; font-size: .68rem; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase; color: #6f8a7b;
+      border-bottom: 1px solid #243024; margin-bottom: .25rem;
+      display: flex; align-items: center; gap: .45rem;
+    }
+    html[data-theme="light"] .dropdown-menu .dd-title { color: #5d7d6b; border-color: #e6ece8; }
     /* ===== Design system global (mesmo padrão da dashboard) ===== */
     /* Cartões genéricos (formulários, painéis) no tema escuro */
     .card { background:#15211a; border:1px solid #243024; border-radius:16px; }
@@ -201,13 +210,53 @@
         position: absolute; top: 4px; right: 12px; font-size: .58rem !important;
       }
 
-      /* Submenus (dropdowns) abrem para a DIREITA, ao CLICAR no ícone */
-      .navbar.navbar-expand-lg .nav-item.dropdown > .dropdown-menu.show {
-        position: absolute !important;
-        left: 100% !important; top: 0 !important; right: auto !important;
-        transform: none !important; margin: 0; min-width: 224px; z-index: 1040;
+      /* Submenus: GAVETA de altura total colada na régua (padrão SeniorX).
+         Antes o painel era ancorado no ícone (top:0 do item), então quem fica
+         no fim da barra — Admin, Perfil — abria metade para fora do rodapé.
+         Começando sempre no topo da tela, o menu inteiro cabe sempre; se um dia
+         passar da altura da tela, a própria gaveta rola. */
+      :root { --drawer-w: 296px; }
+      .navbar.navbar-expand-lg .nav-item.dropdown > .dropdown-menu.show,
+      .navbar.navbar-expand-lg .dropdown-menu-end.show {
+        position: fixed !important;
+        left: var(--rail-w) !important; right: auto !important;
+        top: 0 !important; bottom: 0 !important;
+        transform: none !important; margin: 0 !important;
+        width: var(--drawer-w); min-width: var(--drawer-w); max-width: var(--drawer-w);
+        max-height: none; overflow-y: auto; overscroll-behavior: contain;
+        padding: 0; border: 0; border-right: 1px solid #183224; border-radius: 0;
+        z-index: 1040; box-shadow: 14px 0 34px rgba(0,0,0,.45);
+        animation: railDrawer .16s ease-out;
       }
-      .navbar.navbar-expand-lg .dropdown-menu .dropdown-item { font-size: .9rem; }
+      @keyframes railDrawer {
+        from { opacity: .3; clip-path: inset(0 45% 0 0); }
+        to   { opacity: 1;  clip-path: inset(0 0 0 0); }
+      }
+      /* Cabeçalho da gaveta: nome do módulo (o rótulo do ícone fica oculto) */
+      .navbar.navbar-expand-lg .dropdown-menu.show .dd-title {
+        position: sticky; top: 0; z-index: 2;
+        padding: 1.05rem 1rem; margin: 0; border-bottom: 1px solid #1e3a29;
+        background: #14271c; color: #eafff0;
+        font-size: .84rem; letter-spacing: .03em; text-transform: none;
+      }
+      .navbar.navbar-expand-lg .dropdown-menu.show .dd-title > .bi { font-size: 1.05rem; color: var(--brand-2); }
+      .navbar.navbar-expand-lg .dropdown-menu.show .dd-close {
+        margin-left: auto; background: none; border: 0; color: #7fa891;
+        padding: .1rem .3rem; border-radius: 6px; line-height: 1; cursor: pointer;
+      }
+      .navbar.navbar-expand-lg .dropdown-menu.show .dd-close:hover { background: #1d3a29; color: #eafff0; }
+      /* Itens em largura cheia, como na Senior */
+      .navbar.navbar-expand-lg .dropdown-menu.show .dropdown-item {
+        padding: .68rem 1rem; font-size: .92rem; border-radius: 0;
+        display: flex; align-items: center;
+      }
+      .navbar.navbar-expand-lg .dropdown-menu.show .dropdown-item .bi { width: 1.5rem; }
+      .navbar.navbar-expand-lg .dropdown-menu.show .dropdown-divider { margin: .35rem 0; }
+      /* Barra de rolagem discreta caso a gaveta fique maior que a tela */
+      .navbar.navbar-expand-lg .dropdown-menu.show::-webkit-scrollbar { width: 8px; }
+      .navbar.navbar-expand-lg .dropdown-menu.show::-webkit-scrollbar-thumb {
+        background: #2b4a37; border-radius: 8px;
+      }
 
       /* Bloco do perfil ancorado no rodapé da barra */
       .navbar-collapse > .d-flex.align-items-center { margin-top: auto; justify-content: center; }
@@ -215,10 +264,6 @@
       .navbar.navbar-expand-lg #ddPerfil { justify-content: center; padding: .5rem 0; }
       .navbar.navbar-expand-lg #ddPerfil .avatar-circle { font-size: .8rem !important; }
       .navbar.navbar-expand-lg #ddPerfil.dropdown-toggle::after { display: none !important; }
-      .navbar.navbar-expand-lg .dropdown-menu-end {
-        left: 100% !important; right: auto !important;
-        bottom: 0; top: auto !important; transform: none !important; margin-left: 0;
-      }
 
       /* área de conteúdo ocupa o restante */
       main.container, footer .container { margin-left: auto; margin-right: auto; }
@@ -255,6 +300,7 @@
             <i class="bi bi-box-seam"></i> Estoque
           </a>
           <ul class="dropdown-menu" aria-labelledby="ddEstoque">
+            <li class="dd-title"><i class="bi bi-box-seam"></i> Estoque</li>
             <li><a class="dropdown-item {% if request.endpoint == 'products.list_view' %}active{% endif %}" href="{{ url_for('products.list_view') }}"><i class="bi bi-box-seam me-2"></i> Materiais</a></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('categories.') %}active{% endif %}" href="{{ url_for('categories.list_view') }}"><i class="bi bi-tags me-2"></i> Categorias</a></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('suppliers.') %}active{% endif %}" href="{{ url_for('suppliers.list_view') }}"><i class="bi bi-truck me-2"></i> Fornecedores</a></li>
@@ -271,6 +317,7 @@
             <i class="bi bi-journal-text"></i> Cadastros
           </a>
           <ul class="dropdown-menu" aria-labelledby="ddCadastros">
+            <li class="dd-title"><i class="bi bi-journal-text"></i> Cadastros</li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('licenses.') %}active{% endif %}" href="{{ url_for('licenses.list_view') }}"><i class="bi bi-patch-check me-2"></i> Licenças &amp; Garantias</a></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('domains.') %}active{% endif %}" href="{{ url_for('domains.list_view') }}"><i class="bi bi-globe2 me-2"></i> Domínios</a></li>
           </ul>
@@ -281,6 +328,7 @@
             <i class="bi bi-pc-display"></i> Máquinas
           </a>
           <ul class="dropdown-menu" aria-labelledby="ddMaquinas">
+            <li class="dd-title"><i class="bi bi-pc-display"></i> Máquinas</li>
             <li>
               <a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('machines.') %}active{% endif %}" href="{{ url_for('machines.list_view') }}">
                 <i class="bi bi-pc-display me-2"></i> Cadastro de Máquinas
@@ -330,6 +378,7 @@
             <i class="bi bi-people"></i> Colaboradores
           </a>
           <ul class="dropdown-menu" aria-labelledby="ddColaboradores">
+            <li class="dd-title"><i class="bi bi-people"></i> Colaboradores</li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('colaboradores.') %}active{% endif %}" href="{{ url_for('colaboradores.list_view') }}"><i class="bi bi-person-vcard me-2"></i> Colaboradores</a></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('departments.') %}active{% endif %}" href="{{ url_for('departments.list_view') }}"><i class="bi bi-diagram-3 me-2"></i> Departamentos</a></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('assets.') %}active{% endif %}" href="{{ url_for('assets.list_view') }}"><i class="bi bi-person-badge me-2"></i> Ativos</a></li>
@@ -360,21 +409,42 @@
           </a>
         </li>
 
+        {# ====== Atalhos de uso frequente (Admin) — fora do menu Admin ====== #}
+        {% if current_user.is_admin %}
+        <li class="nav-item">
+          <a class="nav-link {% if request.endpoint and request.endpoint.startswith('cotacoes.') %}active{% endif %}" href="{{ url_for('cotacoes.index') }}">
+            <i class="bi bi-cash-coin"></i> Cotações
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.endpoint and request.endpoint.startswith('dvr.') %}active{% endif %}" href="{{ url_for('dvr.list_view') }}">
+            <i class="bi bi-camera-video"></i> CFTV
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('kiox.index') }}" target="_blank" rel="noopener" title="Kiox (mapa da frota)">
+            <i class="bi bi-geo-alt"></i> Kiox
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.endpoint and request.endpoint.startswith('smartplugs.') %}active{% endif %}" href="{{ url_for('smartplugs.list_view') }}">
+            <i class="bi bi-plug"></i> Tomadas
+          </a>
+        </li>
+        {% endif %}
+
         {# ====== Admin: Cofre & Auditoria (somente Admin) ====== #}
         {% if current_user.is_authenticated and current_user.is_admin %}
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle {% if request.endpoint and (request.endpoint.startswith('credentials.') or request.endpoint.startswith('audit.') or request.endpoint.startswith('docs.') or request.endpoint.startswith('kiox.') or request.endpoint.startswith('cotacoes.') or request.endpoint.startswith('rede.') or request.endpoint.startswith('dvr.') or request.endpoint.startswith('backups.') or request.endpoint.startswith('wpp.') or request.endpoint.startswith('errors.')) %}active{% endif %}"
+          <a class="nav-link dropdown-toggle {% if request.endpoint and (request.endpoint.startswith('credentials.') or request.endpoint.startswith('audit.') or request.endpoint.startswith('docs.') or request.endpoint.startswith('rede.') or request.endpoint.startswith('backups.') or request.endpoint.startswith('wpp.') or request.endpoint.startswith('errors.')) %}active{% endif %}"
              href="#" id="ddAdmin" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             <i class="bi bi-gear"></i> Admin
           </a>
           <ul class="dropdown-menu" aria-labelledby="ddAdmin">
+            <li class="dd-title"><i class="bi bi-gear"></i> Administração</li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('credentials.') %}active{% endif %}" href="{{ url_for('credentials.list_view') }}"><i class="bi bi-key me-2"></i> Cofre</a></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('audit.') %}active{% endif %}" href="{{ url_for('audit.list_view') }}"><i class="bi bi-shield-lock me-2"></i> Auditoria</a></li>
-            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('cotacoes.') %}active{% endif %}" href="{{ url_for('cotacoes.index') }}"><i class="bi bi-cash-coin me-2"></i> Cotações</a></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('rede.') %}active{% endif %}" href="{{ url_for('rede.index') }}"><i class="bi bi-diagram-3 me-2"></i> Rede (ARP)</a></li>
-            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('dvr.') %}active{% endif %}" href="{{ url_for('dvr.list_view') }}"><i class="bi bi-camera-video me-2"></i> CFTV / DVRs</a></li>
-            <li><a class="dropdown-item" href="{{ url_for('kiox.index') }}" target="_blank" rel="noopener"><i class="bi bi-geo-alt me-2"></i> Kiox <span class="text-muted small">(mapa)</span></a></li>
-            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('smartplugs.') %}active{% endif %}" href="{{ url_for('smartplugs.list_view') }}"><i class="bi bi-plug me-2"></i> Tomadas Inteligentes</a></li>
             <li><hr class="dropdown-divider"></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('backups.') %}active{% endif %}" href="{{ url_for('backups.index') }}"><i class="bi bi-database-down me-2"></i> Backups do banco</a></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('wpp.') %}active{% endif %}" href="{{ url_for('wpp.page') }}"><i class="bi bi-envelope-at me-2"></i> Notificações por e-mail</a></li>
@@ -397,6 +467,7 @@
             <span class="small d-none d-sm-inline">{{ current_user.name }}</span>
           </a>
           <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="ddPerfil">
+            <li class="dd-title"><i class="bi bi-person-circle"></i> {{ current_user.name }}</li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('profile.') %}active{% endif %}" href="{{ url_for('profile.edit') }}"><i class="bi bi-person-gear me-2"></i> Meu Perfil</a></li>
             <li><hr class="dropdown-divider"></li>
             <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right me-2"></i> Sair</a></li>
@@ -547,6 +618,31 @@
       if (a.getAttribute('title')) return;
       var t = (a.textContent || '').replace(/\s+/g, ' ').trim();
       if (t) a.setAttribute('title', t);
+    });
+  })();
+</script>
+
+<script nonce="{{ csp_nonce() }}">
+  // Barra lateral (desktop): a gaveta do submenu ganha um "X" para fechar,
+  // igual ao SeniorX. O posicionamento é todo CSS (gaveta de altura total),
+  // então aqui só injetamos o botão — assim nenhum template precisa repeti-lo.
+  (function(){
+    if (!window.matchMedia('(min-width: 992px)').matches) return;
+    document.querySelectorAll('.navbar .dropdown-menu .dd-title').forEach(function(titulo){
+      if (titulo.querySelector('.dd-close')) return;
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'dd-close'; b.title = 'Fechar';
+      b.setAttribute('aria-label', 'Fechar menu');
+      b.innerHTML = '<i class="bi bi-x-lg"></i>';
+      b.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        var caixa = titulo.closest('.nav-item.dropdown, .dropdown');
+        var toggle = caixa && caixa.querySelector('.dropdown-toggle');
+        if (toggle && window.bootstrap && window.bootstrap.Dropdown) {
+          window.bootstrap.Dropdown.getOrCreateInstance(toggle).hide();
+        }
+      });
+      titulo.appendChild(b);
     });
   })();
 </script>
