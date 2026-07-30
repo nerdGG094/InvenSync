@@ -45,8 +45,9 @@ inventory/uploads_private/
 # === APK do KioX (binário grande, copiado da pasta KioX; servido em /kiox/apk) ===
 inventory/kiox/*.apk
 
-# === Backups do banco (pg_dump) ===
-backups/
+# === Backups do banco (pg_dump) — só a pasta de dumps na RAIZ ===
+# (ancorado com "/" p/ não ignorar inventory/templates/backups/)
+/backups/
 
 # === Logs ===
 *.log

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Backups do banco{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="ph-title">
+    <span class="ph-icon"><i class="bi bi-database-down"></i></span>
+    Backups do banco
+    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ items|length }}</span>
+  </h1>
+  <div class="d-flex gap-2">
+    {% if items %}
+    <a class="btn btn-outline-light" href="{{ url_for('backups.download', name=items[0].name) }}"><i class="bi bi-download me-1"></i> Baixar último</a>
+    {% endif %}
+    <form method="post" action="{{ url_for('backups.run') }}">
+      <button class="btn btn-primary"><i class="bi bi-play-circle me-1"></i> Fazer backup agora</button>
+    </form>
+  </div>
+</div>
+
+<div class="table-card p-3 mb-3">
+  <div class="d-flex flex-wrap gap-3 align-items-center">
+    {% if last %}
+      {% if age_hours is not none and age_hours <= 26 %}
+        <span class="badge bg-success-subtle text-success-emphasis"><i class="bi bi-check-circle me-1"></i> Último backup: {{ last.strftime('%d/%m/%Y %H:%M') }}</span>
+      {% else %}
+        <span class="badge bg-warning-subtle text-warning-emphasis"><i class="bi bi-exclamation-triangle me-1"></i> Último backup: {{ last.strftime('%d/%m/%Y %H:%M') }} (há +{{ (age_hours/24)|round(0, 'floor')|int }} dia(s))</span>
+      {% endif %}
+    {% else %}
+      <span class="badge bg-danger-subtle text-danger-emphasis"><i class="bi bi-x-circle me-1"></i> Nenhum backup ainda</span>
+    {% endif %}
+    <span class="text-muted small"><i class="bi bi-folder me-1"></i> {{ backup_dir }}</span>
+
+    {# ---- Status da cópia offsite (2º destino) ---- #}
+    {% if not mirror.configured %}
+      <span class="badge bg-secondary-subtle text-secondary-emphasis" title="Defina BACKUP_MIRROR_DIR no .env"><i class="bi bi-hdd-network me-1"></i> Cópia offsite: desligada</span>
+    {% elif not mirror.reachable %}
+      <span class="badge bg-danger-subtle text-danger-emphasis"><i class="bi bi-exclamation-octagon me-1"></i> Offsite INACESSÍVEL — confira {{ mirror.dir }}</span>
+    {% else %}
+      <span class="badge bg-success-subtle text-success-emphasis"><i class="bi bi-hdd-network me-1"></i>
+        Offsite: {{ mirror.count }} backup(s){% if mirror.last %} · último {{ mirror.last.strftime('%d/%m/%Y %H:%M') }}{% endif %}</span>
+      <span class="text-muted small"><i class="bi bi-folder2-open me-1"></i>{{ mirror.dir }}</span>
+    {% endif %}
+  </div>
+  {% if mirror.configured and mirror.reachable and mirror.last is none %}
+  <div class="small text-warning mt-2"><i class="bi bi-exclamation-triangle me-1"></i>
+    Destino offsite configurado, mas ainda sem cópias — rode um backup para espelhar.</div>
+  {% endif %}
+</div>
+
+<div class="table-card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Arquivo</th>
+          <th style="width:160px">Data</th>
+          <th class="text-end" style="width:120px">Tamanho</th>
+          <th class="text-end" style="width:90px">Baixar</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for it in items %}
+        <tr>
+          <td class="fw-semibold"><i class="bi bi-file-earmark-zip text-success me-1"></i> {{ it.name }}</td>
+          <td>{{ it.mtime.strftime('%d/%m/%Y %H:%M') }}</td>
+          <td class="text-end">{{ (it.size / 1024 / 1024)|round(1) }} MB</td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('backups.download', name=it.name) }}" title="Baixar"><i class="bi bi-download"></i></a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="4">
+            <div class="empty-state">
+              <i class="bi bi-database"></i>
+              Nenhum backup gerado ainda. Use “Fazer backup agora” ou aguarde a rotina diária.
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<p class="text-muted small mt-3">
+  <i class="bi bi-info-circle me-1"></i>
+  Os backups são gerados automaticamente todo dia pelo próprio InvenSync (self-heal: se o
+  servidor estava fora no horário, faz assim que volta) e a rotação mantém os mais recentes.
+  Uma <strong>cópia offsite</strong> é feita se <code>BACKUP_MIRROR_DIR</code> estiver definido
+  (outra máquina/NAS/rede). Para restaurar, use <code>pg_restore</code> sobre um <code>.dump</code>.
+</p>
+{% endblock %}
