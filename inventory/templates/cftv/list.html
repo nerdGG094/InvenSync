@@ -82,6 +82,7 @@
     <div class="dvr-foot">
       <span></span>
       <div class="d-flex gap-1">
+        {% if d.channels %}<a class="btn btn-sm btn-enter" href="{{ url_for('dvr.cameras', did=d.id) }}" title="Ver câmeras"><i class="bi bi-camera-video"></i> Câmeras</a>{% endif %}
         <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('dvr.edit', did=d.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
         <form action="{{ url_for('dvr.delete', did=d.id) }}" method="post" class="d-inline" onsubmit="return confirm('Excluir o DVR “{{ d.location or d.model }}”?');">
           <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>

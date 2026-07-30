@@ -1,6 +1,6 @@
-# inventory/routes/dvr.py — CFTV / DVRs (admin): inventário + status + abrir painel
+# inventory/routes/dvr.py — CFTV / DVRs (admin): inventário + status + abrir painel + câmeras
 from flask import (Blueprint, render_template, request, redirect, url_for, flash,
-                   jsonify, abort, current_app)
+                   jsonify, abort, current_app, Response)
 from flask_login import login_required, current_user
 from sqlalchemy import func
 
@@ -8,7 +8,7 @@ from ..extensions import db
 from ..repositories import dvr_repo
 from ..forms.dvr import DvrForm
 from ..models.dvr import Dvr
-from ..services import audit, crypto, router_ctl
+from ..services import audit, crypto, router_ctl, dvr_cam
 
 bp = Blueprint("dvr", __name__)
 
@@ -118,3 +118,28 @@ def senha(did):
                        url=_base_url(d))
     except crypto.DecryptError:
         return jsonify(error="Não foi possível decifrar (VAULT_KEY incorreta?)."), 500
+
+
+@bp.route("/<int:did>/cameras")
+def cameras(did):
+    """Grade de câmeras (snapshots ao vivo) do DVR."""
+    d = dvr_repo.get_dvr(did)
+    n = d.channels or 1
+    audit.record("access", "dvr", d.id, f"Abriu câmeras do DVR '{d.label or d.model}'")
+    return render_template("cftv/cameras.html", d=d, canais=list(range(1, n + 1)))
+
+
+@bp.route("/<int:did>/snap/<int:ch>")
+def snap(did, ch):
+    """Proxy do snapshot do canal (JPEG em memória — nada é salvo em disco)."""
+    d = dvr_repo.get_dvr(did)
+    try:
+        pw = crypto.decrypt(d.admin_password) or ""
+    except crypto.DecryptError:
+        abort(500)
+    ttl = float(current_app.config.get("DVR_SNAP_TTL", 5))
+    data = dvr_cam.snapshot(d, pw, ch, ttl=ttl)
+    if not data:
+        return Response(status=503)   # sem sinal / DVR indisponível
+    return Response(data, mimetype="image/jpeg",
+                    headers={"Cache-Control": "no-store, max-age=0"})

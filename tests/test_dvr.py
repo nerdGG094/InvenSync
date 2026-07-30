@@ -64,3 +64,31 @@ def test_status_offline_gracioso(app, auth_client):
 
 def test_cftv_bloqueia_nao_admin(app, common_client):
     assert common_client.get("/cftv").status_code in (403, 302)
+
+
+def test_pagina_cameras_e_snap_proxy(app, auth_client, monkeypatch):
+    from inventory.extensions import db
+    from inventory.models.dvr import Dvr
+    from inventory.repositories import dvr_repo
+    from inventory.services import dvr_cam
+    with app.app_context():
+        d = dvr_repo.create_dvr(model="PYTEST-CAM", ip_address="10.0.0.90",
+                                admin_user="admin", admin_password="x", channels=4)
+        did = d.id
+    # página de câmeras traz a grade com os 4 canais
+    r = auth_client.get(f"/cftv/{did}/cameras")
+    assert r.status_code == 200 and b"4 canais" in r.data and b'data-ch="4"' in r.data
+
+    # proxy do snapshot: serve o JPEG em memória
+    jpeg = b"\xff\xd8\xff\xe0dummydata"
+    monkeypatch.setattr(dvr_cam, "snapshot", lambda d, pw, ch, ttl=5.0: jpeg)
+    s = auth_client.get(f"/cftv/{did}/snap/1")
+    assert s.status_code == 200 and s.mimetype == "image/jpeg" and s.data == jpeg
+
+    # sem sinal / DVR fora -> 503
+    monkeypatch.setattr(dvr_cam, "snapshot", lambda d, pw, ch, ttl=5.0: None)
+    assert auth_client.get(f"/cftv/{did}/snap/2").status_code == 503
+
+    with app.app_context():
+        db.session.delete(db.session.get(Dvr, did))
+        db.session.commit()

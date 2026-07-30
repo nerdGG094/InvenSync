@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Câmeras — {{ d.label or d.model }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .cam-grid{ display:grid; gap:.6rem; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); }
+  .cam{ position:relative; background:#000; border:1px solid #243024; border-radius:12px; overflow:hidden;
+    aspect-ratio:16/9; cursor:zoom-in; }
+  .cam img{ width:100%; height:100%; object-fit:cover; display:block; background:#0a0f0c; }
+  .cam .lbl{ position:absolute; left:6px; bottom:6px; font-size:.7rem; padding:.05rem .4rem; border-radius:6px;
+    background:rgba(0,0,0,.6); color:#d0ffd6; }
+  .cam .off{ position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+    color:#6f8a7b; font-size:.78rem; flex-direction:column; gap:.3rem; }
+  .cam.semsinal .off{ display:flex; }
+  .cam.semsinal img{ opacity:.15; }
+  /* Ampliação */
+  .cam-modal{ position:fixed; inset:0; z-index:1090; background:rgba(0,0,0,.9); display:none;
+    align-items:center; justify-content:center; }
+  .cam-modal.on{ display:flex; }
+  .cam-modal img{ max-width:96vw; max-height:92vh; border-radius:10px; }
+  .cam-modal .x{ position:absolute; top:14px; right:18px; color:#fff; font-size:1.8rem; cursor:pointer; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="ph-title"><span class="ph-icon"><i class="bi bi-camera-video"></i></span>
+    Câmeras — {{ d.label or d.model }}
+    <span class="badge bg-secondary-subtle text-secondary-emphasis ph-count">{{ canais|length }} canais</span>
+  </h1>
+  <div class="d-flex gap-2 align-items-center">
+    <span class="small text-muted" id="camInfo"><i class="bi bi-arrow-repeat"></i> atualizando…</span>
+    <a href="{{ url_for('dvr.list_view') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> DVRs</a>
+  </div>
+</div>
+
+<div class="cam-grid">
+  {% for ch in canais %}
+  <div class="cam" data-ch="{{ ch }}" data-src="{{ url_for('dvr.snap', did=d.id, ch=ch) }}">
+    <img alt="Canal {{ ch }}" loading="lazy">
+    <span class="lbl">CH {{ ch }}</span>
+    <div class="off"><i class="bi bi-camera-video-off fs-4"></i> sem sinal</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="cam-modal" id="camModal"><span class="x">&times;</span><img alt=""></div>
+
+<script nonce="{{ csp_nonce() }}">
+(function(){
+  var REFRESH = 6000;   // ms entre atualizações de cada câmera
+  var cams = Array.prototype.slice.call(document.querySelectorAll('.cam'));
+  var modal = document.getElementById('camModal');
+  var modalImg = modal.querySelector('img');
+  var info = document.getElementById('camInfo');
+  var modalCh = null, timers = [];
+
+  function carregar(cam){
+    var img = cam.querySelector('img');
+    var url = cam.dataset.src + '?t=' + Date.now();
+    img.onerror = function(){ cam.classList.add('semsinal'); };
+    img.onload  = function(){ cam.classList.remove('semsinal'); };
+    img.src = url;
+  }
+
+  function iniciar(){
+    // Escalona o 1º carregamento (não dispara as N câmeras de uma vez).
+    cams.forEach(function(cam, i){
+      setTimeout(function(){
+        carregar(cam);
+        timers.push(setInterval(function(){
+          if (document.hidden) return;          // pausa quando a aba não está visível
+          carregar(cam);
+        }, REFRESH));
+      }, i * 200);
+    });
+    info.innerHTML = '<i class="bi bi-broadcast"></i> ao vivo (~6s)';
+  }
+
+  // Ampliar ao clicar
+  cams.forEach(function(cam){
+    cam.addEventListener('click', function(){
+      modalCh = cam;
+      modalImg.src = cam.dataset.src + '?t=' + Date.now();
+      modal.classList.add('on');
+    });
+  });
+  function fecharModal(){ modal.classList.remove('on'); modalCh = null; }
+  modal.addEventListener('click', fecharModal);
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') fecharModal(); });
+  // refresh mais rápido na ampliada
+  setInterval(function(){
+    if (modalCh && modal.classList.contains('on') && !document.hidden)
+      modalImg.src = modalCh.dataset.src + '?t=' + Date.now();
+  }, 2500);
+
+  iniciar();
+})();
+</script>
+{% endblock %}
