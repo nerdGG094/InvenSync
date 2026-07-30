@@ -71,7 +71,8 @@ There is no separate "employee" table anymore. `models/user.py` is the central r
 - `snmp_printer.py` — reads network printers via **SNMP** (Printer-MIB pages/supplies + Brother private toner OID) with an **IPP fallback** (`pyipp`) for Canon that only exposes state/alerts. `query(ip)` is best-effort → `{"ok": bool, ...}`.
 - `printer_monitor.py` — background scheduler (`PRINTER_MONITOR_ENABLED`): scans active network printers, writes `PrinterReading` history, **e-mails TI once per supply-low event**, and **auto-registers a stock OUT movement** when a supply jumps back up (toner/drum swap detected — compares to the last DB reading, robust to restarts).
 - `router_ctl.py` — probes a router's admin panel (online/latency + Basic-Auth vs form detection) for the routers control panel; `auth_url`/`base_url` helpers. Best-effort.
-- `net_scan.py` — ARP-based network discovery for the `/rede` module: reads `arp -a`, filters, reverse-DNS names in parallel; optional ping-sweep of known /24s. Best-effort.
+- `net_scan.py` — ARP-based network discovery for the `/rede` module: reads `arp -a`, filters, reverse-DNS names in parallel; optional ping-sweep of known /24s; `active_set()` returns current ARP MACs/IPs (no DNS) for the machine-card live status. Best-effort.
+- `dvr_cam.py` — snapshot proxy for the CFTV cameras (`/cgi-bin/snapshot.cgi`, Digest); serves the JPEG in-memory (never to disk) with a short per-(dvr,channel) cache. Reuses `router_ctl.probe` for DVR status.
 - `tuya.py` / `plug_scheduler.py` — smart-plug (Tuya/NeoAvant LAN) control + scheduled on/off, backing the `/tomadas` module.
 - `backup_scheduler.py` — periodic PostgreSQL dumps for the `/backups` module. `errorlog.py` — captured error log for `/errors`.
 - `pagination.py` — `paginate(items, per_page=20)` slices an in-memory list using `?page`/`?per_page` (20/50/100) and returns `(slice, meta)`; render with the `pager` macro in `templates/_macros.html` (uses the `page_url` context helper to preserve filters).
@@ -84,15 +85,26 @@ Network printers (`Machine.kind == "impressora"` with an `ip_address`) are polle
 - e-mails TI when a supply crosses `PRINTER_SUPPLY_ALERT_PCT` (re-arms after recovery);
 - **auto-registers a stock OUT movement** of 1 unit when a supply level jumps up by ≥ `PRINTER_REPLACE_JUMP` (default 40) and reaches ≥ `PRINTER_REPLACE_PCT` (default 80) — i.e. a physical swap. The printer's linked supply is `Machine.toner_product_id` / `Machine.drum_product_id` (FK → `product.id`, added via light migration; the machine form shows two comboboxes filtered by the "Toner" / "Cilindro/Fotocondutor" **product categories**, only for printers). Emails TI if the material's stock was already ≤ 0.
 
-The consumption report (`/machines/impressoras/consumo`, `routes/machines.py::printers_report`) sums only the **rises** between consecutive readings, so a counter that "drops" mid-period (IP corrected, device swapped) never yields a negative total. It also shows a "Resma de papel" KPI (pages ÷ 500).
+The consumption report (`/machines/impressoras/consumo`, `routes/machines.py::printers_report`) sums only the **rises** between consecutive readings, so a counter that "drops" mid-period (IP corrected, device swapped) never yields a negative total. It also shows a "Resma de papel" KPI (pages ÷ 500) and a **"Custo de suprimento por setor"** section: it sums OUT stock movements of toner/drum products (Toner/Cilindro categories) × unit cost, grouped by `StockMovement.responsible_sector`. The auto-swap stamps `responsible_sector` (printer's sector) + `unit_cost` (product price) on the movement, so cost accrues per sector over time.
+
+**Brother parts life:** `snmp_printer.query()` also decodes the Brother private "maintenance" blob (`OID_BROTHER_MAINT`) beyond toner (0x81) — items `0x6a/0x6b/0x6c/0x6d/0x6f` are the **remaining-life % of parts** (belt/fuser/laser/PF kits), reported ×100 (÷100 = %; validated because 0x41 matched the standard drum %). Returned as `parts` and shown as bars on the printer card (`_BROTHER_PARTS` labels are best-effort per model).
 
 ### Router control panel (`/routers`, admin)
 Beyond CRUD, each router card shows a **live status** (AJAX to `routers.status` via `services/router_ctl.py`) and a smart access button. Note the hard constraint: browsers strip URL-embedded credentials, so there is **no reliable one-click auto-login** even for Basic-Auth panels — the button opens `http://IP` and copies the admin password to the clipboard. Router admin/Wi-Fi passwords are **encrypted at rest** (`crypto`, VAULT_KEY); revealed on demand via `routers.senha` with audit — never rendered raw into the page.
 
+### CFTV / DVR module (`/cftv`, admin — `routes/dvr.py`, `models/dvr.py`)
+DVRs de câmera (Intelbras/Dahua). Same pattern as routers: encrypted `admin_password` (VAULT_KEY, `String(255)`), live status (`router_ctl.probe`), "Abrir painel" (open + copy password). Plus **live camera view**:
+- `services/dvr_cam.py` proxies the **snapshot CGI** (`/cgi-bin/snapshot.cgi?channel=N`, **Digest auth**) — the JPEG is served **in-memory (never written to disk)**, with a short per-(dvr,channel) cache shared across viewers; the Digest opener is reused.
+- `dvr.cameras` renders a grid of `Dvr.channels` thumbnails; `dvr.snap/<ch>` is the proxy (accepts `?live=1` → minimal cache for the enlarged view). The camera page refreshes the grid every ~3s and the enlarged view does **chained double-buffered polling** (`?live=1`).
+- **Latency ceiling:** these DVRs' snapshot.cgi takes ~0.9s → ~1 fps max. True real-time needs a media gateway (**go2rtc** — see "Próximos passos" at the end; RTSP 554 is open on both DVRs). MJPEG CGI on these units is weak (sub-stream is H.264).
+
 ### Admin utility modules
 - `/tomadas` (smart plugs) — Tuya/NeoAvant LAN plugs with on/off scheduling (`services/tuya.py` + `plug_scheduler.py`); plug local keys encrypted with `crypto`.
 - `/cotacoes` (Cotações) — type a model → **deep-link** to the Mercado Livre listing ordered by lowest price (opens in the admin's browser; ML blocks server-side search, so there is intentionally **no API/scraping**).
-- `/rede` (Rede/ARP) — on-demand network discovery via `net_scan`; the page opens instantly and scans only when the button is clicked (JSON endpoint `rede.scan`, with a CSS "radar" loading animation).
+- `/rede` (Rede/ARP) — on-demand network discovery via `net_scan`; page opens instantly, scans only on the button (JSON `rede.scan`, CSS "radar" animation). Matches devices → cadastro by **MAC** (certeiro, works with DHCP), then hostname/IP/name; "salvar MAC" bootstraps `Machine.mac_address`/`hostname` from a discovered device. Machines & mobiles now carry `mac_address` (+ `hostname` on machines); the machines list shows a **live online/offline chip** for PCs/notebooks via `machines.rede_ativos` (reads the ARP table only — fast, no DNS).
+
+### Uptime monitoring auto-sync (`/machines/monitoring`)
+`services/monitoring.py::_sync_auto_hosts()` (run each `check_all` cycle + on the monitoring page) upserts a `MonitoredHost` (with `auto_source` = `impressora:N`/`dvr:N`/`router:N`) for every active printer/DVR/router that has a fixed IP, so they flow through the existing up/down e-mail alerting. Auto hosts are read-only in the UI (edit/delete blocked); removing/inactivating the device drops its monitor.
 
 ### Auth hardening
 - **Rate limiting** (`extensions.limiter`, Flask-Limiter, memory store): `auth.login` POST `10/min;40/h`, `auth.login_2fa` POST `10/min`. 429 → friendly flash + redirect.
@@ -107,7 +119,7 @@ Admin-only JSON endpoint scanning products/machines/mobiles/chips/tickets/users/
 `static/manifest.webmanifest` + `static/sw.js` (cache-first for `/static/` only) + `icon-192/512.png`. The service worker is served from root via the `/sw.js` route (scope `/`); registration + manifest link live in `base.html`.
 
 ### Domain modules (Blueprints)
-Estoque (products/movements/kanban/reports/categories/suppliers), Máquinas & submódulos (machines + cleanings/maintenance/mobile/chips/monitoring/routers/labels, all under `/machines/...` or related prefixes), Colaboradores/departments/assets, **Chamados** (`tickets` — helpdesk with comments timeline, attachments, status workflow, e-mail notifications), **Central de Avisos** (`announcements` — internal bulletin board; admins post, everyone reads), KB, Admin tools (credentials vault, audit, docs, **kiox**, **tomadas** smart plugs, **cotações** ML price deep-links, **rede** ARP discovery, e-mail test at `/wpp`, error log at `/errors`, DB backups), profile, auth (with optional 2FA/TOTP).
+Estoque (products/movements/kanban/reports/categories/suppliers), Máquinas & submódulos (machines + cleanings/maintenance/mobile/chips/monitoring/routers/labels, all under `/machines/...` or related prefixes), Colaboradores/departments/assets, **Chamados** (`tickets` — helpdesk with comments timeline, attachments, status workflow, e-mail notifications), **Central de Avisos** (`announcements` — internal bulletin board; admins post, everyone reads), KB, Admin tools (credentials vault, audit, docs, **kiox**, **tomadas** smart plugs, **cotações** ML price deep-links, **rede** ARP discovery, **cftv** DVRs + live cameras, e-mail test at `/wpp`, error log at `/errors`, DB backups), profile, auth (with optional 2FA/TOTP). The Admin dropdown (gear) holds Cofre/Auditoria/Cotações/Rede/CFTV/Kiox/Tomadas + Backups/e-mail/Erros/Docs; the profile menu is just Perfil + Sair.
 
 The **kiox** module (`routes/kiox.py`) serves a self-contained fleet-tracking map (`inventory/kiox/RASTREIO-mapa.html`, Leaflet + Firebase) raw via `send_file` (bypassing Jinja); it's a copied snapshot — if the original under the external `KioX/` folder changes, the copy must be re-synced.
 
@@ -133,6 +145,7 @@ Quick navigation aid; for fields/endpoints read the module itself. Several "Máq
 | `/machines/impressoras/consumo` | printer consumption | | `/tomadas` | smart plugs (admin) |
 | `/busca` | global search JSON (admin) | | `/cotacoes` | ML price deep-links (admin) |
 | `/errors` | error log (admin) | | `/rede` | ARP network discovery (admin) |
+| `/cftv` | CFTV / DVRs + câmeras (admin) | | | |
 | (no prefix) | `auth` (login/2FA), `health` (/health), `/sw.js` (PWA) | | | |
 
 ## UI conventions
@@ -159,4 +172,28 @@ Notable optional toggles:
 - **Printers/SNMP**: `SNMP_COMMUNITY`, `SNMP_TIMEOUT`, `PRINTER_MONITOR_ENABLED`, `PRINTER_MONITOR_MINUTES`, `PRINTER_SUPPLY_ALERT_PCT`, `PRINTER_REPLACE_PCT`/`PRINTER_REPLACE_JUMP` (swap-detection thresholds).
 - **Smart plugs**: `PLUG_SCHEDULER_ENABLED`, `PLUG_OFFLINE_*`.
 - **Schedulers/alerts**: `MONITORING_ENABLED`, `ALERTS_ENABLED`/`ALERTS_*`, `INACTIVITY_MINUTES` (0=off).
+- **CFTV/DVR cameras**: `DVR_SNAP_TTL` (grid snapshot cache, default 3s), `DVR_SNAP_TTL_LIVE` (enlarged view, default 0.4s).
+- **Backups**: `BACKUP_DIR`, `BACKUP_KEEP`, `BACKUP_HOUR`, `BACKUP_SCHEDULER_ENABLED` (app-owned daily dump, self-heals if the server was down). **Offsite** (recommended): `BACKUP_MIRROR_DIR` (2nd folder/NAS/synced Drive) and/or `BACKUP_UPLOAD_CMD` (post-backup command, e.g. rclone to Google Drive — `{path}`/`{name}` placeholders). The Backups page shows the offsite status (off / unreachable / OK). `backup_db.py` at the repo root does the work (`run_backup`, `mirror_status`).
 - **HTTPS behind a reverse proxy**: `BEHIND_PROXY=1` + `SESSION_COOKIE_SECURE=1` (see `docs/HTTPS.md`).
+
+## Deploy
+`atualizar.bat` (repo root) is the update flow: `git pull` → `pip install -r requirements.txt` → boot-check (`create_app()`) → **reminder to restart**. Always restart after pulling so `.py` code and templates load together (a template that references a not-yet-registered endpoint/form field errors every page until restart — most historical `/errors` entries were exactly this).
+
+## Próximos passos / TODO
+### Câmeras em tempo real via go2rtc (WebRTC) — HANDOFF para novo chat
+**Estado atual:** o módulo CFTV mostra câmeras por **snapshot** (`services/dvr_cam.py` + `templates/cftv/cameras.html`), com teto de **~1 fps** (snapshot.cgi do DVR leva ~0,9s). Isso NÃO é tempo real.
+
+**Objetivo:** vídeo fluido sub-segundo no navegador, sem transcodificar.
+
+**Fatos já confirmados (deste ambiente):**
+- 2 DVRs cadastrados na tabela `dvr`: **INDUSTRIA3** `192.168.0.134` (16 canais) e **MHDX1216** `192.168.0.136` (18 canais). user `admin`, senha cifrada (VAULT_KEY) — decifra com `crypto.decrypt(d.admin_password)`.
+- **RTSP porta 554 ABERTA** nos dois. URL padrão Intelbras/Dahua: `rtsp://user:senha@IP:554/cams/realmonitor?channel=N&subtype=0` (main) / `subtype=1` (sub).
+- Câmeras analógicas são **H.264** → go2rtc faz **passthrough p/ WebRTC** (CPU baixa). Canais IP (ch17-18 do MHDX) podem ser H.265 → checar (HEVC não passa direto no WebRTC).
+
+**Plano proposto:**
+1. Rodar **go2rtc** (binário único, grátis/MIT, ~20-40 MB) no mesmo servidor, como serviço. Download: github.com/AlexxIT/go2rtc.
+2. **Gerar `go2rtc.yaml`** a partir da tabela `dvr` (um stream por canal, com a URL RTSP montada da credencial decifrada). Cuidar da permissão do arquivo (leva user:senha em texto).
+3. Na página `cftv/cameras.html`, trocar (ou dar opção) o `<img>` snapshot pelo **player WebRTC do go2rtc** (iframe `http://SERVIDOR:1984/webrtc.html?src=<cam>` ou o webcomponent do go2rtc). Grade pode seguir em snapshot (leve) e a **ampliada** vira WebRTC.
+4. Config sugerida: `GO2RTC_URL` no `.env`; endpoint/rota no InvenSync que devolve a URL do player por DVR/canal.
+
+**Custo:** R$ 0 (open-source), CPU baixa (passthrough, só transmite quando alguém assiste), nada em disco. Único ônus: mais um processo pra manter no ar (se cair, o snapshot ~1s continua de reserva).
