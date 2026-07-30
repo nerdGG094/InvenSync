@@ -56,6 +56,8 @@ def _run_light_migrations():
         'ALTER TABLE machine ADD COLUMN IF NOT EXISTS mac_address VARCHAR(20)',
         'ALTER TABLE machine ADD COLUMN IF NOT EXISTS hostname VARCHAR(120)',
         'ALTER TABLE mobile_device ADD COLUMN IF NOT EXISTS mac_address VARCHAR(20)',
+        # Uptime: hosts auto-gerados a partir de impressoras/DVRs/routers.
+        'ALTER TABLE monitored_host ADD COLUMN IF NOT EXISTS auto_source VARCHAR(30)',
         # Senhas cifradas dos routers: alarga p/ 255 (token Fernet de senha longa
         # estourava VARCHAR(120) e truncava). Idempotente (no-op se já é 255).
         'ALTER TABLE router ALTER COLUMN admin_password TYPE VARCHAR(255)',

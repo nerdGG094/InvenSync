@@ -128,10 +128,14 @@
             <i class="bi {{ 'bi-pause' if h.enabled else 'bi-play' }}"></i>
           </button>
         </form>
+        {% if not h.auto_source %}
         <a class="btn btn-sm btn-outline-light btn-icon" href="{{ url_for('monitoring.edit', hid=h.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
         <form action="{{ url_for('monitoring.delete', hid=h.id) }}" method="post" class="d-inline" onsubmit="return confirm('Remover {{ h.label }} do monitoramento?');">
           <button class="btn btn-sm btn-outline-danger btn-icon" title="Excluir"><i class="bi bi-trash"></i></button>
         </form>
+        {% else %}
+        <span class="btn btn-sm btn-icon disabled" title="Automático: gerenciado pelo cadastro do equipamento"><i class="bi bi-magic"></i></span>
+        {% endif %}
       </div>
     </div>
 
@@ -141,6 +145,7 @@
     <div class="mon-meta">
       <span class="pill">{{ kind_labels.get(h.kind, h.kind) }}</span>
       <span class="pill">{{ 'HTTP' if h.check_type == 'http' else 'Ping' }}</span>
+      {% if h.auto_source %}<span class="pill" title="Adicionado automaticamente"><i class="bi bi-magic"></i> auto</span>{% endif %}
       {% if h.is_up and h.last_latency_ms is not none %}
         {% set ms = h.last_latency_ms %}
         <span class="pill {{ 'lat-ok' if ms < 150 else ('lat-mid' if ms < 400 else 'lat-hi') }}">

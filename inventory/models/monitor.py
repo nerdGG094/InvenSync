@@ -18,6 +18,9 @@ class MonitoredHost(db.Model):
 
     enabled = db.Column(db.Boolean, nullable=False, default=True,
                         server_default=db.text("true"), index=True)
+    # Se preenchido, o host é gerado/atualizado automaticamente a partir de um
+    # equipamento (ex.: "impressora:12", "dvr:3", "router:5") — não editar à mão.
+    auto_source = db.Column(db.String(30), nullable=True, index=True)
 
     # Estado da última verificação
     # last_status: up | down | unknown

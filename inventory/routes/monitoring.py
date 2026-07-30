@@ -14,7 +14,7 @@ bp = Blueprint("monitoring", __name__)
 
 KIND_CHOICES = [
     ("servidor", "Servidor"), ("impressora", "Impressora"), ("roteador", "Roteador"),
-    ("switch", "Switch"), ("site", "Site"), ("outro", "Outro"),
+    ("dvr", "DVR/CFTV"), ("switch", "Switch"), ("site", "Site"), ("outro", "Outro"),
 ]
 CHECK_CHOICES = [("icmp", "Ping (ICMP)"), ("http", "HTTP (GET)")]
 
@@ -28,6 +28,7 @@ def _only_admin():
 
 @bp.route("")
 def list_view():
+    monitoring._sync_auto_hosts()   # traz impressoras/DVRs/routers ativos p/ a lista
     q = (request.args.get("q") or "").strip()
     query = MonitoredHost.query
     if q:
@@ -83,6 +84,9 @@ def new():
 @bp.route("/<int:hid>/edit", methods=["GET", "POST"])
 def edit(hid):
     h = db.get_or_404(MonitoredHost, hid)
+    if h.auto_source:
+        flash("Host automático (impressora/DVR/router) — edite no cadastro do equipamento.", "info")
+        return redirect(url_for("monitoring.list_view"))
     if request.method == "POST":
         data = _form_kwargs()
         if not data["label"] or not data["host"]:
@@ -101,6 +105,9 @@ def edit(hid):
 @bp.route("/<int:hid>/delete", methods=["POST"])
 def delete(hid):
     h = db.get_or_404(MonitoredHost, hid)
+    if h.auto_source:
+        flash("Host automático — para remover, inative/exclua o equipamento (ou desative o host).", "info")
+        return redirect(url_for("monitoring.list_view"))
     label = h.label
     db.session.delete(h)
     db.session.commit()

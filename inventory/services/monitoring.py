@@ -3,8 +3,9 @@ Monitoramento de uptime (ping/HTTP) de hosts da rede.
 
 - Verifica hosts cadastrados (servidores, impressoras, roteadores, sites).
 - Roda em background (thread daemon) a cada MONITORING_INTERVAL segundos.
-- Quando um host CAI (up->down) ou VOLTA (down->up), avisa a TI por WhatsApp
-  (CallMeBot) — reaproveita o serviço já existente.
+- Quando um host CAI (up->down) ou VOLTA (down->up), avisa a TI por e-mail.
+- Impressoras, DVRs e routers ativos (com IP) entram automaticamente (auto_source),
+  sem precisar cadastrar host manual — via sync_auto_hosts().
 
 Tolerante a falhas: qualquer erro de verificação nunca derruba o app/servidor.
 """
@@ -29,8 +30,55 @@ _lock = threading.Lock()
 
 KIND_LABELS = {
     "servidor": "Servidor", "impressora": "Impressora", "roteador": "Roteador",
-    "switch": "Switch", "site": "Site", "outro": "Outro",
+    "dvr": "DVR/CFTV", "switch": "Switch", "site": "Site", "outro": "Outro",
 }
+
+
+def _sync_auto_hosts():
+    """Sincroniza hosts automáticos a partir de impressoras/DVRs/routers ativos
+    (com IP). Executa DENTRO de um app_context. Best-effort."""
+    from ..models.machine import Machine
+    from ..models.dvr import Dvr
+    from ..models.router import Router
+
+    def _ipok(ip):
+        ip = (ip or "").strip()
+        return ip and ip.upper() != "DHCP"
+
+    desired = {}  # auto_source -> (label, host, kind)
+    try:
+        for m in Machine.query.filter_by(kind="impressora", is_active=True).all():
+            if _ipok(m.ip_address):
+                desired[f"impressora:{m.id}"] = (m.model or m.name or "Impressora",
+                                                 m.ip_address.strip(), "impressora")
+        for d in Dvr.query.filter(Dvr.status != "inativo").all():
+            if _ipok(d.ip_address):
+                desired[f"dvr:{d.id}"] = (d.label or d.model or "DVR",
+                                          d.ip_address.strip(), "dvr")
+        for r in Router.query.filter(Router.status != "inativo").all():
+            if _ipok(r.ip_address):
+                desired[f"router:{r.id}"] = (r.label or r.model or "Roteador",
+                                             r.ip_address.strip(), "roteador")
+        existing = {h.auto_source: h for h in
+                    MonitoredHost.query.filter(MonitoredHost.auto_source.isnot(None)).all()}
+        for src, (label, host, kind) in desired.items():
+            h = existing.get(src)
+            if h is None:
+                db.session.add(MonitoredHost(auto_source=src, label=label, host=host,
+                                             kind=kind, check_type="icmp", enabled=True))
+            else:
+                h.label, h.host, h.kind = label, host, kind
+        for src, h in existing.items():
+            if src not in desired:      # equipamento removido/inativado -> remove o monitor
+                db.session.delete(h)
+        db.session.commit()
+    except Exception:  # noqa: BLE001
+        db.session.rollback()
+
+
+def sync_auto_hosts(app):
+    with app.app_context():
+        _sync_auto_hosts()
 
 
 # ---------------------------------------------------------------------------
@@ -101,6 +149,7 @@ def check_all(app):
     """Verifica todos os hosts habilitados. Roda dentro de um app_context."""
     transitions = []  # (host, novo_status)
     with app.app_context():
+        _sync_auto_hosts()   # mantém impressoras/DVRs/routers em dia antes de checar
         try:
             hosts = MonitoredHost.query.filter_by(enabled=True).all()
         except Exception:  # noqa: BLE001
