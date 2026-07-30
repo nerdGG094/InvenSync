@@ -211,6 +211,11 @@
           if ((s.desc || '').toLowerCase().indexOf('toner') !== -1) return; // já mostrado
           html += barra((s.desc || 'Suprimento').replace(/ unit$/i, ''), s.pct);
         });
+        // Vida das peças (Brother): correia, fusor, laser, kits PF...
+        (d.parts || []).forEach(function(p){
+          if (p.pct === null || p.pct === undefined) return;
+          html += barra(esc(p.desc || 'Peça'), p.pct);
+        });
         box.innerHTML = html || '<span class="text-muted small">sem dados</span>';
       })
       .catch(function(){

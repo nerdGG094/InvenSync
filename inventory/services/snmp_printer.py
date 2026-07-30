@@ -42,9 +42,29 @@ _ERR_BITS = [
     ("overduePreventMaint", "Manutenção atrasada", "warning"),
 ]
 
-# ===== MIB privado Brother (fallback do toner) =====
+# ===== MIB privado Brother (fallback do toner + vida das peças) =====
 OID_BROTHER_MAINT = "1.3.6.1.4.1.2435.2.3.9.4.2.1.5.5.8.0"
-BROTHER_TONER_ITEM = 0x81                   # % restante de toner
+BROTHER_TONER_ITEM = 0x81                   # % restante de toner (0..100)
+# Vida restante das PEÇAS (reportada em passos ×100 → dividir por 100 p/ %).
+# Validado em campo: 0x41 (cilindro) = 8500 bateu com o cilindro 85% do MIB padrão.
+# Rótulos best-effort (comparar com o painel da impressora; ajustável).
+_BROTHER_PARTS = {
+    0x6a: "Correia",
+    0x6b: "Fusor",
+    0x6c: "Unidade laser",
+    0x6d: "Kit PF MP",
+    0x6f: "Kit PF 1",
+}
+
+
+def _brother_parts(items: dict) -> list:
+    """Itens do blob Brother -> lista de peças com % de vida (valor ÷ 100)."""
+    out = []
+    for code, label in _BROTHER_PARTS.items():
+        v = items.get(code)
+        if isinstance(v, int) and 0 <= v <= 10000:
+            out.append({"desc": label, "pct": max(0, min(100, round(v / 100)))})
+    return out
 
 # Obs.: no Printer-MIB, níveis negativos significam "sem leitura numérica"
 # (-1 outro, -2 desconhecido, -3 resta algo) — por isso só calculamos % com n >= 0.
@@ -109,7 +129,7 @@ async def _coletar(ip: str, community: str, timeout: float) -> dict:
         "model": modelo,
         "name": _texto(await get(OID_SYSNAME)),
         "serial": _texto(await get(OID_SERIAL)),
-        "pages": None, "toner_pct": None, "supplies": [],
+        "pages": None, "toner_pct": None, "supplies": [], "parts": [],
         "status": _STATUS.get(st) if isinstance(st, int) else None,
         "display": _texto(await get(OID_DISPLAY)) or None,
         "alerts": _decode_errors(await get(OID_ERRSTATE)),
@@ -149,13 +169,16 @@ async def _coletar(ip: str, community: str, timeout: float) -> dict:
         if pct is not None and "toner" in nome.lower() and dados["toner_pct"] is None:
             dados["toner_pct"] = pct
 
-    # Toner sem percentual no MIB padrão (Brother): usa o MIB privado.
-    if dados["toner_pct"] is None:
+    # MIB privado Brother: toner (fallback) + vida das peças (correia/fusor/...).
+    if dados["toner_pct"] is None or "brother" in modelo.lower():
         blob = await get(OID_BROTHER_MAINT)
         if isinstance(blob, bytes):
-            item = _decode_brother(blob).get(BROTHER_TONER_ITEM)
-            if isinstance(item, int) and 0 <= item <= 100:
-                dados["toner_pct"] = item
+            items = _decode_brother(blob)
+            if dados["toner_pct"] is None:
+                t = items.get(BROTHER_TONER_ITEM)
+                if isinstance(t, int) and 0 <= t <= 100:
+                    dados["toner_pct"] = t
+            dados["parts"] = _brother_parts(items)
     return dados
 
 
@@ -226,7 +249,7 @@ async def _coletar_ipp(ip: str, timeout: float) -> dict:
     dados = {
         "ok": True, "error": None, "via": "ipp",
         "model": modelo, "name": modelo, "serial": "",
-        "pages": None, "toner_pct": None, "supplies": [],
+        "pages": None, "toner_pct": None, "supplies": [], "parts": [],
         "status": _IPP_STATE.get(st) if isinstance(st, int) else None,
         "display": None,
         "alerts": _ipp_alerts(p.get("printer-state-reasons")),

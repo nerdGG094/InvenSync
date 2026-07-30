@@ -12,6 +12,15 @@ def test_decode_brother_maintenance_blob():
     assert 0xFF not in d          # terminador não vira item
 
 
+def test_brother_parts_vida():
+    """Itens do blob Brother viram % de vida das peças (valor ÷ 100)."""
+    items = {0x81: 90, 0x6a: 7900, 0x6b: 5200, 0x6c: 10000, 0x6f: 9000, 0x63: 1}
+    parts = {p["desc"]: p["pct"] for p in sp._brother_parts(items)}
+    assert parts["Correia"] == 79 and parts["Fusor"] == 52
+    assert parts["Unidade laser"] == 100 and parts["Kit PF 1"] == 90
+    assert "Toner" not in parts and "0x63" not in parts   # toner/flags fora daqui
+
+
 def test_decode_error_bitmap():
     """hrPrinterDetectedErrorState: bitmap -> lista de alertas legíveis."""
     assert sp._decode_errors(b"\x00") == []                 # tudo ok
