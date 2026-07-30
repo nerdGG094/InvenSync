@@ -59,6 +59,7 @@
 
 {% block content %}
 {% macro num(n) %}{{ '{:,.0f}'.format(n).replace(',', '.') if n is not none else '—' }}{% endmacro %}
+{% macro brl(v) %}{{ 'R$ {:,.2f}'.format(v or 0).replace(',', '@').replace('.', ',').replace('@', '.') }}{% endmacro %}
 {% macro supply_chip(rotulo, pct, icon) %}
   {% if pct is not none %}
   {% set sev = 'crit' if pct <= 10 else ('warn' if pct <= 25 else 'ok') %}
@@ -205,6 +206,33 @@
   <i class="bi bi-graph-up"></i>
   <p>Ainda não há histórico suficiente para calcular o consumo.</p>
   <p class="small text-muted">A coleta roda a cada {{ config.PRINTER_MONITOR_MINUTES }} min — o consumo aparece quando houver ao menos 2 leituras da mesma impressora no período ({{ label }}).</p>
+</div>
+{% endif %}
+
+{# ---- Custo de suprimento (toner/cilindro) por setor — independe das páginas ---- #}
+{% if trocas_total %}
+<div class="table-card p-3 mt-3">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+    <h2 class="h6 mb-0"><i class="bi bi-cash-stack text-success me-1"></i> Custo de suprimento por setor
+      <span class="text-muted small">(toner/cilindro · {{ label }})</span></h2>
+    <div class="text-end">
+      <div class="h5 mb-0" style="color:#79ffb0">{{ brl(custo_total) }}</div>
+      <div class="text-muted" style="font-size:.66rem">{{ trocas_total }} troca(s) no período</div>
+    </div>
+  </div>
+  {% set maxc = custo_por_setor[0][1] if custo_por_setor else 0 %}
+  {% for setor, custo, qtd in custo_por_setor %}
+  <div class="sec-row {{ 'top' if loop.first }}">
+    <div class="sec-top">
+      <span class="text-truncate">{{ setor }} <span class="text-muted">· {{ qtd }}x</span></span>
+      <strong>{{ brl(custo) }}</strong>
+    </div>
+    <div class="sec-bar"><i style="width:{{ (custo / maxc * 100) if maxc else 0 }}%"></i></div>
+  </div>
+  {% endfor %}
+  <div class="text-muted mt-2" style="font-size:.66rem"><i class="bi bi-info-circle me-1"></i>
+    Baseado nas baixas de material (troca por SNMP ou manual) × custo do item.
+    Trocas antigas sem setor entram como “Sem setor”.</div>
 </div>
 {% endif %}
 {% endblock %}

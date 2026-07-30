@@ -262,9 +262,40 @@ def printers_report():
     por_setor = sorted(setores.items(), key=lambda kv: kv[1], reverse=True)
     total = sum(setores.values())
     linhas.sort(key=lambda x: (x["pages_period"] is None, -(x["pages_period"] or 0)))
+
+    # ===== Custo de suprimento (toner/cilindro) por setor no período =====
+    # Soma as saídas de material de impressão (categoria/nome toner|cilindro|
+    # fotocondutor) x custo unitário (custo informado, ou preço do produto).
+    from ..models.movement import StockMovement
+    from ..models.product import Product
+    from ..models.category import Category
+    from sqlalchemy import or_
+    custo_val = func.coalesce(StockMovement.unit_cost, Product.price, 0) * StockMovement.quantity
+    rows = (db.session.query(StockMovement.responsible_sector,
+                             func.sum(custo_val), func.sum(StockMovement.quantity))
+            .join(Product, Product.id == StockMovement.product_id)
+            .outerjoin(Category, Product.category_id == Category.id)
+            .filter(StockMovement.movement_type == "OUT",
+                    StockMovement.created_at >= desde, StockMovement.created_at <= ate,
+                    or_(Category.name.ilike("%toner%"), Category.name.ilike("%cilindro%"),
+                        Category.name.ilike("%fotocondutor%"), Product.name.ilike("%toner%"),
+                        Product.name.ilike("%cilindro%")))
+            .group_by(StockMovement.responsible_sector).all())
+    custo_map = {}   # setor -> [custo, trocas]
+    for setor, custo, qtd in rows:
+        chave = (setor or "").strip() or "Sem setor"
+        acc = custo_map.setdefault(chave, [0.0, 0])
+        acc[0] += float(custo or 0)
+        acc[1] += int(qtd or 0)
+    custo_por_setor = sorted(([s, v[0], v[1]] for s, v in custo_map.items()),
+                             key=lambda x: x[1], reverse=True)
+    custo_total = sum(v[1] for v in custo_por_setor)
+    trocas_total = sum(v[2] for v in custo_por_setor)
+
     return render_template("machines/printers_report.html", linhas=linhas,
                            por_setor=por_setor, total=total, dias=dias, label=label,
-                           de=de_s, ate=ate_s)
+                           de=de_s, ate=ate_s, custo_por_setor=custo_por_setor,
+                           custo_total=custo_total, trocas_total=trocas_total)
 
 
 @bp.route("/import", methods=["GET", "POST"])

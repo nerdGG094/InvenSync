@@ -44,6 +44,10 @@ def _registrar_troca(m, chave, rotulo, prev_pct, pct):
     saldo = product_repo.current_stock(prod)  # antes da baixa
     db.session.add(StockMovement(
         product_id=prod_id, movement_type="OUT", quantity=1,
+        # Guarda setor + custo unitário (preço atual) p/ o relatório de custo por setor.
+        responsible_sector=(m.sector or None),
+        responsible_user=f"Troca SNMP: {m.model or m.name}",
+        unit_cost=prod.price,
         note=(f"Troca automática ({rotulo.lower()}) detectada via SNMP na impressora "
               f"'{m.model or m.name}' ({m.sector or 's/ setor'}): {prev_pct}% → {pct}%.")))
     db.session.commit()
