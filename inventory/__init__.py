@@ -379,6 +379,7 @@ def create_app():
     from .models.smart_plug_schedule import SmartPlugSchedule
     from .models.printer_reading import PrinterReading
     from .models.dvr import Dvr
+    from .models.dvr_detection import DvrDetection
 
     # Cria tabelas e semente inicial
     with app.app_context():
@@ -706,5 +707,13 @@ def create_app():
             printer_monitor.start_scheduler(app)
         except Exception:  # noqa: BLE001
             app.logger.exception("Falha ao iniciar o monitoramento de impressoras")
+
+    # Detecção inteligente das câmeras (SMD): escuta os eventos dos DVRs
+    if app.config.get("DVR_EVENTS_ENABLED", True):
+        try:
+            from .services import dvr_events
+            dvr_events.start_scheduler(app)
+        except Exception:  # noqa: BLE001
+            app.logger.exception("Falha ao iniciar a escuta de eventos dos DVRs")
 
     return app

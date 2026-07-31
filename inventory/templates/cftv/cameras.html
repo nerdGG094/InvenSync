@@ -19,14 +19,43 @@
   .cam-modal{ position:fixed; inset:0; z-index:1090; background:rgba(0,0,0,.9); display:none;
     align-items:center; justify-content:center; flex-direction:column; gap:.5rem; }
   .cam-modal.on{ display:flex; }
-  .cam-stage{ position:relative; width:96vw; height:86vh; display:flex; align-items:center; justify-content:center; }
-  .cam-stage img{ max-width:100%; max-height:100%; border-radius:10px; display:none; }
+  /* Palco em 16:9 — mesma proporção do stream principal, para a caixa da
+     detecção (que vem em % da imagem analisada pelo DVR) cair no lugar certo. */
+  .cam-stage{ position:relative; width:min(96vw, calc(86vh * 16 / 9)); aspect-ratio:16/9;
+    display:flex; align-items:center; justify-content:center; }
+  /* `fill` de propósito: o snapshot vem espremido (ex.: 704x480) do mesmo quadro
+     16:9, então esticá-lo devolve a geometria original — e faz a caixa da
+     detecção, que vem em % do quadro, cair no lugar certo. */
+  .cam-stage img{ width:100%; height:100%; object-fit:fill; border-radius:10px; display:none; }
   .cam-stage iframe{ width:100%; height:100%; border:0; border-radius:10px; background:#000; display:none; }
   .cam-modal.modo-snap  .cam-stage img{ display:block; }
   .cam-modal.modo-live  .cam-stage iframe{ display:block; }
   .cam-modal .x{ position:absolute; top:14px; right:18px; color:#fff; font-size:1.8rem; cursor:pointer; z-index:2; }
   .cam-bar{ display:flex; align-items:center; gap:.6rem; color:#9bb6a6; font-size:.8rem; }
   .cam-bar .badge{ font-size:.66rem; }
+
+  /* ===== Detecção inteligente (SMD do DVR): humano / veículo ===== */
+  /* Miniatura da grade: contorno pulsante + etiqueta do que foi detectado */
+  .cam.detectado{ border-color:#00e676; box-shadow:0 0 0 2px rgba(0,230,118,.35); }
+  .cam.detectado.veiculo{ border-color:#ffc107; box-shadow:0 0 0 2px rgba(255,193,7,.35); }
+  .cam .lbl .ia{ color:#5bc0de; margin-left:.15rem; }
+  .cam .det{ position:absolute; right:6px; top:6px; display:none; align-items:center; gap:.25rem;
+    font-size:.6rem; font-weight:700; letter-spacing:.02em; padding:.1rem .4rem; border-radius:6px;
+    background:#00e676; color:#052b13; animation:detPulse 1.2s ease-in-out infinite; }
+  .cam.detectado .det{ display:inline-flex; }
+  .cam.detectado.veiculo .det{ background:#ffc107; }
+  @keyframes detPulse{ 0%,100%{opacity:1} 50%{opacity:.55} }
+  /* Caixa desenhada sobre o vídeo ampliado */
+  /* A caixa vale nos DOIS modos: o DVR redimensiona o mesmo quadro para o
+     snapshot (não corta), então a coordenada em % cai no mesmo ponto. */
+  .det-layer{ position:absolute; inset:0; pointer-events:none; z-index:3; }
+  .det-box{ position:absolute; border:2px solid #00e676; border-radius:4px;
+    box-shadow:0 0 0 1px rgba(0,0,0,.6), 0 0 12px rgba(0,230,118,.5); transition:all .18s linear; }
+  .det-box.veiculo{ border-color:#ffc107; box-shadow:0 0 0 1px rgba(0,0,0,.6), 0 0 12px rgba(255,193,7,.5); }
+  .det-box::after{ content:attr(data-rot); position:absolute; left:-2px; top:-1.15rem;
+    font-size:.62rem; font-weight:700; padding:.05rem .35rem; border-radius:4px;
+    background:#00e676; color:#052b13; white-space:nowrap; }
+  .det-box.veiculo::after{ background:#ffc107; }
 </style>
 {% endblock %}
 
@@ -42,6 +71,26 @@
     <a href="{{ url_for('dvr.list_view') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> DVRs</a>
   </div>
 </div>
+
+{% if not com_ia %}
+<div class="alert alert-warning py-2 px-3 small d-flex align-items-center gap-2">
+  <i class="bi bi-person-bounding-box"></i>
+  <div>
+    Este DVR <strong>não tem detecção inteligente</strong> — nenhuma câmera aqui vai
+    marcar humano/veículo. O firmware dos modelos MHDX 11xx/1216 não permite ativá-la;
+    hoje só o <strong>MHDX1232</strong> aceita, nos canais 1-16.
+  </div>
+</div>
+{% elif com_ia|length < canais|length %}
+<div class="alert alert-secondary py-2 px-3 small d-flex align-items-center gap-2">
+  <i class="bi bi-person-bounding-box"></i>
+  <div>
+    Detecção de humano/veículo ativa em <strong>{{ com_ia|length }} de {{ canais|length }}</strong>
+    canais (marcados com <span class="badge bg-info-subtle text-info-emphasis">IA</span>).
+    Nos demais o aparelho não oferece o recurso.
+  </div>
+</div>
+{% endif %}
 
 {% if not live_ok %}
 <div class="alert alert-secondary py-2 px-3 small d-flex align-items-center gap-2">
@@ -65,8 +114,10 @@
   <div class="cam" data-ch="{{ ch }}" data-src="{{ url_for('dvr.snap', did=d.id, ch=ch) }}"
        {% if players.get(ch) %}data-live="{{ players.get(ch) }}"{% endif %}>
     <img alt="Canal {{ ch }}" loading="lazy">
-    <span class="lbl">CH {{ ch }}</span>
+    <span class="lbl">CH {{ ch }}{% if ch in com_ia %} <i class="bi bi-person-bounding-box ia"
+        title="Detecção de humano/veículo ativa"></i>{% endif %}</span>
     {% if players.get(ch) %}<span class="rt" title="Tempo real (WebRTC) disponível">AO VIVO</span>{% endif %}
+    <span class="det"><i class="bi bi-person-fill"></i> <span class="det-txt">HUMANO</span></span>
     <div class="off"><i class="bi bi-camera-video-off fs-4"></i> sem sinal</div>
   </div>
   {% endfor %}
@@ -78,6 +129,7 @@
     <img alt="">
     <iframe title="Câmera ao vivo" allow="autoplay; fullscreen; picture-in-picture"
             referrerpolicy="no-referrer"></iframe>
+    <div class="det-layer" id="detLayer"></div>
   </div>
   <div class="cam-bar">
     <span id="camTitulo">CH —</span>
@@ -114,10 +166,29 @@
   }
 
   // ---- Grade (miniaturas) — sempre snapshot: 16+ players ao vivo pesariam ----
+  // Cada snapshot segura uma thread do servidor ~0,87s esperando o DVR. Com 32
+  // canais, atualizar tudo o tempo todo consumia TODAS as threads e o resto do
+  // app (dashboard, outras telas) ficava na fila. Por isso só atualizamos o que
+  // está de fato à vista e paramos enquanto há uma câmera ampliada aberta.
+  if ('IntersectionObserver' in window){
+    var observador = new IntersectionObserver(function(entradas){
+      entradas.forEach(function(e){ e.target.dataset.vis = e.isIntersecting ? '1' : '0'; });
+    }, { rootMargin: '150px' });
+    cams.forEach(function(c){ c.dataset.vis = '0'; observador.observe(c); });
+  } else {
+    cams.forEach(function(c){ c.dataset.vis = '1'; });   // navegador antigo
+  }
+
+  function podeAtualizar(cam){
+    if (document.hidden) return false;
+    if (liveCam) return false;              // ampliada aberta: grade em pausa
+    return cam.dataset.vis !== '0';
+  }
+
   cams.forEach(function(cam, i){
     setTimeout(function(){                       // escalona o 1º load
       carregar(cam);
-      setInterval(function(){ if (!document.hidden) carregar(cam); }, REFRESH);
+      setInterval(function(){ if (podeAtualizar(cam)) carregar(cam); }, REFRESH);
     }, i * 180);
   });
   info.innerHTML = LIVE_OK
@@ -187,6 +258,69 @@
     liveCam = null;
     modal.classList.remove('on', 'modo-live', 'modo-snap');
   }
+
+  // ---- Detecção inteligente (o DVR classifica; aqui só desenhamos) ----
+  // A grade ganha contorno + etiqueta no canal com movimento; a ampliada, a
+  // caixa em cima do objeto. Custo zero de CPU no servidor: é só ler eventos.
+  var DET_URL = '{{ url_for("dvr.deteccoes", did=d.id) }}';
+  var detLayer = document.getElementById('detLayer');
+  var porCanal = {};
+  cams.forEach(function(c){ porCanal[c.dataset.ch] = c; });
+
+  // Cada canal traz uma LISTA de objetos: dá para ter várias pessoas, ou
+  // pessoa e veículo ao mesmo tempo, no mesmo canal.
+  function rotulo(t){ return t === 'vehicle' ? 'VEÍCULO' : 'HUMANO'; }
+
+  function pintarGrade(ativos){
+    Object.keys(porCanal).forEach(function(ch){
+      var cam = porCanal[ch], objs = ativos[ch] || [];
+      var humanos = objs.filter(function(o){ return o.tipo !== 'vehicle'; }).length;
+      var veiculos = objs.length - humanos;
+      cam.classList.toggle('detectado', objs.length > 0);
+      // só fica âmbar quando NÃO há humano — pessoa tem prioridade visual
+      cam.classList.toggle('veiculo', objs.length > 0 && humanos === 0);
+      if (objs.length){
+        var t = cam.querySelector('.det-txt');
+        if (t){
+          var partes = [];
+          if (humanos)  partes.push(humanos  > 1 ? humanos + ' HUMANOS'  : 'HUMANO');
+          if (veiculos) partes.push(veiculos > 1 ? veiculos + ' VEÍCULOS' : 'VEÍCULO');
+          t.textContent = partes.join(' + ');
+        }
+      }
+    });
+  }
+
+  function pintarAmpliada(ativos){
+    detLayer.innerHTML = '';
+    if (!liveCam) return;
+    (ativos[liveCam.dataset.ch] || []).forEach(function(o){
+      if (!o.caixa) return;
+      var b = document.createElement('div');
+      b.className = 'det-box' + (o.tipo === 'vehicle' ? ' veiculo' : '');
+      b.setAttribute('data-rot', rotulo(o.tipo));
+      b.style.left   = o.caixa.left + '%';
+      b.style.top    = o.caixa.top + '%';
+      b.style.width  = o.caixa.width + '%';
+      b.style.height = o.caixa.height + '%';
+      detLayer.appendChild(b);
+    });
+  }
+
+  // Ritmo do poll: 1s só quando há uma câmera ampliada (onde a caixa precisa
+  // acompanhar o movimento); na grade 3s bastam para acender o contorno.
+  (function ciclo(){
+    if (document.hidden){ setTimeout(ciclo, 4000); return; }
+    fetch(DET_URL, {credentials:'same-origin'})
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        var a = (j && j.ativos) || {};
+        pintarGrade(a);
+        pintarAmpliada(a);
+        setTimeout(ciclo, liveCam ? 1000 : 3000);
+      })
+      .catch(function(){ setTimeout(ciclo, 8000); });   // erro: espaça o poll
+  })();
 
   cams.forEach(function(cam){ cam.addEventListener('click', function(){ abrir(cam); }); });
   // Fecha só pelo fundo/X — cliques na barra e no player não devem fechar.

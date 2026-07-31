@@ -73,7 +73,13 @@ def main():
 
     print(f"[invensync] servindo em http://{host}:{port} (waitress)", flush=True)
 
-    serve(flask_app, host=host, port=port, threads=8, ident="invensync")
+    # As threads do waitress passam a maior parte do tempo BLOQUEADAS em I/O
+    # (esperando o DVR responder um snapshot, ~0,87s cada), não consumindo CPU.
+    # Com 8 threads, uma grade de 32 câmeras (10,7 req/s x 0,87s = 9,2 threads)
+    # ocupava todas e o resto do app ficava na fila por 10-15s. Subir o número
+    # é barato: thread parada em socket não pesa.
+    threads = int(os.environ.get("SERVE_THREADS", "32"))
+    serve(flask_app, host=host, port=port, threads=threads, ident="invensync")
 
 
 if __name__ == "__main__":

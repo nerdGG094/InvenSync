@@ -8,7 +8,9 @@ from ..extensions import db
 from ..repositories import dvr_repo
 from ..forms.dvr import DvrForm
 from ..models.dvr import Dvr
-from ..services import audit, crypto, router_ctl, dvr_cam, go2rtc
+from ..services import audit, crypto, router_ctl, dvr_cam, go2rtc, dvr_events
+from ..services.pagination import paginate
+from ..models.dvr_detection import DvrDetection
 
 bp = Blueprint("dvr", __name__)
 
@@ -104,7 +106,16 @@ def status(did):
     base = _base_url(d)
     if not base:
         return jsonify(online=False, error="sem IP")
-    return jsonify(router_ctl.probe(base, timeout=float(current_app.config.get("ROUTER_PROBE_TIMEOUT", 4))))
+    info = router_ctl.probe(base, timeout=float(current_app.config.get("ROUTER_PROBE_TIMEOUT", 4)))
+    if not info.get("online"):
+        # O painel HTTP do DVR trava sozinho de vez em quando enquanto o
+        # aparelho segue gravando e servindo vídeo. Dizer só "offline" nesse
+        # caso confunde: o ping responde e as câmeras funcionam. Confirmamos
+        # pelo RTSP antes de dar o equipamento como fora.
+        info["rtsp_ok"] = dvr_cam.porta_aberta(
+            d.ip_address, current_app.config.get("GO2RTC_RTSP_PORT", 554))
+        info["saude_proxy"] = dvr_cam.saude(d.id)
+    return jsonify(info)
 
 
 @bp.route("/<int:did>/senha")
@@ -133,8 +144,59 @@ def cameras(did):
     audit.record("access", "dvr", d.id, f"Abriu câmeras do DVR '{d.label or d.model}'")
     g = go2rtc.probe(ttl=15) if go2rtc.enabled() else {"enabled": False, "online": False}
     players = go2rtc.player_urls(d, canais, g.get("names")) if g.get("online") else {}
+    # Quais canais têm detecção inteligente ligada — a tela precisa dizer isso,
+    # senão o usuário procura a caixa numa câmera que nunca vai ter.
+    try:
+        com_ia = dvr_events.canais_com_deteccao(d, crypto.decrypt(d.admin_password) or "")
+    except crypto.DecryptError:
+        com_ia = set()
     return render_template("cftv/cameras.html", d=d, canais=canais,
-                           go2rtc_info=g, players=players)
+                           go2rtc_info=g, players=players, com_ia=com_ia)
+
+
+@bp.route("/<int:did>/deteccoes")
+def deteccoes(did):
+    """Detecções em curso neste DVR (AJAX da página de câmeras).
+
+    Devolve, por canal, o tipo (humano/veículo) e a caixa já em % da imagem —
+    o navegador só posiciona o retângulo por cima do vídeo."""
+    # NÃO consulta o banco: a página chama isto a cada segundo e o estado ao vivo
+    # mora em memória. A versão anterior fazia um SELECT por chamada, o que
+    # deixava conexões "idle in transaction" e esgotava o pool — o app inteiro
+    # ficava lento enquanto alguém estivesse com a grade de câmeras aberta.
+    ttl = float(current_app.config.get("DVR_DETECT_TTL", 8) or 8)
+    esc = DvrDetection.ESCALA
+    saida = {}
+    for canal, objetos in dvr_events.ativos(did, ttl=ttl).items():
+        lista = []
+        for info in objetos:
+            r = info.get("rect")
+            caixa = None
+            if r:
+                x1, y1, x2, y2 = (v / esc for v in r)
+                caixa = {"left": round(x1 * 100, 2), "top": round(y1 * 100, 2),
+                         "width": round(max(0.0, x2 - x1) * 100, 2),
+                         "height": round(max(0.0, y2 - y1) * 100, 2)}
+            lista.append({"tipo": info["tipo"], "idade": info["idade"], "caixa": caixa})
+        saida[str(canal)] = lista
+    return jsonify(ativos=saida)
+
+
+@bp.route("/deteccoes")
+def historico():
+    """Histórico das detecções (humano/veículo) reportadas pelos DVRs."""
+    tipo = (request.args.get("tipo") or "").strip()
+    did = request.args.get("dvr", type=int)
+    q = DvrDetection.query
+    if tipo in ("human", "vehicle"):
+        q = q.filter(DvrDetection.object_type == tipo)
+    if did:
+        q = q.filter(DvrDetection.dvr_id == did)
+    itens = q.order_by(DvrDetection.id.desc()).limit(600).all()
+    pag_itens, pag = paginate(itens)
+    return render_template("cftv/deteccoes.html", itens=pag_itens, pag=pag,
+                           dvrs=dvr_repo.list_dvrs(), tipo=tipo, did=did,
+                           total=len(itens))
 
 
 @bp.route("/go2rtc")

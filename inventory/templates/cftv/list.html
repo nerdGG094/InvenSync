@@ -35,6 +35,8 @@
     <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ totals.total }}</span>
   </h1>
   <div class="d-flex gap-2">
+    <a href="{{ url_for('dvr.historico') }}" class="btn btn-outline-light" title="Histórico de humanos/veículos detectados">
+      <i class="bi bi-person-bounding-box"></i> Detecções</a>
     <a href="{{ url_for('dvr.go2rtc_page') }}" class="btn btn-outline-light" title="Câmeras em tempo real (WebRTC)">
       <i class="bi bi-broadcast"></i> Tempo real</a>
     <a href="{{ url_for('dvr.new') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Novo DVR</a>
@@ -132,6 +134,13 @@
       var st=card.querySelector('[data-role="status"]');
       if(st){ var dot=st.querySelector('.rt-dot'), txt=st.querySelector('.rt-txt'); dot.classList.remove('chk','on','off');
         if(dd.online){ dot.classList.add('on'); txt.textContent='online'+(dd.latency_ms!=null?(' · '+dd.latency_ms+' ms'):''); }
+        else if(dd.rtsp_ok){
+          // Aparelho vivo (RTSP responde), só o painel web travado — acontece
+          // sozinho nesses DVRs. Gravação e câmeras seguem funcionando.
+          dot.classList.add('chk'); dot.style.animation='none';
+          txt.textContent='painel fora · vídeo ok';
+          txt.title='O aparelho responde e as câmeras funcionam; só a interface web travou.';
+        }
         else { dot.classList.add('off'); txt.textContent='offline'; } }
       var box=card.querySelector('[data-role="access"]'); if(!box) return;
       if(!dd.online){ box.innerHTML='<span class="rt-hint"><i class="bi bi-plug"></i> painel indisponível agora</span>'; return; }

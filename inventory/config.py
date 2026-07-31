@@ -135,6 +135,17 @@ class Config:
     # Caminho do ffmpeg.exe; vazio = procura ao lado do go2rtc.yaml e no PATH.
     GO2RTC_FFMPEG = os.environ.get("GO2RTC_FFMPEG", "")
 
+    # Detecção inteligente das câmeras (SMD do próprio DVR: humano/veículo).
+    # O InvenSync só escuta os eventos — não decodifica vídeo, não roda modelo.
+    DVR_EVENTS_ENABLED = os.environ.get("DVR_EVENTS_ENABLED", "1") in ("1", "true", "True")
+    # Segundos que uma detecção continua "ativa" na tela sem novo evento.
+    DVR_DETECT_TTL = float(os.environ.get("DVR_DETECT_TTL", "8"))
+    # Aviso por e-mail à TI ao detectar PESSOA dentro da janela de vigilância.
+    # Ex.: DVR_ALERT_HOURS=19-6 (das 19h às 6h). Vazio = nunca avisa.
+    DVR_ALERT_ENABLED = os.environ.get("DVR_ALERT_ENABLED", "0") in ("1", "true", "True")
+    DVR_ALERT_HOURS = os.environ.get("DVR_ALERT_HOURS", "")
+    DVR_ALERT_COOLDOWN = int(os.environ.get("DVR_ALERT_COOLDOWN", "900"))
+
     # Monitoramento de uptime (ping/HTTP em segundo plano).
     MONITORING_ENABLED = os.environ.get("MONITORING_ENABLED", "1") in ("1", "true", "True")
     MONITORING_INTERVAL = int(os.environ.get("MONITORING_INTERVAL", "120"))  # segundos
