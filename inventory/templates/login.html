@@ -4,9 +4,10 @@
 {% block extra_head %}
 <style>
   .auth-wrap{ min-height: calc(100vh - 120px); }
-  /* Fundo com brilho verde sutil */
+  /* Brilho verde sutil — fica abaixo do fundo de bolhas e é a reserva caso o
+     3D não carregue (sem internet até o CDN). */
   .auth-bg{
-    position: fixed; inset: 0; z-index: -1;
+    position: fixed; inset: 0; z-index: -2;
     background:
       radial-gradient(1200px 600px at 15% -10%, rgba(0,200,83,.10), transparent 60%),
       radial-gradient(900px 500px at 110% 120%, rgba(0,230,118,.08), transparent 55%),
@@ -47,6 +48,9 @@
   {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors[0] }}</div>{% endif %}
 {%- endmacro %}
 
+{# O degradê fica ABAIXO do fundo de bolhas (que vem do base.html) e serve de
+   reserva: sem internet até o CDN, o módulo não carrega e a tela de login
+   continua exatamente como era. #}
 <div class="auth-bg"></div>
 
 <div class="container auth-wrap d-flex align-items-center justify-content-center">
@@ -149,4 +153,5 @@
     }
   })();
 </script>
+
 {% endblock %}

@@ -5,6 +5,10 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/intro.css') }}">
 {% endblock %}
 
+{# A apresentação tem cena própria (densidade cheia + câmera amarrada ao
+   scroll), então anula o fundo padrão do base.html — senão seriam duas. #}
+{% block fundo_bolhas %}{% endblock %}
+
 {% block content %}
 {# Tudo escopado sob .intro: a página usa nomes genéricos (.card, .btn) que
    colidiriam com o Bootstrap se ficassem soltos. #}

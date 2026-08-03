@@ -42,6 +42,12 @@ class Config:
     # não conflitar com o "lembrar-me". Defina INACTIVITY_MINUTES no .env p/ ligar.
     INACTIVITY_MINUTES = int(os.environ.get("INACTIVITY_MINUTES", "0"))
 
+    # Fundo animado de bolhas em TODAS as telas. Roda no navegador de quem usa
+    # (WebGL), não no servidor — mas numa máquina fraca pode pesar. Desligue com
+    # UI_FUNDO_BOLHAS=0; a densidade regula quantas bolhas aparecem.
+    UI_FUNDO_BOLHAS = os.environ.get("UI_FUNDO_BOLHAS", "1") in ("1", "true", "True")
+    UI_FUNDO_DENSIDADE = float(os.environ.get("UI_FUNDO_DENSIDADE", "0.3"))
+
     # Cabeçalhos de segurança (CSP, X-Frame-Options, etc.). Desligue só p/ depurar.
     SECURITY_HEADERS = os.environ.get("SECURITY_HEADERS", "1") in ("1", "true", "True")
 
