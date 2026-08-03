@@ -38,7 +38,7 @@
     background:#15211a; border:1px solid #243024; color:#9bb6a6; }
 
   /* Atalhos de sistemas (KioX, CarregLogi) */
-  .sys-card { display:flex; align-items:center; gap:.85rem; width:100%; text-align:left; overflow:hidden;
+  .sys-card { position:relative; display:flex; align-items:center; gap:.85rem; width:100%; text-align:left; overflow:hidden;
     background:linear-gradient(160deg,#17231b,#131a16); border:1px solid #243024; border-radius:16px;
     padding:.8rem .9rem; color:#dceede; text-decoration:none; cursor:pointer;
     transition:transform .14s, border-color .14s, box-shadow .14s; }
@@ -49,7 +49,42 @@
   .sys-name { font-weight:700; color:#eafff0; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .sys-sub { color:#8fb0a0; font-size:.75rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .sys-go { color:#46e08a; font-size:1.1rem; flex:0 0 auto; opacity:.75; transition:opacity .14s; }
-  .sys-card:hover .sys-go { opacity:1; }
+  .sys-card:hover .sys-go { opacity:1; transform:translateX(2px); }
+  .sys-go { transition:opacity .14s, transform .14s; }
+
+  /* --- Animação dos logos (KioX / CarregLogi) ---
+     O invólucro flutua (transform) e o <img> reage ao hover (transform próprio):
+     separar os dois evita que a animação infinita e o hover briguem pela mesma
+     propriedade. Sem brilho/halo atrás do logo — só movimento. */
+  .sys-logo-wrap { position:relative; flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
+    animation:sysFlutua 4.6s ease-in-out infinite; }
+  .sys-logo { position:relative; z-index:1;
+    transition:transform .3s cubic-bezier(.22,1.2,.36,1); }
+  .sys-card:hover .sys-logo,
+  .sys-card:focus-visible .sys-logo { transform:scale(1.16) rotate(-6deg); }
+
+  /* Brilho que varre o card no hover */
+  .sys-card::after { content:""; position:absolute; top:-60%; bottom:-60%; left:-70%; width:45%; z-index:2;
+    background:linear-gradient(90deg, transparent, rgba(255,255,255,.10), transparent);
+    transform:translateX(0) skewX(-18deg); pointer-events:none; opacity:0; }
+  html[data-theme="light"] .sys-card::after {
+    background:linear-gradient(90deg, transparent, rgba(0,120,60,.08), transparent); }
+  .sys-card:hover::after, .sys-card:focus-visible::after { opacity:1; animation:sysBrilho .85s ease-out; }
+
+  /* Entrada dos cards (o 2º entra depois, e as flutuações ficam defasadas) */
+  .sys-row > [class*="col-"] { animation:sysEntra .5s cubic-bezier(.22,1,.36,1) both; }
+  .sys-row > [class*="col-"]:nth-child(2) { animation-delay:.1s; }
+  .sys-row > [class*="col-"]:nth-child(2) .sys-logo-wrap { animation-delay:-1.6s; }
+
+  @keyframes sysFlutua { 0%,100% { transform:translateY(-3px); } 50% { transform:translateY(3px); } }
+  @keyframes sysBrilho { from { transform:translateX(0) skewX(-18deg); } to { transform:translateX(440%) skewX(-18deg); } }
+  @keyframes sysEntra  { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sys-logo-wrap, .sys-row > [class*="col-"] { animation:none; }
+    .sys-card::after { display:none; }
+    .sys-card:hover .sys-logo, .sys-card:focus-visible .sys-logo { transform:scale(1.06); }
+  }
 
   /* Modal do QR/KioX (fundo por classe p/ adaptar ao tema — ver theme-light.css) */
   .kiox-modal { background:#15211a; border:1px solid #243024; }
@@ -88,10 +123,10 @@
 
 {# ===================== Sistemas / Atalhos ===================== #}
 <div class="sec-label"><i class="bi bi-grid-3x3-gap-fill"></i> Sistemas</div>
-<div class="row g-3 justify-content-center mb-4">
+<div class="row g-3 justify-content-center mb-4 sys-row">
   <div class="col-12 col-md-6 col-lg-3">
     <button type="button" class="sys-card" data-bs-toggle="modal" data-bs-target="#kioxQrModal">
-      <img src="{{ url_for('static', filename='logos/kiox.png') }}" alt="KioX" class="sys-logo">
+      <span class="sys-logo-wrap"><img src="{{ url_for('static', filename='logos/kiox.png') }}" alt="KioX" class="sys-logo"></span>
       <div class="sys-txt">
         <div class="sys-name">KioX</div>
         <div class="sys-sub">QR de provisionamento</div>
@@ -101,7 +136,7 @@
   </div>
   <div class="col-12 col-md-6 col-lg-3">
     <a href="http://192.168.0.54" target="_blank" rel="noopener" class="sys-card">
-      <img src="{{ url_for('static', filename='logos/carreglogi.svg') }}" alt="CarregLogi" class="sys-logo">
+      <span class="sys-logo-wrap"><img src="{{ url_for('static', filename='logos/carreglogi.svg') }}" alt="CarregLogi" class="sys-logo"></span>
       <div class="sys-txt">
         <div class="sys-name">CarregLogi</div>
         <div class="sys-sub">Controle de carregamentos</div>
