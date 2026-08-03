@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}Apresentação — InvenSync{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/intro.css') }}">
+{% endblock %}
+
+{% block content %}
+{# Tudo escopado sob .intro: a página usa nomes genéricos (.card, .btn) que
+   colidiriam com o Bootstrap se ficassem soltos. #}
+<div class="intro">
+  <div class="progresso" id="introProgresso"></div>
+  <canvas id="introCena"></canvas>
+
+  <div class="conteudo">
+
+
+    <!-- 1. HERO -->
+    <section class="sec" id="introHero">
+      <div class="wrap">
+        <div class="rotulo" data-anim="rotulo">Plataforma interna de gestão</div>
+        <h1>
+          <span class="linha"><span>Inven<span class="marca-sync">Sync</span></span></span>
+          <span class="linha"><span>tudo em um só lugar</span></span>
+        </h1>
+        <p class="lead" data-anim="lead">
+          Patrimônio, estoque, chamados e infraestrutura conversando entre si —
+          com a informação certa na hora em que você precisa dela.
+        </p>
+        <a href="#sobre" class="btn" data-anim="btn">Conhecer a plataforma <i class="bi bi-arrow-down"></i></a>
+      </div>
+    </section>
+
+    <!-- 2. SOBRE -->
+    <section class="sec" id="sobre">
+      <div class="wrap">
+        <div class="rotulo" data-anim>Sobre</div>
+        <h2 data-split>Menos planilha solta, mais processo no lugar.</h2>
+        <p class="lead" data-anim>
+          A plataforma reúne o que antes vivia espalhado: cadastros, movimentações,
+          atendimentos e monitoramento. Cada registro tem origem, responsável e histórico —
+          então a pergunta "quem mexeu nisso?" sempre tem resposta.
+        </p>
+        <div class="pilulas" data-stagger>
+          <span class="pilula"><i class="bi bi-check2-circle"></i> Interface direta</span>
+          <span class="pilula"><i class="bi bi-check2-circle"></i> Histórico completo</span>
+          <span class="pilula"><i class="bi bi-check2-circle"></i> Sem retrabalho</span>
+          <span class="pilula"><i class="bi bi-check2-circle"></i> Pronta para crescer</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. MÓDULOS -->
+    <section class="sec" id="modulos">
+      <div class="wrap">
+        <div class="rotulo" data-anim>Módulos</div>
+        <h2 data-split>Cada área com o seu espaço.</h2>
+        <div class="grade" data-cards>
+          <article class="card"><i class="bi bi-box-seam"></i><h3>Estoque</h3>
+            <p>Materiais, entradas e saídas, com saldo sempre conferido.</p></article>
+          <article class="card"><i class="bi bi-pc-display"></i><h3>Máquinas</h3>
+            <p>Equipamentos, responsáveis e manutenções em um cadastro só.</p></article>
+          <article class="card"><i class="bi bi-headset"></i><h3>Chamados</h3>
+            <p>Solicitações com fluxo definido, prazo e histórico de conversa.</p></article>
+          <article class="card"><i class="bi bi-people"></i><h3>Pessoas</h3>
+            <p>Colaboradores, setores e o que está sob a guarda de cada um.</p></article>
+          <article class="card"><i class="bi bi-camera-video"></i><h3>Monitoramento</h3>
+            <p>Disponibilidade dos equipamentos acompanhada de perto.</p></article>
+          <article class="card"><i class="bi bi-clipboard-data"></i><h3>Relatórios</h3>
+            <p>Números organizados para decidir com base em fato.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. RECURSOS -->
+    <section class="sec" id="recursos">
+      <div class="wrap">
+        <div class="rotulo" data-anim>Recursos</div>
+        <h2 data-split>O que a plataforma faz por você.</h2>
+        <div class="grade" data-cards>
+          <article class="card"><i class="bi bi-speedometer2"></i><h3>Painéis</h3>
+            <p>Indicadores reunidos numa tela, atualizados sozinhos.</p></article>
+          <article class="card"><i class="bi bi-activity"></i><h3>Monitoramento</h3>
+            <p>Acompanhamento contínuo, com aviso quando algo sai do normal.</p></article>
+          <article class="card"><i class="bi bi-robot"></i><h3>Automação</h3>
+            <p>Rotinas que rodam sozinhas e poupam trabalho repetitivo.</p></article>
+          <article class="card"><i class="bi bi-shield-lock"></i><h3>Segurança</h3>
+            <p>Segredos protegidos e trilha de auditoria em cada ação.</p></article>
+          <article class="card"><i class="bi bi-person-badge"></i><h3>Acesso</h3>
+            <p>Cada perfil enxerga apenas o que lhe diz respeito.</p></article>
+          <article class="card"><i class="bi bi-graph-up-arrow"></i><h3>Indicadores</h3>
+            <p>Evolução ao longo do tempo, sem montar planilha à mão.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. FLUXO -->
+    <section class="sec" id="fluxo">
+      <div class="wrap">
+        <div class="rotulo" data-anim>Como funciona</div>
+        <h2 data-split>Do cadastro ao indicador.</h2>
+        <div class="fluxo" id="linhaFluxo">
+          <div class="trilho" id="trilho"></div>
+          <div class="etapa"><span class="n">ETAPA 01</span><h3>Cadastre</h3>
+            <p>Registre o que existe: itens, equipamentos e responsáveis.</p></div>
+          <div class="etapa"><span class="n">ETAPA 02</span><h3>Movimente</h3>
+            <p>Cada entrada, saída ou transferência fica registrada com autor e data.</p></div>
+          <div class="etapa"><span class="n">ETAPA 03</span><h3>Acompanhe</h3>
+            <p>O sistema observa e avisa quando algo precisa de atenção.</p></div>
+          <div class="etapa"><span class="n">ETAPA 04</span><h3>Decida</h3>
+            <p>Com o histórico organizado, o número vira decisão.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. BENEFÍCIOS -->
+    <section class="sec" id="beneficios">
+      <div class="wrap">
+        <div class="rotulo" data-anim>Benefícios</div>
+        <h2 data-split>O que muda no dia a dia.</h2>
+        <div class="grade" data-cards>
+          <article class="card"><i class="bi bi-diagram-3"></i><h3>Organização</h3>
+            <p>Um lugar só, com a informação onde se espera encontrar.</p></article>
+          <article class="card"><i class="bi bi-lightning-charge"></i><h3>Agilidade</h3>
+            <p>Menos passos entre a dúvida e a resposta.</p></article>
+          <article class="card"><i class="bi bi-bar-chart-line"></i><h3>Produtividade</h3>
+            <p>O trabalho repetitivo sai da frente e sobra tempo para o resto.</p></article>
+          <article class="card"><i class="bi bi-link-45deg"></i><h3>Integração</h3>
+            <p>Os módulos se conversam em vez de viverem isolados.</p></article>
+          <article class="card"><i class="bi bi-arrows-angle-expand"></i><h3>Escalabilidade</h3>
+            <p>Cresce junto com a operação, sem precisar recomeçar.</p></article>
+          <article class="card"><i class="bi bi-emoji-smile"></i><h3>Simplicidade</h3>
+            <p>Feita para o dia a dia de quem usa, não para o manual.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. ENCERRAMENTO -->
+    <section class="sec fim" id="fim">
+      <div class="wrap">
+        <div class="rotulo" style="justify-content:center" data-anim>Bem-vindo</div>
+        <h2 data-split>Pronto para começar?</h2>
+        <p class="lead" data-anim>
+          Sua área de trabalho está a um clique. Você pode voltar a esta apresentação
+          quando quiser, pelo menu.
+        </p>
+        <div>
+          <a href="{{ destino }}" class="btn" data-anim>{{ destino_rotulo }} <i class="bi bi-arrow-right"></i></a>
+          <a href="#introHero" class="btn fantasma" data-anim>Rever do início</a>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="rolar" id="introRolar"><span>role</span><span class="seta"></span></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{# Só esta página carrega Three.js e GSAP — nenhuma outra tela paga por isso. #}
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+<script type="module" src="{{ url_for('static', filename='js/intro.js') }}"></script>
+{% endblock %}

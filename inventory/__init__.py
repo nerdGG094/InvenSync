@@ -22,6 +22,7 @@ def _run_light_migrations():
         'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS session_token VARCHAR(32)',
         "UPDATE \"user\" SET session_token = md5(random()::text || id::text) WHERE session_token IS NULL",
         # Bloqueio de conta por tentativas de senha erradas.
+        'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS intro_visto BOOLEAN NOT NULL DEFAULT false',
         'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS failed_logins INTEGER NOT NULL DEFAULT 0',
         'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP',
         # Preferência de tema (claro/escuro) por usuário.
@@ -288,7 +289,7 @@ def _encrypt_router_secrets():
 
 # Endpoints liberados para usuários NÃO administradores (perfil "comum").
 # Eles só acessam Chamados, o próprio Perfil, autenticação e estáticos.
-NON_ADMIN_PREFIXES = ("tickets.", "profile.", "auth.", "kb.", "announcements.")
+NON_ADMIN_PREFIXES = ("tickets.", "profile.", "auth.", "kb.", "announcements.", "intro.")
 NON_ADMIN_ENDPOINTS = ("static", "health.health", "service_worker", "manifest")
 
 _WEAK_SECRETS = {"", "dev-secret-key", "troque-por-uma-chave-secreta", "changeme"}
@@ -468,6 +469,7 @@ def create_app():
     from .routes.smartplugs import bp as smartplugs_bp  # tomadas inteligentes Tuya/NeoAvant (admin)
     from .routes.cotacoes import bp as cotacoes_bp      # cotações no Mercado Livre (admin)
     from .routes.rede import bp as rede_bp              # descoberta de rede via ARP (admin)
+    from .routes.intro import bp as intro_bp            # Apresentação (todos)
     from .routes.dvr import bp as dvr_bp                # CFTV / DVRs (admin)
 
     app.register_blueprint(auth_bp)
@@ -507,6 +509,7 @@ def create_app():
     app.register_blueprint(smartplugs_bp, url_prefix="/tomadas")  # tomadas inteligentes (admin)
     app.register_blueprint(cotacoes_bp, url_prefix="/cotacoes")   # cotações Mercado Livre (admin)
     app.register_blueprint(rede_bp, url_prefix="/rede")          # descoberta de rede (admin)
+    app.register_blueprint(intro_bp, url_prefix="/apresentacao")  # Apresentação (todos)
     app.register_blueprint(dvr_bp, url_prefix="/cftv")           # CFTV / DVRs (admin)
 
     # ===== Controle de acesso por módulo =====

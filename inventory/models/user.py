@@ -62,6 +62,12 @@ class User(db.Model, UserMixin):
         db.Boolean, nullable=False, default=False, server_default=db.text("false")
     )
 
+    # Já viu a página de apresentação? Falso = o login leva para ela uma vez.
+    # (a tela continua acessível pelo menu depois disso)
+    intro_visto = db.Column(
+        db.Boolean, nullable=False, default=False, server_default=db.text("false")
+    )
+
     def get_id(self) -> str:
         """ID para o Flask-Login no formato "id:token". Rotacionar o token
         invalida sessões e cookies "lembrar-me" emitidos antes (logout global)."""

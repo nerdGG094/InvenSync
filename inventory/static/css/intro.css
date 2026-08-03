@@ -1,0 +1,183 @@
+/* Apresentação do InvenSync — estilos da tela de boas-vindas.
+
+   Carregado SÓ em /apresentacao (o template pede no bloco extra_head).
+   Tudo está escopado sob `.intro` de propósito: a página usa nomes genéricos
+   (.card, .btn, .lead) que colidiriam com o Bootstrap e com o design system
+   do sistema. Escopado, nada vaza para o resto do app. */
+
+/* --------------------------------------------------------------------------
+   A apresentação é de PONTA A PONTA. O `main.container` do base.html tem
+   largura máxima e recuo — dentro dele a página ficaria numa coluna estreita,
+   diferente do que foi aprovado. O `:has()` neutraliza o container APENAS nas
+   telas que contêm `.intro`, sem tocar em nenhuma outra página.
+   (Navegador sem `:has()` só perde a expansão; nada quebra.)
+   -------------------------------------------------------------------------- */
+body:has(.intro) main.container {
+  max-width: none;
+  padding: 0;
+  margin: 0;
+}
+body:has(.intro) footer .container { max-width: none; }
+
+/* Tipografia e fundo da página — vinham do `body` na demonstração e precisam
+   ser reaplicados aqui, senão a tela herda a fonte e o fundo do resto do app. */
+.intro {
+  display: block;
+  background: var(--bg);
+  color: var(--tx);
+  overflow-x: hidden;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Mesma identidade do sistema: verde de marca, fundos escuros, bordas #243024 */
+.intro {
+    --brand:#00c853; --brand-2:#00e676;
+    --bg:#0b120e; --painel:#15211a; --borda:#243024;
+    --tx:#eafff0; --tx-2:#9bb6a6; --tx-3:#6f8a7b;
+  }
+.intro *, .intro *::before, .intro *::after { box-sizing:border-box; }
+  /* A cena 3D fica atrás de tudo, fixa, sem capturar cliques */
+.intro #introCena { position:fixed; inset:0; z-index:0; pointer-events:none; }
+.intro .conteudo { position:relative; z-index:1; }
+/* Centralização SEGURA. Com `align-items:center`, um bloco mais alto que a
+   tela transborda para os DOIS lados — e o excesso de cima cai por cima da
+   seção anterior (foi o que aconteceu na linha do tempo, que cresceu ao ser
+   centralizada). Com `margin-block:auto` o espaço livre só é distribuído
+   quando existe: sem folga, o conteúdo simplesmente começa no topo. */
+.intro .sec { min-height:100vh; display:flex; flex-direction:column;
+    align-items:stretch; padding:6rem 1.5rem; }
+.intro .sec > .wrap { margin-block:auto; }
+  /* Tudo centralizado na página */
+.intro .wrap { width:100%; max-width:1100px; margin:0 auto; text-align:center; }
+.intro .rotulo { font-size:.72rem; letter-spacing:.22em; text-transform:uppercase;
+    color:var(--brand-2); margin-bottom:1rem; display:flex; align-items:center;
+    justify-content:center; gap:.6rem; }
+  /* Traço dos dois lados, para o rótulo ficar simétrico quando centralizado */
+.intro .rotulo::before, .intro .rotulo::after { content:''; width:34px; height:1px;
+    background:var(--brand); display:inline-block; }
+.intro h1 { font-size:clamp(2.6rem,8vw,5.5rem); line-height:1.02; margin:0 0 1.2rem; font-weight:700; letter-spacing:-.03em; }
+.intro h2 { font-size:clamp(1.9rem,4.5vw,3.2rem); line-height:1.1; margin:0 0 1.4rem; font-weight:700; letter-spacing:-.02em; }
+.intro .lead { font-size:clamp(1rem,1.8vw,1.22rem); color:var(--tx-2); max-width:60ch;
+    line-height:1.65; margin-left:auto; margin-right:auto; }
+.intro .marca-sync { color:var(--brand-2); }
+
+  /* Reveal por linha: a máscara esconde o texto até a hora de entrar */
+.intro .linha { display:block; overflow:hidden; }
+.intro .linha > span { display:block; will-change:transform; }
+.intro .btn { display:inline-flex; align-items:center; gap:.55rem; margin-top:2rem;
+    background:var(--brand); color:#052b13; border:0; border-radius:999px;
+    padding:.85rem 1.7rem; font-weight:700; font-size:1rem; cursor:pointer;
+    text-decoration:none; transition:transform .18s ease, box-shadow .18s ease, background .18s; }
+.intro .btn:hover { transform:translateY(-2px); background:var(--brand-2); box-shadow:0 12px 30px rgba(0,200,83,.28); }
+.intro .btn.fantasma { background:transparent; color:var(--tx); border:1px solid var(--borda); }
+.intro .btn.fantasma:hover { border-color:var(--brand); background:rgba(0,200,83,.08); box-shadow:none; }
+
+.intro .grade { display:grid; gap:1.15rem; grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+    margin-top:2.5rem; }
+
+  /* CARD FLUTUANTE: painel translúcido que deixa o fundo passar desfocado, com
+     sombra projetada longa. É a sombra que convence o olho de que ele está
+     ACIMA do fundo, e não colado nele. */
+.intro .card { position:relative; border-radius:18px; padding:1.6rem;
+    /* VIDRO OPACO: o fundo não passa mais através do card. Sem `backdrop-filter`
+       — além de opaco ficar mais legível, some o custo de desfocar a cena atrás
+       de 18 cards. A separação do fundo vem da sombra projetada, não da
+       transparência. */
+    background:linear-gradient(160deg, #1e3025 0%, #16241b 55%, #101a14 100%);
+    border:1px solid rgba(0,200,83,.20);
+    box-shadow:
+      0 34px 60px -18px rgba(0,0,0,.72),      /* sombra projetada, bem longe */
+      0 12px 24px -12px rgba(0,0,0,.55),      /* contato mais próximo */
+      0 0 0 1px rgba(255,255,255,.03) inset,  /* fio de luz na borda */
+      0 1px 0 rgba(190,255,215,.10) inset;    /* brilho no topo */
+    transition:border-color .25s ease, box-shadow .25s ease; }
+  /* Realce de luz no topo, do lado de onde vem a iluminação da cena */
+.intro .card::before { content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    background:linear-gradient(120deg, rgba(190,255,215,.10), transparent 42%); }
+.intro .card:hover { border-color:rgba(0,230,118,.45);
+    box-shadow:
+      0 46px 80px -20px rgba(0,0,0,.80),
+      0 16px 30px -14px rgba(0,0,0,.6),
+      0 0 30px -6px rgba(0,200,83,.22),
+      0 1px 0 rgba(190,255,215,.16) inset; }
+.intro .card i { font-size:1.6rem; color:var(--brand-2); display:block; margin-bottom:.9rem;
+    filter:drop-shadow(0 4px 10px rgba(0,200,83,.35)); }
+.intro .card h3 { margin:0 0 .5rem; font-size:1.06rem; }
+.intro .card p { margin:0; color:var(--tx-3); font-size:.9rem; line-height:1.6; }
+
+  /* (o card já é opaco em qualquer tela — nada a ajustar no celular) */
+
+/* Telas baixas (notebook): a seção do fluxo é a mais alta e é a primeira a
+   não caber. Menos respiro no topo e entre etapas resolve sem mexer no
+   layout de telas grandes. */
+@media (max-height: 860px) {
+.intro .sec { padding-top:3.5rem; padding-bottom:3.5rem; }
+.intro .etapa { margin-bottom:1.5rem; }
+.intro .fluxo { margin-top:2rem; }
+}
+.intro .pilulas { display:flex; flex-wrap:wrap; justify-content:center; gap:.6rem; margin-top:2.2rem; }
+.intro .pilula { border:1px solid rgba(0,200,83,.20); border-radius:999px; padding:.55rem 1.15rem;
+    font-size:.86rem; color:var(--tx-2); display:flex; align-items:center; gap:.5rem;
+    background:rgba(21,33,26,.55); backdrop-filter:blur(9px); -webkit-backdrop-filter:blur(9px);
+    box-shadow:0 14px 26px -12px rgba(0,0,0,.65), 0 1px 0 rgba(190,255,215,.10) inset; }
+.intro .pilula i { color:var(--brand-2); font-size:.95rem; }
+
+  /* O texto também descola do fundo: sombra suave o separa das bolhas. */
+.intro h1, .intro h2 { text-shadow:0 12px 34px rgba(0,0,0,.6); }
+.intro .lead { text-shadow:0 6px 20px rgba(0,0,0,.55); }
+
+  /* TÍTULOS EM BRANCO. O verde fica reservado ao "Sync" da marca e aos ícones,
+     que assim voltam a ter destaque em vez de competir com o texto. */
+.intro h1, .intro h2, .intro .card h3, .intro .etapa h3 { color:#ffffff; }
+.intro .marca-sync { color:var(--brand-2); }
+
+  /* Linha do tempo do fluxo — trilho e bolinhas AO LADO do texto.
+     O bloco inteiro fica centralizado na página (margin auto), mas por dentro
+     é lateral: por isso o texto das etapas volta a ser alinhado à esquerda —
+     texto centralizado ao lado de um trilho fica torto. */
+.intro .fluxo { position:relative; margin:3rem auto 0; max-width:600px;
+    padding-left:2.9rem; text-align:left; }
+.intro .fluxo::before { content:''; position:absolute; left:11px;
+    top:6px; bottom:6px; width:2px; background:var(--borda); }
+.intro .trilho { position:absolute; left:11px; top:6px; width:2px;
+    background:var(--brand); transform-origin:top; transform:scaleY(0); height:calc(100% - 12px); }
+/* Cada etapa é uma caixa fechada: o espaçamento vira `margin` entre elas em
+   vez de `padding` interno, para nada encostar no bloco de baixo. */
+.intro .etapa { position:relative; padding:0; margin:0 0 2.2rem; }
+.intro .etapa:last-child { margin-bottom:0; }
+  /* A bolinha fica À ESQUERDA do texto, encaixada sobre o trilho.
+     `left:-2.9rem` casa com o `padding-left` do .fluxo: assim o centro dela
+     (12px) cai exatamente sobre a linha (left:11px + 1px de meia-largura). */
+.intro .etapa::before { content:''; display:block; position:absolute; left:-2.9rem; top:.1rem;
+    margin:0; width:24px; height:24px; border-radius:50%;
+    background:var(--bg); border:2px solid var(--borda); }
+.intro .etapa.viva::before { border-color:var(--brand); box-shadow:0 0 0 5px rgba(0,200,83,.14); }
+.intro .etapa h3 { margin:0 0 .35rem; font-size:1.1rem; }
+.intro .etapa p { margin:0; color:var(--tx-3); font-size:.92rem; line-height:1.6; }
+  /* A bolinha da etapa flutua junto: sombra por baixo e brilho quando ativa */
+.intro .etapa::before { box-shadow:0 10px 18px -8px rgba(0,0,0,.7); }
+.intro .etapa.viva::before { box-shadow:0 0 0 5px rgba(0,200,83,.14), 0 10px 20px -6px rgba(0,200,83,.35); }
+.intro .etapa .n { font-size:.7rem; letter-spacing:.16em; color:var(--brand-2); display:block; margin-bottom:.3rem; }
+.intro .metrica { font-size:clamp(2rem,5vw,3.4rem); font-weight:700; color:var(--brand-2); line-height:1; }
+.intro .metrica + span { color:var(--tx-3); font-size:.9rem; }
+.intro .fim { text-align:center; }
+.intro .fim .lead { margin:0 auto; }
+.intro .rodape-demo { text-align:center; padding:2.5rem 1rem 4rem; color:var(--tx-3); font-size:.8rem; }
+.intro .rolar { position:fixed; left:50%; bottom:1.6rem; transform:translateX(-50%); z-index:2;
+    color:var(--tx-3); font-size:.72rem; letter-spacing:.18em; text-transform:uppercase;
+    display:flex; flex-direction:column; align-items:center; gap:.5rem; }
+.intro .rolar .seta { width:1px; height:34px; background:linear-gradient(var(--brand),transparent); }
+
+  /* Barra de progresso do scroll */
+.intro .progresso { position:fixed; top:0; left:0; height:2px; width:100%; background:var(--brand);
+    transform:scaleX(0); transform-origin:left; z-index:5; }
+@media (max-width:768px) {
+.intro .sec { padding:4.5rem 1.2rem; min-height:auto; }
+  
+}
+  /* Respeita quem pediu menos movimento no sistema operacional */
+@media (prefers-reduced-motion:reduce) {
+.intro .card { transition:none; }
+  
+}

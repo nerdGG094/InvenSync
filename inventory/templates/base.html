@@ -71,6 +71,11 @@
       display: flex; align-items: center; gap: .45rem;
     }
     html[data-theme="light"] .dropdown-menu .dd-title { color: #5d7d6b; border-color: #e6ece8; }
+    /* Subtítulo dentro da gaveta, para agrupar itens sem abrir outro menu */
+    .dropdown-menu .dd-sub {
+      padding: .5rem .9rem .25rem; font-size: .64rem; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase; color: #6f8a7b;
+    }
     /* ===== Design system global (mesmo padrão da dashboard) ===== */
     /* Cartões genéricos (formulários, painéis) no tema escuro */
     .card { background:#15211a; border:1px solid #243024; border-radius:16px; }
@@ -287,6 +292,12 @@
     <div class="collapse navbar-collapse" id="navbarsMain">
       {% if current_user.is_authenticated %}
       <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-lg-1">
+        {# Apresentação: primeira da lista, acima do Painel, visível a todos #}
+        <li class="nav-item">
+          <a class="nav-link {% if request.endpoint and request.endpoint.startswith('intro.') %}active{% endif %}" href="{{ url_for('intro.index') }}">
+            <i class="bi bi-stars"></i> Apresentação
+          </a>
+        </li>
         {% if current_user.is_admin %}
         <li class="nav-item">
           <a class="nav-link {% if request.endpoint == 'dashboard.index' %}active{% endif %}" href="{{ url_for('dashboard.index') }}">
@@ -409,7 +420,11 @@
           </a>
         </li>
 
-        {# ====== Atalhos de uso frequente (Admin) — fora do menu Admin ====== #}
+        {# ====== Atalhos de uso frequente (Admin) ======
+           A régua comporta um número limitado de ícones antes de estourar a
+           altura da tela — e o que passa disso simplesmente não aparece. Por
+           isso ela é limitada a 12 itens e todo o resto vai para o "…" abaixo.
+           Ao acrescentar um módulo novo aqui, mova outro para o "…". #}
         {% if current_user.is_admin %}
         <li class="nav-item">
           <a class="nav-link {% if request.endpoint and request.endpoint.startswith('cotacoes.') %}active{% endif %}" href="{{ url_for('cotacoes.index') }}">
@@ -421,31 +436,25 @@
             <i class="bi bi-camera-video"></i> CFTV
           </a>
         </li>
-        <li class="nav-item">
-          <a class="nav-link" href="{{ url_for('kiox.index') }}" target="_blank" rel="noopener" title="Kiox (mapa da frota)">
-            <i class="bi bi-geo-alt"></i> Kiox
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {% if request.endpoint and request.endpoint.startswith('smartplugs.') %}active{% endif %}" href="{{ url_for('smartplugs.list_view') }}">
-            <i class="bi bi-plug"></i> Tomadas
-          </a>
-        </li>
         {% endif %}
 
-        {# ====== Admin: Cofre & Auditoria (somente Admin) ====== #}
+        {# ====== "…" — tudo o que não coube nos 12 ícones (somente Admin) ====== #}
         {% if current_user.is_authenticated and current_user.is_admin %}
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle {% if request.endpoint and (request.endpoint.startswith('credentials.') or request.endpoint.startswith('audit.') or request.endpoint.startswith('docs.') or request.endpoint.startswith('rede.') or request.endpoint.startswith('backups.') or request.endpoint.startswith('wpp.') or request.endpoint.startswith('errors.')) %}active{% endif %}"
-             href="#" id="ddAdmin" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="bi bi-gear"></i> Admin
+          <a class="nav-link dropdown-toggle {% if request.endpoint and (request.endpoint.startswith('credentials.') or request.endpoint.startswith('audit.') or request.endpoint.startswith('docs.') or request.endpoint.startswith('rede.') or request.endpoint.startswith('backups.') or request.endpoint.startswith('wpp.') or request.endpoint.startswith('errors.') or request.endpoint.startswith('kiox.') or request.endpoint.startswith('smartplugs.')) %}active{% endif %}"
+             href="#" id="ddMais" role="button" data-bs-toggle="dropdown" aria-expanded="false"
+             title="Mais módulos">
+            <i class="bi bi-three-dots"></i> Mais
           </a>
-          <ul class="dropdown-menu" aria-labelledby="ddAdmin">
-            <li class="dd-title"><i class="bi bi-gear"></i> Administração</li>
-            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('credentials.') %}active{% endif %}" href="{{ url_for('credentials.list_view') }}"><i class="bi bi-key me-2"></i> Cofre</a></li>
-            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('audit.') %}active{% endif %}" href="{{ url_for('audit.list_view') }}"><i class="bi bi-shield-lock me-2"></i> Auditoria</a></li>
+          <ul class="dropdown-menu" aria-labelledby="ddMais">
+            <li class="dd-title"><i class="bi bi-three-dots"></i> Mais módulos</li>
+            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('smartplugs.') %}active{% endif %}" href="{{ url_for('smartplugs.list_view') }}"><i class="bi bi-plug me-2"></i> Tomadas Inteligentes</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('kiox.index') }}" target="_blank" rel="noopener"><i class="bi bi-geo-alt me-2"></i> Kiox <span class="text-muted small">(mapa)</span></a></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('rede.') %}active{% endif %}" href="{{ url_for('rede.index') }}"><i class="bi bi-diagram-3 me-2"></i> Rede (ARP)</a></li>
             <li><hr class="dropdown-divider"></li>
+            <li class="dd-sub">Administração</li>
+            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('credentials.') %}active{% endif %}" href="{{ url_for('credentials.list_view') }}"><i class="bi bi-key me-2"></i> Cofre</a></li>
+            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('audit.') %}active{% endif %}" href="{{ url_for('audit.list_view') }}"><i class="bi bi-shield-lock me-2"></i> Auditoria</a></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('backups.') %}active{% endif %}" href="{{ url_for('backups.index') }}"><i class="bi bi-database-down me-2"></i> Backups do banco</a></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('wpp.') %}active{% endif %}" href="{{ url_for('wpp.page') }}"><i class="bi bi-envelope-at me-2"></i> Notificações por e-mail</a></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('errors.') %}active{% endif %}" href="{{ url_for('errors.list_view') }}"><i class="bi bi-bug me-2"></i> Log de erros</a></li>

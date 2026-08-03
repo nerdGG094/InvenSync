@@ -18,7 +18,13 @@ PENDING_KEY = "pending_2fa_uid"
 _DUMMY_PW_HASH = generate_password_hash("timing-equalizer")
 
 def _home_for(user):
-    """Tela inicial conforme o perfil: admin -> painel, comum -> central de avisos."""
+    """Tela inicial conforme o perfil: admin -> painel, comum -> central de avisos.
+
+    Exceção: quem ainda não viu a página de apresentação vai para ela UMA vez
+    (a própria página marca `intro_visto`). Depois disso ela só é aberta pelo
+    menu. O `getattr` protege o caso de a coluna ainda não existir no banco."""
+    if not getattr(user, "intro_visto", True):
+        return url_for("intro.index")
     return url_for("dashboard.index") if user.is_admin else url_for("announcements.list_view")
 
 
