@@ -388,3 +388,29 @@ pre, code { max-width: 100%; overflow-x: auto; }
   /* Botões de ação em grupo ocupam a linha (mais fáceis de tocar) */
   .cred-foot, .machine-actions, .phone-actions { flex-wrap: wrap; }
 }
+
+/* ==========================================================================
+   Tabela equivalente dos gráficos (botão "Dados" no cabeçalho do cartão).
+   Global porque os dois painéis — Painel e Chamados — usam o mesmo
+   static/js/chart-tabela.js, com estruturas de cartão diferentes.
+   ========================================================================== */
+/* O texto do cabeçalho absorve a sobra; o botão nunca encolhe nem empurra
+   o título para a linha de baixo. */
+.ch-head-txt { flex:1 1 auto; min-width:0; }
+/* o ícone entrou para dentro do span, então perdeu o `gap` do cabeçalho */
+.ch-head-txt > .bi:first-child { margin-right:.4rem; }
+.ch-tab-btn { margin-left:auto; background:none; border:1px solid #243024; color:#8fb0a0;
+  border-radius:8px; padding:.2rem .4rem; cursor:pointer; line-height:1;
+  display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto;
+  transition:color .14s, border-color .14s; }
+.ch-tab-btn:hover { color:#46e08a; border-color:#2f6b46; }
+.ch-tab-btn .bi { color:inherit !important; font-size:.85rem; }
+.ch-table { padding:.6rem 0 .2rem; overflow-x:auto; }
+.ch-card .ch-table { padding:0 1.05rem 1rem; }
+.ch-table table { width:100%; font-size:.78rem; border-collapse:collapse; margin:0; }
+.ch-table th, .ch-table td { padding:.35rem .5rem; border-bottom:1px solid #1f2c24; text-align:left; }
+.ch-table thead th { color:#8fb0a0; font-weight:600; font-size:.7rem;
+  text-transform:uppercase; letter-spacing:.06em; }
+.ch-table tbody th { font-weight:500; color:#dceede; }
+/* tabular-nums só aqui: são colunas que precisam alinhar na vertical */
+.ch-table .num { text-align:right; font-variant-numeric:tabular-nums; color:#dceede; }

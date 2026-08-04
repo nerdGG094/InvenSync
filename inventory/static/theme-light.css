@@ -25,6 +25,15 @@ html[data-theme="light"] .navbar .dropdown-item:hover,
 html[data-theme="light"] .navbar .dropdown-item.active { background: #eaf4ee; color: #0f5132; }
 html[data-theme="light"] .navbar .dropdown-divider { border-color: #e2e8e4; }
 
+/* ----- Tabela equivalente dos gráficos do Painel ----- */
+html[data-theme="light"] .ch-tab-btn { border-color: #e2e8e4; color: #5b6b62; }
+html[data-theme="light"] .ch-tab-btn:hover { color: #0f5132; border-color: #b9d6c5; }
+html[data-theme="light"] .ch-table th,
+html[data-theme="light"] .ch-table td { border-bottom-color: #eef2ef; }
+html[data-theme="light"] .ch-table thead th { color: #5b6b62; }
+html[data-theme="light"] .ch-table tbody th,
+html[data-theme="light"] .ch-table .num { color: #1a2b22; }
+
 /* ----- Superfícies de card (todas as variantes do app) ----- */
 html[data-theme="light"] .card,
 html[data-theme="light"] .table-card,

@@ -184,6 +184,16 @@ Quick navigation aid; for fields/endpoints read the module itself. Several "Máq
 - Dark theme. On desktop (≥992px) the navbar becomes a fixed **icon-only left rail** (labels become tooltips); keep an `<i class="bi ...">` icon on every nav item. Dropdowns open as a **full-height drawer** beside the rail (SeniorX pattern): CSS pins the `.dropdown-menu.show` to `left: var(--rail-w)` with `position: fixed; top: 0; bottom: 0` and a fixed `--drawer-w`, overriding Popper via `!important`. Anchoring to the icon (the old behavior) made items at the end of the rail — Admin, Perfil — open half off-screen; starting at the top always fits, and the drawer scrolls if it ever outgrows the viewport. Each drawer starts with a `<li class="dd-title">` naming the module (the rail hides the icon's label); it sticks to the top and a script in `base.html` injects the ✕ close button into it, so no template repeats that markup. The drawer **overlays** the content — it does not push it like SeniorX does. Icons are Bootstrap Icons; CSS is Bootstrap 5 via CDN plus `static/style.css` and `:root` brand vars (`--brand: #00c853`).
 - Reusable patterns: `.page-header`/`.ph-title`, `.table-card`, `.stat-card`, `.empty-state`, `.section-label`, `.kpi`, `badge bg-{color}-subtle text-{color}-emphasis`.
 
+### Charts — the palette is validated, not chosen
+Both dashboards (`dashboard.html`, `tickets/dashboard.html`) declare the **same 8-slot categorical palette**, plus a reserved status palette and a single-hue ordinal ramp. It is measured, not picked: it clears the lightness band, chroma floor, colorblind separation, normal-vision floor and 3:1 contrast against **both** surfaces this app renders on (`#15211a` dark, `#ffffff` light). The previous palette failed — brand green `#00c853` and amber `#ffb020` sit at **ΔE 2.9 under protanopia**, and they were the two series of the Entradas × Saídas chart, i.e. indistinguishable for red-green colorblind users.
+
+Rules that are load-bearing, not taste:
+- **The slot ORDER is the safety mechanism** — adjacent pairs are what get measured. Don't reorder, don't add a 9th color, without re-running the validator (`dataviz` skill, `scripts/validate_palette.js`, against both surfaces).
+- **The brand green is not a series color** — it's too light for the dark-theme band. It identifies the UI, not the data.
+- **Color by entity, never by rank or index.** Ticket status is colored from a name→color map because the query sorts by count; a single series gets *one* color for every bar (cycling the palette double-encodes bar length as hue and invents categories).
+- **Ordered scales use the ordinal ramp** (priority), identity uses categorical, state uses the status palette (with the label always beside it).
+- Every chart has a **table-view twin** via `static/js/chart-tabela.js` (the "Dados" button, built from `chart.data`). It's not optional decoration: three light-mode slots sit below 3:1, which obliges a non-color path to the values.
+
 ### Global front-end behaviors (all in `base.html`, automatic — no per-page wiring)
 These are driven by markup conventions + global scripts; reuse them instead of reinventing:
 - **Flash → toasts**: flash messages render as auto-dismissing toasts (top-right).

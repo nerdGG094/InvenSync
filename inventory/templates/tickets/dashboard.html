@@ -112,34 +112,62 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/chart-tabela.js') }}"></script>
 <script nonce="{{ csp_nonce() }}">
 (function(){
+  if (typeof Chart === 'undefined') return;
+  const TAB = [];   // gráficos que ganham tabela equivalente no fim
+
   const trend = {{ trend|tojson }};
   const cat = {{ cat_data|tojson }};
   const prio = {{ prio_data|tojson }};
   const assignee = {{ assignee_data|tojson }};
-  const PALETTE = ['#2e8b57','#0dcaf0','#ffc107','#dc3545','#6f42c1','#fd7e14','#20c997','#6c757d'];
+  /* Mesma paleta validada do Painel — ver o comentário longo em
+     dashboard.html. A anterior reprovava em dois gates: quatro cores fora da
+     faixa de luminosidade do tema escuro e o cinza #6c757d abaixo do piso de
+     croma (lia como "sem cor", não como categoria). */
+  const LIGHT = document.documentElement.getAttribute('data-theme') === 'light';
+  const PAL = LIGHT
+    ? ['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#008300','#4a3aa7','#e34948']
+    : ['#3987e5','#d95926','#199e70','#c98500','#d55181','#008300','#9085e9','#e66767'];
+  const RAMP = ['#86b6ef','#3987e5','#256abf','#184f95'];
+  const SURF = LIGHT ? '#ffffff' : '#15211a';
+  const rgba=(hex,a)=>{const h=hex.replace('#','');const n=parseInt(h,16);
+    return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;};
 
   const t = document.getElementById('chartTrend');
-  if (t) new Chart(t, { type:'line', data:{ labels: trend.labels,
-    datasets:[{ label:'Abertos', data: trend.values, borderColor:'#2e8b57',
-      backgroundColor:'rgba(46,139,87,.15)', fill:true, tension:.3 }] },
-    options:{ plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{precision:0}}} } });
+  if (t) TAB.push(new Chart(t, { type:'line', data:{ labels: trend.labels,
+    datasets:[{ label:'Abertos', data: trend.values, borderColor:PAL[0],
+      backgroundColor:rgba(PAL[0],.15), fill:true, tension:.3, borderWidth:2,
+      pointRadius:0, pointHoverRadius:5 }] },
+    options:{ plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{precision:0}}} } }));
 
+  // Categoria: identidade => categórica, ordem fixa, vão de 2px entre fatias
   const c = document.getElementById('chartCat');
-  if (c) new Chart(c, { type:'doughnut', data:{ labels: cat.map(x=>x[0]),
-    datasets:[{ data: cat.map(x=>x[1]), backgroundColor: PALETTE }] },
-    options:{ plugins:{legend:{position:'bottom'}} } });
+  if (c) TAB.push(new Chart(c, { type:'doughnut', data:{ labels: cat.map(x=>x[0]),
+    datasets:[{ data: cat.map(x=>x[1]), backgroundColor: PAL,
+      borderColor: SURF, borderWidth: 2 }] },
+    options:{ plugins:{legend:{position:'bottom'}} } }));
 
+  /* Prioridade é escala ORDENADA, não identidade => rampa de uma cor só,
+     do passo mais escuro (mais severo) para o mais claro. Girar a paleta
+     categórica aqui sugeria que as prioridades eram categorias soltas. */
   const p = document.getElementById('chartPrio');
-  if (p) new Chart(p, { type:'bar', data:{ labels: prio.map(x=>x[0]),
-    datasets:[{ data: prio.map(x=>x[1]), backgroundColor: PALETTE }] },
-    options:{ plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{precision:0}}} } });
+  if (p) TAB.push(new Chart(p, { type:'bar', data:{ labels: prio.map(x=>x[0]),
+    datasets:[{ data: prio.map(x=>x[1]), borderRadius:4,
+      backgroundColor: prio.map((_,i,arr)=>RAMP[Math.max(0, RAMP.length-1-Math.round(i*(RAMP.length-1)/Math.max(1,arr.length-1)))]) }] },
+    options:{ plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{precision:0}}} } }));
 
+  // Série única => uma cor para todas as barras
   const a = document.getElementById('chartAssignee');
-  if (a) new Chart(a, { type:'bar', data:{ labels: assignee.map(x=>x[0]),
-    datasets:[{ data: assignee.map(x=>x[1]), backgroundColor:'#0dcaf0' }] },
-    options:{ indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true, ticks:{precision:0}}} } });
+  if (a) TAB.push(new Chart(a, { type:'bar', data:{ labels: assignee.map(x=>x[0]),
+    datasets:[{ data: assignee.map(x=>x[1]), backgroundColor:PAL[0], borderRadius:4 }] },
+    options:{ indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true, ticks:{precision:0}}} } }));
+
+  // Tabela equivalente de cada gráfico (ver static/js/chart-tabela.js)
+  if (window.tabelaDoGrafico) {
+    TAB.forEach(function(c){ window.tabelaDoGrafico(c, {cartao:'.card-body', cabeca:'h6'}); });
+  }
 })();
 </script>
 {% endblock %}

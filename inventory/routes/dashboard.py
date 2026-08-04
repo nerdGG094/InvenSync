@@ -154,7 +154,10 @@ def index():
     # ----- Chamados por prioridade (barras) -----
     tickets_priority = {"labels": [], "data": []}
     try:
-        order = {"critica": 0, "alta": 1, "media": 2, "baixa": 3}
+        # Vocabulário real do formulário (PRIORITY_CHOICES). Antes a chave mais
+        # severa era "critica", que não existe — "urgente" caía no default 99 e
+        # a prioridade mais alta era ordenada por ÚLTIMO no gráfico.
+        order = {"urgente": 0, "alta": 1, "media": 2, "baixa": 3}
         rows = (
             db.session.query(Ticket.priority, func.count(Ticket.id))
             .filter(~Ticket.status.in_(["resolvido", "fechado"]))

@@ -12,9 +12,17 @@
     font-size:.74rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#7fae93; }
   .sec-label::after { content:""; flex:1; height:1px; background:linear-gradient(90deg,#243024,transparent); }
 
-  /* KPI cards */
-  .kpi { position:relative; background:linear-gradient(160deg,#17231b,#131a16); border:1px solid #243024;
+  /* KPI cards — translúcidos, para o fundo de bolhas aparecer por trás.
+     Só os KPIs e os atalhos: os cartões de GRÁFICO ficam opacos de propósito.
+     O contraste da paleta foi validado contra a cor sólida #15211a; deixar o
+     fundo variar por trás das barras invalidaria essa medição. */
+  .kpi { position:relative; background:linear-gradient(160deg, rgba(23,35,27,.72), rgba(19,26,22,.72));
+    backdrop-filter:blur(14px) saturate(120%); -webkit-backdrop-filter:blur(14px) saturate(120%);
+    border:1px solid #243024;
     border-radius:16px; padding:1rem 1.1rem; height:100%; overflow:hidden; transition:transform .14s, border-color .14s; }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .kpi { background:linear-gradient(160deg,#17231b,#131a16); }
+  }
   .kpi:hover { transform:translateY(-3px); border-color:#2f6b46; }
   .kpi::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--accent,#00c853); }
   .kpi .ico { width:42px; height:42px; border-radius:12px; display:inline-flex; align-items:center; justify-content:center;
@@ -505,6 +513,7 @@ adb shell dpm set-device-owner com.empresa.semhotspot/.HotspotDeviceAdminReceive
 
 {# ===================== SCRIPTS ===================== #}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/chart-tabela.js') }}"></script>
 <script nonce="{{ csp_nonce() }}">
 (function(){
   if (typeof Chart === 'undefined') return;
@@ -512,9 +521,47 @@ adb shell dpm set-device-owner com.empresa.semhotspot/.HotspotDeviceAdminReceive
   const LIGHT = document.documentElement.getAttribute('data-theme') === 'light';
   const TICK = LIGHT ? 'rgba(26,43,34,.85)' : 'rgba(255,255,255,.78)';
   const GRID = LIGHT ? 'rgba(20,40,28,.12)' : 'rgba(255,255,255,.07)';
-  const PAL = ['#00c853','#ffb020','#0dcaf0','#ff7043','#9c6bff','#00b894','#f44336','#26c6da'];
+  /* ---------------------------------------------------------------------
+     PALETA — validada, não escolhida no olho.
+
+     A anterior (verde da marca + âmbar + ciano…) reprovava: verde #00c853 e
+     âmbar #ffb020 ficam a ΔE 2.9 sob protanopia, ou seja, praticamente a mesma
+     cor para quem tem daltonismo vermelho-verde — e eram justamente as duas
+     séries do gráfico de Entradas × Saídas. Seis das oito cores também caíam
+     fora da faixa de luminosidade do tema escuro.
+
+     Esta passa em todos os gates (faixa de luminosidade, croma, separação sob
+     daltonismo, piso de visão normal e contraste) nas DUAS superfícies deste
+     app: #15211a no escuro e #ffffff no claro.
+
+     A ORDEM é o mecanismo de segurança, não estética: cada par vizinho foi
+     medido. Não reordenar nem acrescentar uma 9ª cor sem rodar o validador.
+     O verde da marca não entra como cor de série — é claro demais para a faixa
+     do tema escuro; ele segue identificando a interface, não os dados.
+     --------------------------------------------------------------------- */
+  const PAL = LIGHT
+    ? ['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#008300','#4a3aa7','#e34948']
+    : ['#3987e5','#d95926','#199e70','#c98500','#d55181','#008300','#9085e9','#e66767'];
+  /* Reservada para estado (bom/atenção/crítico). Nunca vira "série 4", e vai
+     sempre acompanhada do rótulo — cor sozinha não carrega o significado. */
+  const ST = { good:'#0ca30c', warning:'#fab219', serious:'#ec835a', critical:'#d03b3b' };
+  /* Rampa ordinal: uma cor só, clara→escura, para escalas ORDENADAS
+     (prioridade). Validada nos dois temas — a ponta mais próxima de cada
+     superfície ainda passa de 2:1. */
+  const RAMP = ['#86b6ef','#3987e5','#256abf','#184f95'];
   const rgba=(hex,a)=>{const h=hex.replace('#','');const n=parseInt(h,16);
     return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;};
+
+  /* Cor da superfície do cartão. Serve de "vão" de 2px entre fatias vizinhas —
+     separar por borda colorida é o que a régua de marcas manda evitar. */
+  const SURF = LIGHT ? '#ffffff' : '#15211a';
+
+  // Rótulos vindos crus do banco ("em_andamento") ficam legíveis no gráfico
+  const rotulo = (s) => String(s).replace(/_/g,' ').replace(/^./, c => c.toUpperCase());
+
+  // Todo gráfico criado entra aqui, para ganhar a tabela equivalente depois
+  const CHARTS = [];
+  const reg = (c) => { CHARTS.push(c); return c; };
 
   Chart.defaults.color = TICK;
   Chart.defaults.font.family = "system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
@@ -561,68 +608,89 @@ adb shell dpm set-device-owner com.empresa.semhotspot/.HotspotDeviceAdminReceive
   // 1) Movimentações (área, 2 séries)
   (function(){ const el=document.getElementById('chMovTrend'); if(!el||!DATA.movements.labels) return;
     const ctx=el.getContext('2d');
-    new Chart(el,{type:'line',data:{labels:DATA.movements.labels,datasets:[
+    reg(new Chart(el,{type:'line',data:{labels:DATA.movements.labels,datasets:[
       {label:'Entradas',data:DATA.movements.in||[],borderColor:PAL[0],backgroundColor:grad(ctx,PAL[0]),
-        fill:true,tension:.35,borderWidth:2,pointRadius:0,pointHoverRadius:4},
+        fill:true,tension:.35,borderWidth:2,pointRadius:0,pointHoverRadius:5},
       {label:'Saídas',data:DATA.movements.out||[],borderColor:PAL[1],backgroundColor:grad(ctx,PAL[1]),
-        fill:true,tension:.35,borderWidth:2,pointRadius:0,pointHoverRadius:4}
+        fill:true,tension:.35,borderWidth:2,pointRadius:0,pointHoverRadius:5}
     ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      scales:axes(),plugins:{legend:{position:'top'}}}});
+      scales:axes(),plugins:{legend:{position:'top'}}}}));
   })();
 
-  // 2) Saúde do estoque (rosca + centro %)
+  // 2) Saúde do estoque (rosca + centro %) — saudável/abaixo/sem estoque é
+  //    ESTADO, não identidade: usa a paleta de status, com rótulo na legenda.
   (function(){ const el=document.getElementById('chStockHealth'); if(!el||!hasV(DATA.health)) return;
-    new Chart(el,{type:'doughnut',plugins:[centerText],data:{labels:DATA.health.labels,datasets:[{
-      data:DATA.health.data,backgroundColor:[rgba(PAL[0],.85),rgba(PAL[1],.85),rgba(PAL[6],.85)],
-      borderColor:(LIGHT?'#ffffff':'#0f1a13'),borderWidth:2}]},
+    reg(new Chart(el,{type:'doughnut',plugins:[centerText],data:{labels:DATA.health.labels,datasets:[{
+      data:DATA.health.data,backgroundColor:[ST.good,ST.warning,ST.critical],
+      borderColor:SURF,borderWidth:2}]},
       options:{responsive:true,maintainAspectRatio:false,cutout:'72%',
-        plugins:{legend:{position:'bottom'},centerText:{text:(DATA.health.pct_ok||0)+'%',sub:'SAUDÁVEL'}}}});
+        plugins:{legend:{position:'bottom'},centerText:{text:(DATA.health.pct_ok||0)+'%',sub:'SAUDÁVEL'}}}}));
   })();
 
-  // 3) Mix de ativos (polar area)
+  // 3) Mix de ativos — era polarArea, que codifica o valor no RAIO: a área
+  //    cresce ao quadrado e uma categoria com o dobro aparece com ~4x a mancha.
+  //    São 3 categorias nominais comparando grandeza => barra horizontal, uma
+  //    cor só (pintar cada barra de uma cor sugere categorias que não existem).
   (function(){ const el=document.getElementById('chAssetsMix'); if(!el||!hasV(DATA.assets)) return;
-    new Chart(el,{type:'polarArea',data:{labels:DATA.assets.labels,datasets:[{
-      data:DATA.assets.data,backgroundColor:DATA.assets.labels.map((_,i)=>rgba(PAL[i%PAL.length],.65)),
-      borderColor:DATA.assets.labels.map((_,i)=>PAL[i%PAL.length]),borderWidth:1.5}]},
-      options:{responsive:true,maintainAspectRatio:false,
-        scales:{r:{ticks:{display:false,backdropColor:'transparent'},grid:{color:GRID},angleLines:{color:GRID}}},
-        plugins:{legend:{position:'bottom'}}}});
-  })();
-
-  // 4) Top itens críticos (barras arredondadas, estoque x mínimo)
-  (function(){ const el=document.getElementById('chLowStockBar'); if(!el||!has(DATA.low)) return;
-    new Chart(el,{type:'bar',data:{labels:DATA.low.labels,datasets:[
-      {label:'Estoque',data:DATA.low.estoque||[],backgroundColor:rgba(PAL[0],.65),borderColor:PAL[0],borderWidth:1.5,borderRadius:6},
-      {label:'Mínimo',data:DATA.low.minimo||[],backgroundColor:rgba(PAL[6],.55),borderColor:PAL[6],borderWidth:1.5,borderRadius:6}
-    ]},options:{responsive:true,maintainAspectRatio:false,scales:axes(),plugins:{legend:{position:'top'}}}});
-  })();
-
-  // 5) Top itens movimentados (barras horizontais)
-  (function(){ const el=document.getElementById('chTopItems'); if(!el||!has(DATA.topItems)) return;
-    new Chart(el,{type:'bar',data:{labels:DATA.topItems.labels,datasets:[{
-      label:'Qtd movimentada',data:DATA.topItems.data||[],
-      backgroundColor:DATA.topItems.labels.map((_,i)=>rgba(PAL[i%PAL.length],.7)),
-      borderColor:DATA.topItems.labels.map((_,i)=>PAL[i%PAL.length]),borderWidth:1.5,borderRadius:6}]},
+    reg(new Chart(el,{type:'bar',data:{labels:DATA.assets.labels,datasets:[{
+      label:'Quantidade',data:DATA.assets.data,backgroundColor:PAL[0],borderRadius:4,borderWidth:0}]},
       options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
         scales:{x:{beginAtZero:true,ticks:{color:TICK,precision:0},grid:{color:GRID}},
-                y:{ticks:{color:TICK},grid:{display:false}}},plugins:{legend:{display:false}}}});
+                y:{ticks:{color:TICK},grid:{display:false}}},plugins:{legend:{display:false}}}}));
   })();
 
-  // Helpers categóricos (TI)
-  function doughnut(id,d){ const el=document.getElementById(id); if(!el||!hasV(d)) return;
-    new Chart(el,{type:'doughnut',data:{labels:d.labels,datasets:[{data:d.data,
-      backgroundColor:d.labels.map((_,i)=>rgba(PAL[i%PAL.length],.8)),borderColor:(LIGHT?'#ffffff':'#0f1a13'),borderWidth:2}]},
-      options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom'}}}}); }
-  function bars(id,d){ const el=document.getElementById(id); if(!el||!hasV(d)) return;
-    new Chart(el,{type:'bar',data:{labels:d.labels,datasets:[{label:'Qtd',data:d.data,
-      backgroundColor:d.labels.map((_,i)=>rgba(PAL[i%PAL.length],.7)),
-      borderColor:d.labels.map((_,i)=>PAL[i%PAL.length]),borderWidth:1.5,borderRadius:6}]},
-      options:{responsive:true,maintainAspectRatio:false,scales:axes(),plugins:{legend:{display:false}}}}); }
+  // 4) Top itens críticos — 2 séries distintas => categórica, slots 1 e 2
+  (function(){ const el=document.getElementById('chLowStockBar'); if(!el||!has(DATA.low)) return;
+    reg(new Chart(el,{type:'bar',data:{labels:DATA.low.labels,datasets:[
+      {label:'Estoque',data:DATA.low.estoque||[],backgroundColor:PAL[0],borderRadius:4,borderWidth:0},
+      {label:'Mínimo',data:DATA.low.minimo||[],backgroundColor:PAL[1],borderRadius:4,borderWidth:0}
+    ]},options:{responsive:true,maintainAspectRatio:false,scales:axes(),plugins:{legend:{position:'top'}}}}));
+  })();
 
-  doughnut('chTicketsStatus', DATA.tStatus);
-  bars('chTicketsPriority', DATA.tPrio);
+  // 5) Top itens movimentados — série ÚNICA: uma cor para todas as barras. A
+  //    versão anterior girava a paleta por índice, o que dobra o comprimento da
+  //    barra em cor e não informa nada.
+  (function(){ const el=document.getElementById('chTopItems'); if(!el||!has(DATA.topItems)) return;
+    reg(new Chart(el,{type:'bar',data:{labels:DATA.topItems.labels,datasets:[{
+      label:'Qtd movimentada',data:DATA.topItems.data||[],
+      backgroundColor:PAL[0],borderRadius:4,borderWidth:0}]},
+      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+        scales:{x:{beginAtZero:true,ticks:{color:TICK,precision:0},grid:{color:GRID}},
+                y:{ticks:{color:TICK},grid:{display:false}}},plugins:{legend:{display:false}}}}));
+  })();
+
+  /* Rosca categórica. `cores` opcional amarra a cor ao NOME da fatia: a query
+     de chamados ordena por contagem, então colorir por índice repintaria tudo
+     assim que a ordem mudasse — quem aprendeu "aberto é azul" seria enganado. */
+  function doughnut(id,d,cores){ const el=document.getElementById(id); if(!el||!hasV(d)) return;
+    const bg = cores ? d.labels.map((l,i)=>cores[String(l).toLowerCase()] || PAL[i%PAL.length])
+                     : d.labels.map((_,i)=>PAL[i%PAL.length]);
+    reg(new Chart(el,{type:'doughnut',data:{labels:d.labels.map(rotulo),datasets:[{data:d.data,
+      backgroundColor:bg,borderColor:SURF,borderWidth:2}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom'}}}})); }
+
+  /* Barras de série única. `rampa` liga a rampa ordinal, para escalas em que a
+     ordem das categorias significa alguma coisa (prioridade). */
+  function bars(id,d,rampa){ const el=document.getElementById(id); if(!el||!hasV(d)) return;
+    const n=d.labels.length;
+    const bg = rampa ? d.labels.map((_,i)=>RAMP[Math.max(0, RAMP.length-1-Math.round(i*(RAMP.length-1)/Math.max(1,n-1)))])
+                     : PAL[0];
+    reg(new Chart(el,{type:'bar',data:{labels:d.labels.map(rotulo),datasets:[{label:'Qtd',data:d.data,
+      backgroundColor:bg,borderRadius:4,borderWidth:0}]},
+      options:{responsive:true,maintainAspectRatio:false,scales:axes(),plugins:{legend:{display:false}}}})); }
+
+  // Cor presa ao estado do chamado, nunca à posição na lista
+  const CORES_STATUS = { 'aberto':PAL[0], 'em_andamento':PAL[3], 'resolvido':PAL[5], 'cancelado':PAL[7] };
+
+  doughnut('chTicketsStatus', DATA.tStatus, CORES_STATUS);
+  bars('chTicketsPriority', DATA.tPrio, true);   // urgente = passo mais escuro
   doughnut('chMachinesKind', DATA.mKind);
   bars('chMobilesStatus', DATA.mStatus);
+
+  // Tabela equivalente de cada gráfico (ver static/js/chart-tabela.js)
+  if (window.tabelaDoGrafico) {
+    CHARTS.forEach(function(c){ window.tabelaDoGrafico(c, {cartao:'.ch-card', cabeca:'.ch-head'}); });
+  }
 })();
 </script>
 {% endblock %}
