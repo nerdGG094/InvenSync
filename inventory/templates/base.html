@@ -67,6 +67,14 @@
     .brand-name { font-size: 1.15rem; }
     .brand-name .sync { color: var(--brand-2); }
     .brand-tag { font-size: .62rem; letter-spacing: .14em; text-transform: uppercase; color: #5f8f72; line-height: 1; }
+    /* No celular/tablet a marca fica só com o nome. Com as duas linhas
+       empilhadas, "InvenSync" era empurrado para cima do ">> Tech-Almox" e o
+       conjunto deixava de acompanhar a altura do logo. Sem a segunda linha, o
+       `align-items:center` do .navbar-brand centraliza o nome sozinho.
+       (Na régua do desktop este bloco de texto já é escondido por inteiro.) */
+    @media (max-width: 991.98px) {
+      .brand-tag { display: none; }
+    }
     .navbar .nav-link {
       display: flex; align-items: center; gap: .4rem;
       border-radius: 8px; padding: .45rem .7rem !important;
