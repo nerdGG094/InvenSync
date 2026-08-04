@@ -232,10 +232,24 @@
         display: flex !important; flex-direction: column; flex: 1 1 auto;
         align-items: stretch; height: 100%; overflow: visible;
       }
+      /* A LISTA de ícones é a única parte que rola; marca e perfil ficam fixos.
+         `min-height:0` é o que faz funcionar: item de flex nasce com
+         `min-height:auto` e se recusa a encolher abaixo do conteúdo — era por
+         isso que, em tela baixa, os últimos ícones simplesmente vazavam para
+         fora da viewport em vez de virarem rolagem.
+         A gaveta do submenu é `position:fixed`, então tem a viewport como bloco
+         contentor e NÃO é recortada por este overflow. */
       .navbar-collapse > .navbar-nav {
         flex-direction: column; width: 100%; gap: 4px !important; margin: 0 !important;
-        flex: 1 1 auto; overflow: visible;   /* visível p/ o submenu não ser recortado */
+        flex: 1 1 auto; min-height: 0;
+        overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
+        scrollbar-width: thin; scrollbar-color: #2b4a37 transparent;
       }
+      /* Fina de propósito: a régua só tem 70px e a barra come largura útil.
+         Visível, e não escondida, para haver pista de que ainda há itens. */
+      .navbar-collapse > .navbar-nav::-webkit-scrollbar { width: 4px; }
+      .navbar-collapse > .navbar-nav::-webkit-scrollbar-thumb { background: #2b4a37; border-radius: 4px; }
+      .navbar-collapse > .navbar-nav::-webkit-scrollbar-track { background: transparent; }
 
       /* Itens: ícone centralizado, rótulo oculto (vira tooltip via title) */
       .navbar.navbar-expand-lg .nav-link {
@@ -306,6 +320,35 @@
 
       /* área de conteúdo ocupa o restante */
       main.container, footer .container { margin-left: auto; margin-right: auto; }
+    }
+
+    /* ===================================================================
+       TELA BAIXA: a régua encolhe antes de precisar rolar.
+
+       São 13 ícones + marca + perfil. No tamanho padrão isso pede ~710px de
+       viewport — sobra num monitor, mas não num notebook 1366x768 (que fica
+       com ~660px depois da barra do navegador), e aí os últimos módulos
+       ficavam fora da tela. Cada faixa aperta espaçamento e ícone; a rolagem
+       da lista continua como último recurso, para qualquer altura.
+       =================================================================== */
+    @media (min-width: 992px) and (max-height: 800px) {
+      .navbar.navbar-expand-lg .nav-link { padding: .45rem 0 !important; }
+      .navbar.navbar-expand-lg .nav-link i { font-size: 1.18rem; }
+      .navbar-collapse > .navbar-nav { gap: 2px !important; }
+      .navbar-brand { margin-bottom: 7px !important; padding: 8px 0 7px; }
+      .brand-logo { height: 30px; }
+      .navbar.navbar-expand-lg #ddPerfil { padding: .35rem 0; }
+    }
+    @media (min-width: 992px) and (max-height: 660px) {
+      .navbar.navbar-expand-lg .nav-link { padding: .32rem 0 !important; }
+      .navbar.navbar-expand-lg .nav-link i { font-size: 1.06rem; }
+      .navbar-collapse > .navbar-nav { gap: 1px !important; }
+      .navbar-brand { margin-bottom: 5px !important; padding: 6px 0 5px; }
+      .brand-logo { height: 26px; }
+      .navbar.navbar-expand-lg #ddPerfil { padding: .25rem 0; }
+      .navbar.navbar-expand-lg #ddPerfil .avatar-circle {
+        width: 26px !important; height: 26px !important; flex-basis: 26px !important;
+      }
     }
   </style>
 </head>
