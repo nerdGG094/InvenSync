@@ -43,6 +43,15 @@
       --bg-2: #1e1e1e;
       --text-1: #e0e0e0;
       --text-2: #b9f6ca;
+      /* Faixa da marca no topo do menu, nas cores da Jaboti: bloco VERMELHO com
+         um fio AMARELO como separador — assim as três cores da marca aparecem
+         (o verde continua sendo o do menu). Vermelho e não amarelo porque o
+         monograma é branco: sobre o vermelho o contraste é forte, sobre o
+         amarelo o logo praticamente sumiria. */
+      --band: #8a2f2f;
+      --band-2: #742727;
+      --band-line: #5a1f1f;
+      --band-accent: #e0b545;
     }
     body { background-color: var(--bg-1); color: var(--text-1); }
     .navbar { background: #0b1a12; border-bottom: 1px solid #183224; }
@@ -158,7 +167,13 @@
     .cfm-msg{ color:#e6ffe9; white-space:pre-wrap; font-size:.92rem; line-height:1.45; }
     .cfm-foot{ display:flex; justify-content:flex-end; gap:.5rem; padding:.8rem 1.2rem; border-top:1px solid #243024; background:#111a14; }
     footer { border-top: 1px solid #183224; color:#9ed9b2; }
-    .brand-logo{ height: 28px; width: auto; display: inline-block; object-fit: contain; }
+    /* Marca quadrada (monograma IS) — mais alta que o antigo logotipo deitado,
+       que era largo e baixo; a 28px o monograma ficava miúdo.
+       Fora da régua (mobile) o logo ganha uma pastilha vermelha própria; no
+       desktop a faixa inteira é vermelha e a pastilha é desfeita. */
+    .brand-logo{ height: 36px; width: auto; display: inline-block; object-fit: contain;
+      background: var(--band); border-radius: 10px; padding: 5px 9px;
+      box-shadow: 0 0 0 1px var(--band-line); }
 
     /* Filtro por departamento (pills) — usado nas listas agrupadas por setor */
     .dept-tabs{ display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:.5rem; margin-bottom:1rem; }
@@ -191,8 +206,25 @@
         flex-direction: column; flex-wrap: nowrap; height: 100%;
         align-items: stretch; padding: 0 9px; gap: 6px; overflow: visible;
       }
-      /* Marca: mantém só o logo centralizado */
-      .navbar-brand { justify-content: center; margin: 0 0 8px !important; padding: 4px 0; }
+      /* Marca: só o logo, centralizado, numa faixa própria que marca o início
+         do menu. As margens negativas sangram o padding do container (9px nos
+         lados) e o do .navbar (10px no topo) para a faixa pintar a régua
+         inteira, de borda a borda — sem isso ela ficaria uma ilha no meio. */
+      .navbar-brand {
+        justify-content: center; position: relative;
+        margin: -10px -9px 10px !important; padding: 12px 0 11px;
+        background: linear-gradient(180deg, var(--band), var(--band-2));
+        border-bottom: 1px solid var(--band-line);
+      }
+      /* Separador: fio amarelo da marca esmaecendo nas pontas, sobre a borda */
+      .navbar-brand::after {
+        content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+        background: linear-gradient(90deg, transparent, var(--band-accent), transparent);
+      }
+      /* Na régua a faixa já é vermelha — a pastilha do logo sai de cena */
+      .navbar.navbar-expand-lg .brand-logo {
+        background: none; box-shadow: none; padding: 0;
+      }
       .navbar-brand .d-flex.flex-column { display: none !important; }
       .navbar-toggler { display: none !important; }
 
@@ -280,8 +312,12 @@
 <body>
 <nav class="navbar navbar-expand-lg" aria-label="Main navigation">
   <div class="container-fluid">
-    <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('dashboard.index') }}">
-      <img class="brand-logo" src="{{ url_for('static', filename='logo-green.png' if ui_theme == 'light' else 'logo.png') }}" alt="InvenSync">
+    {# O logo leva à Apresentação (tela inicial), não ao Painel — o Painel já
+       tem o próprio ícone na régua. #}
+    <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('intro.index') }}" title="Tela inicial">
+      {# Sempre o monograma branco: o fundo dele é a faixa vermelha em qualquer
+         tema, então a variante verde (para fundo claro) não serve mais aqui. #}
+      <img class="brand-logo" src="{{ url_for('static', filename='logos/is2.png') }}" alt="InvenSync">
       <span class="d-flex flex-column">
         <span class="brand-name">Inven<span class="sync">Sync</span></span>
         <span class="brand-tag">>> Tech-Almox</span>
