@@ -20,6 +20,7 @@ function animarConteudo() {
   const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
   tl.from('#introHero .linha > span', { yPercent: 115, duration: 1.1, stagger: 0.12 })
     .from('#introHero [data-anim="rotulo"]', { opacity: 0, x: -18, duration: 0.7 }, 0.15)
+    .from('#introHero [data-anim="logo"]', { opacity: 0, scale: 0.8, duration: 0.8 }, 0.3)
     .from('#introHero [data-anim="lead"]', { opacity: 0, y: 22, duration: 0.8 }, 0.55)
     .from('#introHero [data-anim="btn"]', { opacity: 0, y: 18, duration: 0.7 }, 0.75);
 

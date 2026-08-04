@@ -56,6 +56,10 @@ body:has(.intro) footer .container { max-width: none; }
   /* Traço dos dois lados, para o rótulo ficar simétrico quando centralizado */
 .intro .rotulo::before, .intro .rotulo::after { content:''; width:34px; height:1px;
     background:var(--brand); display:inline-block; }
+  /* Monograma do hero, entre o rótulo e o título. Sem pastilha nem moldura —
+     a marca respira sobre a cena; só a sombra a descola do fundo. */
+.intro .hero-logo { display:block; margin:0 auto 1.5rem; width:auto;
+    height:clamp(72px,10vw,124px); filter:drop-shadow(0 12px 28px rgba(0,0,0,.5)); }
 .intro h1 { font-size:clamp(2.6rem,8vw,5.5rem); line-height:1.02; margin:0 0 1.2rem; font-weight:700; letter-spacing:-.03em; }
 .intro h2 { font-size:clamp(1.9rem,4.5vw,3.2rem); line-height:1.1; margin:0 0 1.4rem; font-weight:700; letter-spacing:-.02em; }
 .intro .lead { font-size:clamp(1rem,1.8vw,1.22rem); color:var(--tx-2); max-width:60ch;
