@@ -1,0 +1,189 @@
+/* InvenSync — telas de autenticação (login e verificação em duas etapas).
+
+   Carregado SÓ por login.html e login_2fa.html (bloco extra_head). Antes cada
+   template repetia o mesmo bloco de <style>; qualquer ajuste tinha de ser feito
+   duas vezes e as duas telas já tinham começado a divergir.
+
+   Tudo escopado sob `.auth-page` / `.auth-card`: nada vaza para o resto do app.
+   Estas telas são sempre ESCURAS — quem não fez login ainda não tem tema
+   escolhido (base.html cai em `dark` para anônimo), então não há tema claro a
+   atender aqui. */
+
+/* --------------------------------------------------------------------------
+   Tela cheia. Sem login feito, a régua lateral mostra só a marca e um botão
+   "Entrar" — inútil justamente na tela de entrar, e ainda empurrava o cartão
+   70px para a direita. O `:has()` desliga régua e rodapé APENAS nestas telas.
+   (Navegador sem `:has()` só mantém a barra; nada quebra.)
+   -------------------------------------------------------------------------- */
+body:has(.auth-page) { padding-left: 0 !important; }
+body:has(.auth-page) > nav.navbar,
+body:has(.auth-page) > footer { display: none; }
+body:has(.auth-page) main.container { max-width: none; padding: 0; margin: 0; }
+
+.auth-page {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  padding: 2rem 1rem;
+}
+
+/* Degradê de reserva. Fica ABAIXO do fundo de bolhas (#fundoBolhas usa z-index
+   -1): sem internet até o CDN o módulo 3D não carrega e a tela continua com
+   um fundo apresentável. */
+.auth-bg {
+  position: fixed; inset: 0; z-index: -2;
+  background:
+    radial-gradient(1200px 600px at 15% -10%, rgba(0, 200, 83, .12), transparent 60%),
+    radial-gradient(900px 500px at 110% 120%, rgba(0, 230, 118, .09), transparent 55%),
+    #0b120e;
+}
+
+/* --------------------------------------------------------------------------
+   Cartão: vidro fosco. O fundo de bolhas é o assunto da tela — um cartão opaco
+   simplesmente o tapava. Translúcido + blur, as bolhas passam por trás sem
+   atrapalhar a leitura do formulário.
+   -------------------------------------------------------------------------- */
+.auth-card {
+  position: relative; width: min(980px, 100%);
+  display: grid; grid-template-columns: 1.02fr 1fr;
+  border-radius: 22px; overflow: hidden;
+  border: 1px solid rgba(122, 255, 177, .10);
+  background: rgba(15, 23, 18, .70);
+  backdrop-filter: blur(18px) saturate(125%);
+  -webkit-backdrop-filter: blur(18px) saturate(125%);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .05);
+  animation: authEntra .55s cubic-bezier(.22, 1, .36, 1) both;
+}
+/* Sem suporte a blur o vidro vira só transparência — aí escurece para o texto
+   não disputar leitura com as bolhas passando atrás. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .auth-card { background: rgba(15, 23, 18, .93); }
+}
+
+/* Fio das três cores da Jaboti no topo — mesma identidade da faixa do menu */
+.auth-card::before {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; z-index: 2;
+  background: linear-gradient(90deg, #8a2f2f, #e0b545 38%, var(--brand) 100%);
+}
+
+@keyframes authEntra {
+  from { opacity: 0; transform: translateY(18px) scale(.985); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ----- Coluna da marca ----- */
+.auth-aside {
+  padding: 2.7rem 2.2rem 2.2rem; display: flex; flex-direction: column; gap: 1.05rem;
+  align-items: center; text-align: center;
+  background: linear-gradient(160deg, rgba(0, 200, 83, .10), transparent 58%), rgba(7, 13, 10, .45);
+  border-right: 1px solid rgba(122, 255, 177, .08);
+}
+/* `align-self` é obrigatório: sem ele o `stretch` padrão da coluna flex
+   esticaria a largura da imagem até a borda, deformando o monograma (a altura
+   está fixa). `center` para ficar no eixo do título. */
+.auth-mark { height: 74px; width: auto; align-self: center; object-fit: contain;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, .5)); }
+.auth-brand { font-size: 1.85rem; font-weight: 700; letter-spacing: -.02em; margin: 0; color: #eafff0; }
+.auth-brand .sync { color: var(--brand-2); }
+.auth-claim { margin: 0; color: #9bb6a6; font-size: .92rem; line-height: 1.6; }
+.auth-feats { list-style: none; margin: .4rem 0 0; padding: 0; display: grid; gap: .6rem; }
+.auth-feats li { display: flex; align-items: center; gap: .6rem; font-size: .87rem; color: #b7cfc0; }
+.auth-feats .bi { color: var(--brand-2); font-size: 1rem; flex: 0 0 auto; }
+.auth-org {
+  margin-top: auto; padding-top: 1.4rem; font-size: .71rem; letter-spacing: .12em;
+  text-transform: uppercase; color: #5f8f72;
+}
+
+/* ----- Coluna do formulário ----- */
+.auth-main { padding: 2.7rem 2.2rem 2.2rem; display: flex; flex-direction: column; justify-content: center; }
+.auth-main h2 { font-size: 1.5rem; font-weight: 700; margin: 0; color: #eafff0; letter-spacing: -.01em; }
+.auth-main .auth-hint { color: #7fa890; font-size: .86rem; margin: .3rem 0 1.5rem; }
+.auth-main .alert { border-radius: 12px; font-size: .85rem; padding: .6rem .8rem; }
+
+.auth-main .form-label {
+  font-size: .72rem; text-transform: uppercase; letter-spacing: .1em;
+  font-weight: 700; color: #8fb0a0; margin-bottom: .4rem;
+}
+
+/* Campo: ícone dentro do input em vez de input-group. O `input-group` do
+   Bootstrap cria aquele bloco colado do lado, que é a cara de formulário
+   padrão — o ícone por dentro deixa o campo inteiro como uma peça só. */
+.fld { position: relative; }
+.fld > .fld-ico {
+  position: absolute; left: .95rem; top: 50%; transform: translateY(-50%);
+  color: #5f9f7c; font-size: 1rem; pointer-events: none; z-index: 3;
+}
+.auth-card .form-control {
+  background: rgba(7, 13, 10, .66); border: 1px solid #2b4034; color: #eafff0;
+  border-radius: 12px; padding: .78rem 1rem .78rem 2.75rem; font-size: .95rem;
+}
+.auth-card .form-control::placeholder { color: #5c7c6b; }
+.auth-card .form-control:focus {
+  background: rgba(7, 13, 10, .82); border-color: var(--brand); color: #eafff0;
+  box-shadow: 0 0 0 .22rem rgba(0, 200, 83, .18);
+}
+.fld--pwd .form-control { padding-right: 3rem; }
+.pwd-toggle {
+  position: absolute; right: .45rem; top: 50%; transform: translateY(-50%); z-index: 3;
+  background: none; border: 0; color: #6fbb90; padding: .35rem .5rem;
+  border-radius: 8px; line-height: 1; cursor: pointer;
+}
+.pwd-toggle:hover { color: #9dffc4; background: rgba(0, 200, 83, .10); }
+.fld-hint { display: flex; align-items: center; gap: .4rem; margin-top: .45rem; font-size: .76rem; color: #ffce6a; }
+
+.auth-main .form-check-input { background-color: rgba(7, 13, 10, .66); border-color: #2b4034; }
+.auth-main .form-check-input:checked { background-color: var(--brand); border-color: var(--brand); }
+.auth-main .form-check-input:focus { box-shadow: 0 0 0 .2rem rgba(0, 200, 83, .18); }
+.auth-main .form-check-label { color: #9bb6a6; font-size: .85rem; }
+
+.auth-btn {
+  width: 100%; border: 0; border-radius: 12px; padding: .85rem 1rem;
+  font-weight: 700; font-size: .98rem; color: #05230f;
+  background: linear-gradient(180deg, var(--brand-2), var(--brand));
+  display: inline-flex; align-items: center; justify-content: center; gap: .6rem;
+  box-shadow: 0 10px 24px rgba(0, 200, 83, .22);
+  transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
+}
+.auth-btn:hover { transform: translateY(-2px); filter: brightness(1.05); color: #05230f;
+  box-shadow: 0 16px 32px rgba(0, 200, 83, .30); }
+.auth-btn:disabled { opacity: .7; transform: none; box-shadow: none; }
+
+.auth-link { color: #7fa890; font-size: .84rem; text-decoration: none; text-align: center; }
+.auth-link:hover { color: var(--brand-2); }
+
+.auth-foot {
+  margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(122, 255, 177, .08);
+  color: #5f8f72; font-size: .74rem;
+  display: flex; align-items: center; justify-content: center; gap: .4rem; text-align: center;
+}
+
+/* ----- Variante de uma coluna (2FA): sem a coluna da marca ----- */
+.auth-card--solo { grid-template-columns: 1fr; width: min(430px, 100%); }
+.auth-card--solo .auth-main { padding: 2.4rem 1.9rem 2rem; }
+.auth-selo {
+  width: 62px; height: 62px; margin: 0 auto 1rem; border-radius: 18px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 200, 83, .10); border: 1px solid rgba(0, 200, 83, .28);
+  color: var(--brand-2); font-size: 1.7rem;
+}
+.auth-card--solo .auth-main h2,
+.auth-card--solo .auth-main .auth-hint { text-align: center; }
+.code-input {
+  letter-spacing: .55em; text-align: center; font-size: 1.35rem; font-weight: 700;
+  padding-left: 1rem !important; text-indent: .55em;
+}
+
+/* ----- Telas estreitas: vira uma coluna só ----- */
+@media (max-width: 900px) {
+  .auth-card { grid-template-columns: 1fr; width: min(430px, 100%); }
+  .auth-aside {
+    border-right: 0; border-bottom: 1px solid rgba(122, 255, 177, .08);
+    padding: 2rem 1.6rem 1.5rem; gap: .7rem;
+  }
+  .auth-mark { height: 60px; }
+  .auth-feats, .auth-org { display: none; }   /* espaço vai todo para o formulário */
+  .auth-main { padding: 1.8rem 1.6rem 1.9rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-card { animation: none; }
+  .auth-btn:hover { transform: none; }
+}

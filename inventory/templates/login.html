@@ -2,45 +2,7 @@
 {% block title %}Entrar{% endblock %}
 
 {% block extra_head %}
-<style>
-  .auth-wrap{ min-height: calc(100vh - 120px); }
-  /* Brilho verde sutil — fica abaixo do fundo de bolhas e é a reserva caso o
-     3D não carregue (sem internet até o CDN). */
-  .auth-bg{
-    position: fixed; inset: 0; z-index: -2;
-    background:
-      radial-gradient(1200px 600px at 15% -10%, rgba(0,200,83,.10), transparent 60%),
-      radial-gradient(900px 500px at 110% 120%, rgba(0,230,118,.08), transparent 55%),
-      #0d120f;
-  }
-  .auth-card{
-    background: linear-gradient(180deg, #15211a 0%, #131913 100%);
-    border: 1px solid #24382b; border-radius: 18px;
-    box-shadow: 0 20px 50px rgba(0,0,0,.45);
-    overflow: hidden;
-  }
-  .auth-head{ padding: 1.6rem 1.6rem 0; text-align: center; }
-  .auth-logo{
-    width: 84px; height: 84px; margin: 0 auto .8rem; padding: 12px;
-    border-radius: 18px; display: flex; align-items: center; justify-content: center;
-    background: #0e1a13; border: 1px solid #2e4b3b; overflow: hidden;
-    box-shadow: 0 6px 18px rgba(0,200,83,.22);
-  }
-  .auth-logo img{ max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; }
-  .auth-title{ font-size: 1.5rem; font-weight: 700; letter-spacing: .3px; margin: 0; }
-  .auth-title .sync{ color: var(--brand-2); }
-  .auth-sub{ color: #7fa890; font-size: .86rem; margin-top: .15rem; }
-  .auth-body{ padding: 1.4rem 1.6rem 1.7rem; }
-  .auth-card .input-group-text{ background:#0e1a13; border-color:#2f3f34; color:#7ee0a4; }
-  .auth-card .form-control{ background:#0e1a13; border-color:#2f3f34; }
-  .auth-card .form-control:focus{ background:#0e1a13; }
-  .pwd-toggle{ border-color:#2f3f34 !important; color:#7ee0a4 !important; }
-  .auth-foot{
-    text-align:center; padding:.9rem 1rem; border-top:1px solid #20322799;
-    color:#5f8f72; font-size:.76rem; background:#0e1611;
-  }
-  .auth-badge{ font-size:.7rem; color:#6f8a7a; }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -48,85 +10,100 @@
   {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors[0] }}</div>{% endif %}
 {%- endmacro %}
 
-{# O degradê fica ABAIXO do fundo de bolhas (que vem do base.html) e serve de
-   reserva: sem internet até o CDN, o módulo não carrega e a tela de login
-   continua exatamente como era. #}
+{# O fundo de bolhas vem do base.html e não é tocado aqui. Este degradê fica
+   ABAIXO dele e serve de reserva: sem internet até o CDN o módulo 3D não
+   carrega e a tela continua apresentável. #}
 <div class="auth-bg"></div>
 
-<div class="container auth-wrap d-flex align-items-center justify-content-center">
-  <div class="col-12 col-sm-10 col-md-7 col-lg-5 col-xl-4">
-    <div class="auth-card">
-      <div class="auth-head">
-        <div class="auth-logo">
-          <img src="{{ url_for('static', filename='logo.png') }}" alt="InvenSync">
+<div class="auth-page">
+  <div class="auth-card">
+
+    {# ----- Coluna da marca ----- #}
+    <aside class="auth-aside">
+      <img class="auth-mark" src="{{ url_for('static', filename='logos/is2.png') }}" alt="">
+      <h1 class="auth-brand">Inven<span class="sync">Sync</span></h1>
+      <p class="auth-claim">
+        Patrimônio, estoque, chamados e infraestrutura conversando entre si —
+        com a informação certa na hora em que você precisa dela.
+      </p>
+      <ul class="auth-feats">
+        <li><i class="bi bi-box-seam"></i> Estoque e patrimônio</li>
+        <li><i class="bi bi-life-preserver"></i> Chamados de TI</li>
+        <li><i class="bi bi-activity"></i> Monitoramento e alertas</li>
+      </ul>
+      <div class="auth-org">Refrigerantes Jaboti · Tecnologia da Informação</div>
+    </aside>
+
+    {# ----- Coluna do formulário ----- #}
+    <div class="auth-main">
+      <h2>Entrar</h2>
+      <p class="auth-hint">Use seu e-mail corporativo para acessar o sistema.</p>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for cat, msg in messages %}
+            <div class="alert alert-{{ 'warning' if cat=='message' else cat }} d-flex align-items-center gap-2">
+              <i class="bi bi-info-circle"></i><span>{{ msg }}</span>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="post" novalidate id="loginForm" class="d-grid gap-3">
+        {{ form.hidden_tag() }}
+
+        <div>
+          {{ form.email.label(class="form-label") }}
+          <div class="fld">
+            <i class="bi bi-envelope fld-ico"></i>
+            {{ form.email(
+                class="form-control" + (" is-invalid" if form.email.errors else ""),
+                placeholder="voce@refrigerantesjaboti.com.br",
+                autocomplete="username", autofocus=True
+            ) }}
+          </div>
+          {{ field_error(form.email) }}
         </div>
-        <h1 class="auth-title">Inven<span class="sync">Sync</span></h1>
-        <div class="auth-sub"><i class="bi bi-box-seam me-1"></i>Controle de Almoxarifado</div>
-      </div>
 
-      <div class="auth-body">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for cat, msg in messages %}
-              <div class="alert alert-{{ 'warning' if cat=='message' else cat }} py-2 d-flex align-items-center gap-2">
-                <i class="bi bi-info-circle"></i><span>{{ msg }}</span>
-              </div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
-
-        <form method="post" novalidate id="loginForm" class="d-grid gap-3">
-          {{ form.hidden_tag() }}
-
-          <div>
-            {{ form.email.label(class="form-label fw-semibold small") }}
-            <div class="input-group">
-              <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-              {{ form.email(
-                  class="form-control" + (" is-invalid" if form.email.errors else ""),
-                  placeholder="voce@refrigerantesjaboti.com.br",
-                  autocomplete="username", autofocus=True
-              ) }}
-            </div>
-            {{ field_error(form.email) }}
+        <div>
+          {{ form.password.label(class="form-label") }}
+          <div class="fld fld--pwd">
+            <i class="bi bi-lock fld-ico"></i>
+            {{ form.password(
+                class="form-control" + (" is-invalid" if form.password.errors else ""),
+                placeholder="Sua senha",
+                autocomplete="current-password", id="passwordInput"
+            ) }}
+            <button class="pwd-toggle" type="button" id="togglePwd" aria-label="Mostrar/ocultar senha">
+              <i class="bi bi-eye"></i>
+            </button>
           </div>
-
-          <div>
-            {{ form.password.label(class="form-label fw-semibold small") }}
-            <div class="input-group">
-              <span class="input-group-text"><i class="bi bi-lock"></i></span>
-              {{ form.password(
-                  class="form-control" + (" is-invalid" if form.password.errors else ""),
-                  placeholder="Sua senha",
-                  autocomplete="current-password", id="passwordInput"
-              ) }}
-              <button class="btn btn-outline-light pwd-toggle" type="button" id="togglePwd" aria-label="Mostrar/ocultar senha">
-                <i class="bi bi-eye"></i>
-              </button>
-            </div>
-            {{ field_error(form.password) }}
+          {# Caps Lock ligado é a causa mais comum de "minha senha não entra" #}
+          <div class="fld-hint" id="capsHint" hidden>
+            <i class="bi bi-capslock"></i> Caps Lock está ligado
           </div>
+          {{ field_error(form.password) }}
+        </div>
 
-          {% if form.remember is defined %}
-          <div class="form-check">
-            {{ form.remember(class="form-check-input", id="rememberCheck") }}
-            <label class="form-check-label small" for="rememberCheck">Manter conectado</label>
-          </div>
-          {% endif %}
+        {% if form.remember is defined %}
+        <div class="form-check">
+          {{ form.remember(class="form-check-input", id="rememberCheck") }}
+          <label class="form-check-label" for="rememberCheck">Manter conectado neste computador</label>
+        </div>
+        {% endif %}
 
-          <button class="btn btn-primary w-100 d-inline-flex align-items-center justify-content-center gap-2 py-2" type="submit" id="submitBtn">
-            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" id="btnSpinner"></span>
-            <i class="bi bi-box-arrow-in-right"></i>
-            <span>Entrar</span>
-          </button>
-        </form>
-      </div>
+        <button class="auth-btn" type="submit" id="submitBtn">
+          <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" id="btnSpinner"></span>
+          <i class="bi bi-box-arrow-in-right"></i>
+          <span>Entrar</span>
+        </button>
+      </form>
 
       <div class="auth-foot">
-        <i class="bi bi-shield-lock me-1"></i>Acesso restrito · Refrigerantes Jaboti
-        <div class="auth-badge mt-1">Desenvolvido pelo time de Tecnologia</div>
+        <i class="bi bi-shield-lock"></i> Acesso restrito · uso monitorado
       </div>
     </div>
+
   </div>
 </div>
 
@@ -137,6 +114,7 @@
     const form = document.getElementById('loginForm');
     const btn = document.getElementById('submitBtn');
     const spinner = document.getElementById('btnSpinner');
+    const caps = document.getElementById('capsHint');
 
     if (toggle && pwd) {
       toggle.addEventListener('click', function(){
@@ -144,6 +122,17 @@
         pwd.setAttribute('type', isText ? 'password' : 'text');
         this.innerHTML = isText ? '<i class="bi bi-eye"></i>' : '<i class="bi bi-eye-slash"></i>';
       });
+    }
+    if (pwd && caps) {
+      // getModifierState só existe em eventos de teclado — daí o aviso aparecer
+      // na primeira tecla, e não ao focar o campo.
+      const ver = function(e){
+        if (typeof e.getModifierState !== 'function') return;
+        caps.hidden = !e.getModifierState('CapsLock');
+      };
+      pwd.addEventListener('keydown', ver);
+      pwd.addEventListener('keyup', ver);
+      pwd.addEventListener('blur', function(){ caps.hidden = true; });
     }
     if (form && btn && spinner) {
       form.addEventListener('submit', function(){
