@@ -19,6 +19,18 @@ body:has(.intro) main.container {
 }
 body:has(.intro) footer .container { max-width: none; }
 
+/* --------------------------------------------------------------------------
+   A cena (`#introCena`) é `position:fixed; z-index:0` e cobre a viewport
+   inteira. No desktop a barra de navegação é `position:fixed; z-index:1031`
+   e fica por cima; no celular/tablet ela é ESTÁTICA, sem z-index — então a
+   cena era pintada em cima dela e o menu sumia da tela de apresentação.
+   Basta dar à barra um lugar próprio na pilha, só aqui e só nesta largura
+   (no desktop, sobrescrever `position` quebraria a régua lateral).
+   -------------------------------------------------------------------------- */
+@media (max-width: 991.98px) {
+  body:has(.intro) > nav.navbar { position: relative; z-index: 3; }
+}
+
 /* Tipografia e fundo da página — vinham do `body` na demonstração e precisam
    ser reaplicados aqui, senão a tela herda a fonte e o fundo do resto do app. */
 .intro {
