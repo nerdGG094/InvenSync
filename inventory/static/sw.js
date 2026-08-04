@@ -1,7 +1,11 @@
 /* InvenSync — service worker (PWA)
    Estratégia: cache-first só para /static/ (CSS/ícones); páginas dinâmicas
    sempre via rede (não serve HTML desatualizado). */
-const CACHE = 'invensync-v8';
+/* Incrementar SEMPRE que um arquivo de /static/ mudar de conteúdo sem mudar de
+   nome: a estratégia é cache-first, então o `activate` apagando os caches
+   antigos é o único jeito de o usuário ver CSS e ícones novos.
+   v9: monograma nos ícones + CSS da rodada visual (auth, gráficos, régua). */
+const CACHE = 'invensync-v9';
 const SHELL = ['/static/style.css', '/static/icon-192.png'];
 
 self.addEventListener('install', (e) => {
