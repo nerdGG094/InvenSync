@@ -843,7 +843,12 @@
             var html='', grp=null;
             rs.forEach(function(it){
               if(it.grupo!==grp){ grp=it.grupo; html += '<div class="gsearch-grp">'+esc(grp)+'</div>'; }
-              html += '<a class="gsearch-item" href="'+it.url+'"><i class="bi '+esc(it.icon)+'"></i>'
+              // A url também é escapada e obrigada a ser um caminho deste site.
+              // Hoje ela vem de url_for() com ids inteiros, mas era a única
+              // interpolação crua no meio de irmãs escapadas: bastaria alguém
+              // criar uma rota com slug de texto para virar XSS.
+              var href = /^\/[^\/\\]/.test(it.url || '') ? esc(it.url) : '#';
+              html += '<a class="gsearch-item" href="'+href+'"><i class="bi '+esc(it.icon)+'"></i>'
                    + '<div class="t"><div class="titulo">'+esc(it.titulo)+'</div>'
                    + (it.sub ? '<div class="sub">'+esc(it.sub)+'</div>' : '') + '</div></a>';
             });

@@ -76,3 +76,50 @@ def test_ticket_authz_binds_requester_by_stable_id(app):
             opened_by_id=None, title=f"{MARK} sem dono", status="aberto",
             requester="Zzz Inexistente Qwerty")
         assert t2.requester_id is None
+
+
+# ---------------------------------------------------------------------------
+# S-REDIR: `request.referrer` é cabeçalho do cliente. Antes, três rotas faziam
+# `redirect(request.referrer or ...)` e aceitavam qualquer destino — uma página
+# externa conseguia fazer o app devolver o usuário para onde ela quisesse, o
+# que empresta ao golpe a credibilidade de ter partido do sistema.
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize("ref, ok", [
+    ("/tickets", True),                       # caminho do próprio site
+    ("/tickets?status=aberto", True),
+    (None, False),                            # sem referrer -> padrão
+    ("https://falso.example/login", False),   # outro host
+    ("//falso.example/login", False),         # relativo a protocolo
+    (r"/\falso.example", False),             # barra invertida: o navegador normaliza para //
+    ("javascript:alert(1)", False),           # esquema executável
+    ("data:text/html,<script>1</script>", False),
+])
+def test_destino_seguro_so_aceita_o_proprio_site(app, ref, ok):
+    from inventory.seguranca import destino_seguro
+    with app.test_request_context("/", base_url="http://localhost"):
+        assert destino_seguro(ref) == (ref if ok else None)
+
+
+def test_destino_seguro_aceita_url_absoluta_do_proprio_host(app):
+    from inventory.seguranca import destino_seguro
+    with app.test_request_context("/", base_url="http://localhost"):
+        assert destino_seguro("http://localhost/tickets") == "http://localhost/tickets"
+
+
+def test_csrf_expirado_nao_redireciona_para_fora(app):
+    """O handler de CSRF expirado voltava para o `Referer` sem checar o host."""
+    client = app.test_client()
+    r = client.post("/login", data={"email": "a@b.c", "password": "x"},
+                    headers={"Referer": "https://falso.example/phish"})
+    destino = r.headers.get("Location", "")
+    assert "falso.example" not in destino, f"redirecionou para fora: {destino}"
+
+
+def test_busca_global_nao_interpola_url_crua(app):
+    """S-XSS: a url do resultado ia crua para dentro do href, no meio de irmãs
+    escapadas. Segura hoje (url_for + ids inteiros), mas era armadilha."""
+    fonte = (app.jinja_env.get_template("base.html").filename)
+    with open(fonte, encoding="utf-8") as f:
+        html = f.read()
+    assert "href=\"'+it.url+'\"" not in html, "url ainda entra crua no href"
+    assert "esc(it.url)" in html

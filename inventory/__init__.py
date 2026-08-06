@@ -6,6 +6,7 @@ from flask_login import current_user
 from sqlalchemy import text
 from .extensions import db, login_manager, csrf, limiter
 from .config import Config
+from .seguranca import voltar
 
 
 def _run_light_migrations():
@@ -347,7 +348,7 @@ def create_app():
     @app.errorhandler(CSRFError)
     def _handle_csrf_error(e):
         flash("Sessão expirada ou formulário inválido. Tente novamente.", "warning")
-        return redirect(request.referrer or url_for("auth.login"))
+        return voltar(url_for("auth.login"))
 
     # Importa modelos para o SQLAlchemy conhecer
     from .models.user import User
@@ -645,7 +646,7 @@ def create_app():
         if ep == "auth.login_2fa":
             return redirect(url_for("auth.login_2fa"))
         if ep == "credentials.reauth":
-            return redirect(request.referrer or url_for("credentials.list_view"))
+            return voltar(url_for("credentials.list_view"))
         return redirect(url_for("auth.login"))
 
     # Log central de erros: captura exceções NÃO tratadas das requisições (5xx).

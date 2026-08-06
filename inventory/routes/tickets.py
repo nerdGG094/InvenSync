@@ -11,6 +11,7 @@ from sqlalchemy.orm import joinedload
 from werkzeug.utils import secure_filename
 
 from ..extensions import db
+from ..seguranca import voltar
 from ..repositories import ticket_repo
 from ..models.ticket_attachment import TicketAttachment
 from ..forms.tickets import (TicketForm, CommentForm, STATUS_CHOICES,
@@ -440,7 +441,7 @@ def assume(tid):
     audit.record("update", "ticket", t.id, f"Assumiu o chamado {t.code}")
     # Sem WhatsApp aqui — o CallMeBot fica só na abertura do chamado.
     flash(f"Você assumiu o chamado {t.code}.", "success")
-    return redirect(request.referrer or url_for("tickets.list_view"))
+    return voltar(url_for("tickets.list_view"))
 
 
 @bp.route("/<int:tid>/rate", methods=["POST"])
