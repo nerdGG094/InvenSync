@@ -218,7 +218,12 @@ Notable optional toggles:
 - **HTTPS behind a reverse proxy**: `BEHIND_PROXY=1` + `SESSION_COOKIE_SECURE=1` (see `docs/HTTPS.md`).
 
 ## Deploy
-`atualizar.bat` (repo root) is the update flow: `git pull` → `pip install -r requirements.txt` → boot-check (`create_app()`) → **reminder to restart**. Always restart after pulling so `.py` code and templates load together (a template that references a not-yet-registered endpoint/form field errors every page until restart — most historical `/errors` entries were exactly this).
+`atualizar.bat` (repo root): `git pull` → `pip install -r requirements.txt` → boot-check (`create_app()`) → **restart via `setup\reiniciar.ps1`**. The restart used to be a printed reminder; it is now a step, because the reminder was the single source of production failure — **every one of the 42 entries in the `/errors` log**, across 4 separate deploys, is `Could not build url for endpoint '…'`, i.e. new templates running on the old process. The boot-check runs *before* anything is killed, so a broken pull leaves the old version serving.
+
+`setup\reiniciar.ps1` stops the app, starts it, and then polls `/health` — a deploy that doesn't come back reports failure instead of passing silently. **It selects processes by `ExecutablePath` under the project root, never by process name or command line**: this server runs other Python apps, and CARREG-LOGI's launcher has a byte-identical command line (`".venv\Scripts\pythonw.exe" "launcher.py"`). Filtering any other way kills the neighbours.
+
+### Front-end dependencies (CDN)
+All pinned to exact versions, and everything loaded via `<script src>`/`<link>` carries **SRI + `crossorigin`** (bootstrap, bootstrap-icons, gsap, chart.js) — the CSP allows the whole jsdelivr origin, so integrity is what actually pins the bytes. `chart.js` used to be unpinned (`npm/chart.js` = whatever is newest), which meant a breaking release would take out both dashboards with no local change. **ES-module imports cannot carry `integrity`** (three.js in `bolhas.js`, mermaid in `docs/index.html`) — for those, the exact version pin is the only protection. Re-computing a hash after a version bump: `curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A`.
 
 ## Próximos passos / TODO
 ### Câmeras em tempo real (go2rtc) — no ar; falta reiniciar o InvenSync
