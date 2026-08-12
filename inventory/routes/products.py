@@ -190,7 +190,9 @@ def new():
                 )
             try:
                 kwargs = _form_to_kwargs(form)
-                product_repo.create_product(**kwargs)
+                novo = product_repo.create_product(**kwargs)
+                audit.record("create", "product", novo.id,
+                             f"Criou o material {novo.sku} — {novo.name}")
                 flash(f"Material criado! SKU: {form.sku.data}", "success")
                 return redirect(url_for("products.list_view"))
             except IntegrityError:
@@ -230,8 +232,20 @@ def edit(pid):
 
     if form.validate_on_submit():
         try:
+            # Captura o antes ANTES de gravar: depois do update_product o objeto
+            # já carrega os valores novos e a comparação se perde.
+            antes = {"SKU": p.sku, "nome": p.name, "mínimo": p.min_stock,
+                     "preço": p.price, "responsável": p.responsible_user,
+                     "setor": p.responsible_sector}
             kwargs = _form_to_kwargs(form)
             product_repo.update_product(p, **kwargs)
+            depois = {"SKU": p.sku, "nome": p.name, "mínimo": p.min_stock,
+                      "preço": p.price, "responsável": p.responsible_user,
+                      "setor": p.responsible_sector}
+            mudou = [f"{k}: {antes[k]} → {depois[k]}"
+                     for k in antes if antes[k] != depois[k]]
+            audit.record("update", "product", p.id,
+                         f"Editou {p.sku}" + (" · " + "; ".join(mudou) if mudou else ""))
             flash("Material atualizado!", "success")
             return redirect(url_for("products.list_view"))
         except IntegrityError:
@@ -292,8 +306,12 @@ def import_template():
 @login_required
 def delete(pid):
     p = db.get_or_404(Product, pid)
+    # Lido antes de excluir: depois do delete o objeto não serve mais para
+    # descrever o que foi apagado, e é justamente isso que a trilha precisa.
+    descricao = f"Excluiu o material {p.sku} — {p.name}"
     try:
         product_repo.delete_product(p)
+        audit.record("delete", "product", pid, descricao)
         flash("Material excluído.", "success")
     except ValueError as e:
         flash(str(e), "warning")

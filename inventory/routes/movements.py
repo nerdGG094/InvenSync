@@ -17,7 +17,7 @@ from ..repositories import movement_repo
 from ..forms.catalog import MovementForm
 from ..models.product import Product
 from ..models.movement import StockMovement  # para filtrar/consultar com joins
-from ..services import people
+from ..services import people, audit
 
 
 bp = Blueprint("movements", __name__)
@@ -78,7 +78,7 @@ def list_and_new():
         if form.movement_type.data == "IN" and form.has_nf.data:
             nf_filename, nf_original = _save_nf(form.nf_file.data)
 
-        movement_repo.create_movement(
+        mov = movement_repo.create_movement(
             product_id=form.product_id.data,
             movement_type=form.movement_type.data,
             quantity=form.quantity.data,
@@ -88,6 +88,24 @@ def list_and_new():
             responsible_sector=(form.responsible_sector.data or "").strip() or None,
             nf_filename=nf_filename,
             nf_original_name=nf_original,
+        )
+        # Auditoria: a saída de material é a operação com consequência
+        # financeira direta deste sistema, e era a única que não deixava rastro
+        # na trilha — módulos bem menores (tomadas, cofre) já registravam tudo.
+        # A tabela guarda `user_id`, mas só a trilha reúne as ações de uma
+        # pessoa em ordem, ao lado das dos outros módulos.
+        item = next((p for p in products if p.id == form.product_id.data), None)
+        destino = (form.responsible_user.data or "").strip() or "—"
+        setor = (form.responsible_sector.data or "").strip()
+        audit.record(
+            "create", "movement", mov.id,
+            "{} de {} x {} · para {}{}".format(
+                "Entrada" if form.movement_type.data == "IN" else "Saída",
+                form.quantity.data,
+                (item.name if item else f"produto {form.product_id.data}"),
+                destino,
+                f" ({setor})" if setor else "",
+            ),
         )
         if form.movement_type.data == "IN" and form.has_nf.data and not nf_filename:
             flash("Entrada registrada, mas a NF não foi anexada (envie um XML ou PDF).", "warning")
