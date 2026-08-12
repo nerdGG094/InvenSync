@@ -146,6 +146,10 @@ class Config:
     DVR_EVENTS_ENABLED = os.environ.get("DVR_EVENTS_ENABLED", "1") in ("1", "true", "True")
     # Segundos que uma detecção continua "ativa" na tela sem novo evento.
     DVR_DETECT_TTL = float(os.environ.get("DVR_DETECT_TTL", "8"))
+    # Quantos dias de histórico de detecção guardar (0 = guarda tudo). É a
+    # tabela que mais cresce de longe — ~6.850 linhas/dia medidas em produção,
+    # ou ~2,5 milhões por ano — e sem expurgo ela domina o banco e o backup.
+    DVR_DETECT_KEEP_DAYS = int(os.environ.get("DVR_DETECT_KEEP_DAYS", "90"))
     # Aviso por e-mail à TI ao detectar PESSOA dentro da janela de vigilância.
     # Ex.: DVR_ALERT_HOURS=19-6 (das 19h às 6h). Vazio = nunca avisa.
     DVR_ALERT_ENABLED = os.environ.get("DVR_ALERT_ENABLED", "0") in ("1", "true", "True")

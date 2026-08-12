@@ -29,6 +29,24 @@ def _info() -> dict:
         }
     except Exception:  # noqa: BLE001
         pass
+    # Escutas de detecção do CFTV. Existe porque a detecção ficou 6 dias fora
+    # do ar sem ninguém notar: o app monitorava impressora, roteador e DVR, mas
+    # não monitorava os próprios coletores. `stale` marca a escuta que está sem
+    # receber nem heartbeat.
+    try:
+        from ..services import dvr_events
+        s = dvr_events.saude()
+        if s:
+            paradas = [i for i, v in s.items()
+                       if not v["ok"] or (v["ha_segundos"] or 1e9) > 300]
+            out["dvr_eventos"] = {
+                "enabled": bool(current_app.config.get("DVR_EVENTS_ENABLED")),
+                "escutas": len(s),
+                "paradas": paradas,
+                "stale": bool(paradas),
+            }
+    except Exception:  # noqa: BLE001
+        pass
     # E-mail configurado?
     try:
         from ..services import mailer

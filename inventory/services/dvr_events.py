@@ -49,6 +49,43 @@ CODES = "[SmartMotionHuman,SmartMotionVehicle]"
 # MESMO objeto ainda em cena (o DVR repete o evento). Medido: repete a cada ~5s.
 _CONTINUA = 20.0
 
+# Sinal de vida da conexão de eventos. O DVR manda um heartbeat a cada
+# _HEARTBEAT segundos; se passar _LEITURA_TIMEOUT sem NADA chegar, a leitura
+# levanta exceção e a thread reconecta. Sem esse par, uma conexão que morre em
+# silêncio deixa a escuta pendurada indefinidamente.
+_HEARTBEAT = 20
+_LEITURA_TIMEOUT = 75          # ~3 heartbeats de folga
+
+# Saúde de cada escuta: dvr_id -> {"ok": bool, "ultimo": epoch}. Só memória —
+# é isso que o /health e a página de CFTV leem para dizer se a detecção está
+# de pé. Antes não havia sinal nenhum, e por isso a queda passou 6 dias.
+_saude = {}
+_saude_lock = threading.Lock()
+
+
+def _marcar_vivo(dvr_id):
+    with _saude_lock:
+        _saude[dvr_id] = {"ok": True, "ultimo": time.time()}
+
+
+def _marcar_morto(dvr_id):
+    with _saude_lock:
+        anterior = _saude.get(dvr_id) or {}
+        _saude[dvr_id] = {"ok": False, "ultimo": anterior.get("ultimo")}
+
+
+def saude():
+    """Estado das escutas: {dvr_id: {"ok", "ultimo", "ha_segundos"}}.
+
+    Consumido pelo /health e pela página de CFTV. `ok=False` significa que a
+    thread está no recuo entre tentativas — o DVR está fora do ar, sem suporte
+    a SMD, ou a rede caiu."""
+    agora = time.time()
+    with _saude_lock:
+        return {i: {"ok": v["ok"], "ultimo": v["ultimo"],
+                    "ha_segundos": (agora - v["ultimo"]) if v["ultimo"] else None}
+                for i, v in _saude.items()}
+
 
 # --------------------------------------------------------------------------- #
 # Estado ao vivo (o que a página de câmeras lê)
@@ -332,14 +369,26 @@ def _escutar(app, dvr_id):
                 return                              # DVR removido/inativado
             dvr_cam._openers.pop(dvr_id, None)      # negocia digest do zero
             op, base = dvr_cam._opener(copia, senha)
-            resp = op.open(f"{base}/cgi-bin/eventManager.cgi?action=attach&codes={CODES}",
-                           timeout=None)
+            # `heartbeat` faz o DVR mandar um sinal de vida a cada N segundos, e
+            # o `timeout` transforma o silêncio em exceção. Os dois andam
+            # juntos: sem heartbeat, um DVR só quieto estouraria o timeout; sem
+            # timeout, `read()` bloqueia PARA SEMPRE quando a conexão morre sem
+            # avisar (NAT/switch descartando o estado, DVR reiniciando). Foi
+            # exatamente isso: a escuta ficou 6 dias pendurada num `read()` que
+            # nunca voltava — o laço de reconexão abaixo existia e nunca chegou
+            # a rodar, porque a thread jamais saiu da leitura.
+            resp = op.open(
+                f"{base}/cgi-bin/eventManager.cgi?action=attach&codes={CODES}"
+                f"&heartbeat={_HEARTBEAT}",
+                timeout=_LEITURA_TIMEOUT)
             espera = 5                              # conectou: zera o recuo
+            _marcar_vivo(dvr_id)
             buf = b""
             while True:
                 pedaco = resp.read(512)
                 if not pedaco:
                     break                            # DVR encerrou: reconecta
+                _marcar_vivo(dvr_id)                 # inclui o heartbeat
                 buf += pedaco
                 while b"\r\n\r\n" in buf:
                     bloco, _, buf = buf.partition(b"\r\n\r\n")
@@ -350,8 +399,35 @@ def _escutar(app, dvr_id):
                     buf = b""
         except Exception:  # noqa: BLE001 — queda de rede, DVR reiniciando, etc.
             pass
+        _marcar_morto(dvr_id)
         time.sleep(espera)
         espera = min(espera * 2, 300)                # recuo exponencial até 5 min
+
+
+def expurgar(app):
+    """Apaga detecções antigas. Retorna quantas saíram.
+
+    Sem isto a tabela cresce para sempre: medido em produção, ~6.850 linhas por
+    dia (~206 mil/mês, ~2,5 milhões/ano). Com 7 dias de uso ela já era 7,9 MB
+    dos ~11 MB do banco inteiro — 12x maior que a segunda maior tabela — e
+    pesava em cada pg_dump e na página de histórico.
+
+    `DVR_DETECT_KEEP_DAYS=0` desliga o expurgo (guarda tudo)."""
+    dias = int(app.config.get("DVR_DETECT_KEEP_DAYS", 90) or 0)
+    if dias <= 0:
+        return 0
+    from datetime import datetime, timedelta
+    from ..models.dvr_detection import DvrDetection
+    corte = datetime.now() - timedelta(days=dias)
+    with app.app_context():
+        try:
+            n = (DvrDetection.query.filter(DvrDetection.started_at < corte)
+                 .delete(synchronize_session=False))
+            db.session.commit()
+            return n or 0
+        except Exception:  # noqa: BLE001 — limpeza nunca derruba a escuta
+            db.session.rollback()
+            return 0
 
 
 def alvos(app):
@@ -379,4 +455,13 @@ def start_scheduler(app):
             threading.Thread(target=_escutar, args=(app, dvr_id), daemon=True,
                              name=f"dvr-eventos-{dvr_id}").start()
 
+    def faxina():
+        """Expurgo diário do histórico. Roda no mesmo pacote da escuta para não
+        depender de tarefa externa — o servidor pode ficar dias sem reiniciar."""
+        time.sleep(120)         # nunca concorre com a subida do app
+        while True:
+            expurgar(app)
+            time.sleep(24 * 3600)
+
     threading.Thread(target=iniciar, daemon=True, name="dvr-eventos").start()
+    threading.Thread(target=faxina, daemon=True, name="dvr-expurgo").start()
