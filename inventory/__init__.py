@@ -416,21 +416,59 @@ def create_app():
     # Loader do usuário
     @login_manager.user_loader
     def load_user(user_id):
+        """Resolve o cookie de sessão no usuário.
+
+        Devolver None aqui equivale a "não está logado", e o Flask-Login manda
+        para a tela de login SEM MENSAGEM (login_message = None). Por isso cada
+        motivo é registrado: antes, um `except Exception` mudo transformava
+        qualquer soluço do banco em logout invisível, e não havia como
+        distinguir isso de cookie expirado, token trocado ou sessão de outra
+        instância. Quem relata "voltou para o login do nada" não deixava rastro
+        nenhum para investigar."""
+        from .services import errorlog
+        raw = str(user_id)
+        uid, _, tok = raw.partition(":")
         try:
-            raw = str(user_id)
-            uid, _, tok = raw.partition(":")
             u = db.session.get(User, int(uid))
-            if u is None:
-                return None
-            # O token é obrigatório quando o usuário tem session_token (todos têm,
-            # via backfill): cookie sem token (formato legado) é rejeitado — força
-            # um novo login e garante que "sair de todas as sessões" invalide
-            # cookies antigos de fato.
-            if (u.session_token or "") and tok != u.session_token:
-                return None
-            return u
-        except Exception:
+        except Exception as e:  # noqa: BLE001 — banco fora, pool esgotado, etc.
+            errorlog.record("user_loader", exc=e,
+                            message=f"falha ao carregar a sessão do usuário {uid}")
             return None
+        if u is None:
+            errorlog.record("user_loader", level="warning",
+                            message=f"sessão apontava para usuário inexistente ({uid})")
+            return None
+        # O token é obrigatório quando o usuário tem session_token (todos têm,
+        # via backfill): cookie sem token (formato legado) é rejeitado — força
+        # um novo login e garante que "sair de todas as sessões" invalide
+        # cookies antigos de fato.
+        if (u.session_token or "") and tok != u.session_token:
+            errorlog.record(
+                "user_loader", level="warning",
+                message=("token de sessão não confere para {} — cookie antigo, "
+                         "'sair de todas as sessões', ou cookie gerado por outra "
+                         "instância/SECRET_KEY").format(u.email or u.id))
+            return None
+        return u
+
+    @login_manager.unauthorized_handler
+    def _sem_sessao():
+        """Mesmo destino de sempre (a tela de login), mas registrando o motivo.
+
+        Só registra quando havia ALGUM cookie de autenticação: sem isso, toda
+        visita anônima a uma página protegida viraria ruído no log."""
+        from .services import errorlog
+        tinha_sessao = bool(request.cookies.get("session"))
+        tinha_lembrete = bool(request.cookies.get("remember_token"))
+        if tinha_sessao or tinha_lembrete:
+            errorlog.record(
+                "sessao_perdida", level="warning",
+                message=("mandado ao login em {} — cookie de sessão: {}, "
+                         "lembrar-me: {}").format(
+                    request.endpoint or request.path,
+                    "presente" if tinha_sessao else "ausente",
+                    "presente" if tinha_lembrete else "ausente"))
+        return redirect(url_for("auth.login"))
 
     # Blueprints
     from .routes.auth import bp as auth_bp
