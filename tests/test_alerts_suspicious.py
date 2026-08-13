@@ -22,6 +22,10 @@ def test_suspicious_activity_triggers_on_reveal_burst(app, tmp_path, monkeypatch
     state = tmp_path / "sec_state.txt"
     monkeypatch.setattr(alerts, "_sec_state_file", lambda app_: str(state))
     with app.app_context():
+        # O teste declara as duas configuracoes de que depende. Antes so fixava
+        # o limite e herdava SECURITY_ALERTS_ENABLED do ambiente — passava na
+        # maquina do dev e quebrava em qualquer lugar com o flag em 0.
+        app.config["SECURITY_ALERTS_ENABLED"] = True
         app.config["SEC_ALERT_REVEAL"] = 3
         # 1ª rodada: só marca o ponto de partida (sem alerta retroativo).
         assert alerts.check_suspicious_activity(app) == []

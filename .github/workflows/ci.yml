@@ -8,6 +8,9 @@ on:
 jobs:
   smoke:
     runs-on: ubuntu-latest
+    # Uma thread de fundo pendurada em socket travava o job ate o teto de 6h do
+    # GitHub. Com o limite, um travamento falha em minutos e mostra onde parou.
+    timeout-minutes: 20
 
     services:
       postgres:
@@ -27,9 +30,32 @@ jobs:
     env:
       DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/invensync_test
       SECRET_KEY: test-secret-ci
+
+      # ---------------------------------------------------------------------
+      # TODO agendador de fundo fica DESLIGADO aqui.
+      #
+      # O create_app sobe cinco threads daemon que falam com o mundo: SNMP em
+      # impressora, LAN das tomadas, evento dos DVRs, SMTP e pg_dump. Nenhum
+      # existe no runner do GitHub, e todos ficam tentando alcancar rede que
+      # nao responde — ruido, lentidao e travamento intermitente num job que
+      # deveria so rodar teste. O arquivo desligava apenas dois; os outros
+      # cinco subiam por default=True.
+      #
+      # BACKUP_SCHEDULER_ENABLED merece destaque: ligado, ele chama pg_dump
+      # dentro do CI.
+      # ---------------------------------------------------------------------
       MONITORING_ENABLED: "0"
       ALERTS_ENABLED: "0"
-      WHATSAPP_ENABLED: "0"
+      MAIL_ENABLED: "0"
+      # SECURITY_ALERTS_ENABLED fica LIGADO de proposito: nao e agendador, e um
+      # flag lido por alerts.check_suspicious_activity(), que os testes chamam
+      # direto. A thread ja morre com ALERTS_ENABLED=0.
+      PRINTER_MONITOR_ENABLED: "0"
+      PLUG_SCHEDULER_ENABLED: "0"
+      BACKUP_SCHEDULER_ENABLED: "0"
+      DVR_EVENTS_ENABLED: "0"
+      # WHATSAPP_ENABLED saiu: a integracao virou e-mail e nenhuma fonte le
+      # essa variavel ha tempo — desligava algo que nao existe mais.
 
     steps:
       - uses: actions/checkout@v4
