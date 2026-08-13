@@ -457,17 +457,27 @@ def create_app():
 
         Só registra quando havia ALGUM cookie de autenticação: sem isso, toda
         visita anônima a uma página protegida viraria ruído no log."""
+        from flask import session
         from .services import errorlog
         tinha_sessao = bool(request.cookies.get("session"))
         tinha_lembrete = bool(request.cookies.get("remember_token"))
         if tinha_sessao or tinha_lembrete:
+            # As CHAVES da sessão (nunca os valores) sao o dado decisivo:
+            #   vazio       -> o cookie chegou mas nao decodificou (assinatura /
+            #                  SECRET_KEY diferente) ou expirou
+            #   sem _user_id-> decodificou, mas ninguem esta logado nele
+            # O host distingue o caso de abrir o sistema por dois enderecos
+            # (IP e nome), que sao potes de cookie separados no navegador.
             errorlog.record(
                 "sessao_perdida", level="warning",
-                message=("mandado ao login em {} — cookie de sessão: {}, "
-                         "lembrar-me: {}").format(
+                message=("mandado ao login em {} — cookie sessao: {}, lembrar-me: {}"
+                         " | chaves na sessao: {} | host: {} | ip: {}").format(
                     request.endpoint or request.path,
                     "presente" if tinha_sessao else "ausente",
-                    "presente" if tinha_lembrete else "ausente"))
+                    "presente" if tinha_lembrete else "ausente",
+                    sorted(session.keys()) or "VAZIA",
+                    request.host,
+                    request.remote_addr))
         return redirect(url_for("auth.login"))
 
     # Blueprints
