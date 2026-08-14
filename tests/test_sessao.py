@@ -51,7 +51,11 @@ def test_redirecionado_ao_login_com_cookie_gera_registro(app):
     assert r.status_code == 302 and "/login" in r.headers.get("Location", "")
     reg = _ultimo(app, "sessao_perdida")
     assert reg is not None, "queda com cookie presente precisa ficar registrada"
-    assert "presente" in (reg.message or "")
+    msg = reg.message or ""
+    # O registro tem que dizer POR QUE, nao so que caiu: aqui o cookie e
+    # invalido de proposito, entao o veredito da assinatura precisa aparecer.
+    assert "ASSINATURA FALHOU" in msg, msg
+    assert "chaves na sessao: VAZIA" in msg, msg
 
 
 def test_visita_anonima_nao_polui_o_log(app):

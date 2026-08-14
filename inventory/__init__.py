@@ -347,6 +347,22 @@ def create_app():
 
     @app.errorhandler(CSRFError)
     def _handle_csrf_error(e):
+        # Esta e a mensagem que o usuario relata ao "perder a sessao". O CSRF
+        # so falha quando o token do formulario nao casa com o csrf_token da
+        # SESSAO — ou seja, a pagina foi montada com uma sessao e enviada com
+        # outra. Registrar o estado permite ligar (ou nao) este erro a mesma
+        # causa dos registros de 'sessao_perdida'.
+        from flask import session
+        from .services import errorlog
+        errorlog.record(
+            "csrf", level="warning",
+            message=("{} em {} | logado: {} | chaves na sessao: {} | {} | ip: {}").format(
+                getattr(e, "description", "falha de CSRF"),
+                request.endpoint or request.path,
+                getattr(current_user, "is_authenticated", False),
+                sorted(session.keys()) or "VAZIA",
+                _diagnostico_cookie(),
+                request.remote_addr))
         flash("Sessão expirada ou formulário inválido. Tente novamente.", "warning")
         return voltar(url_for("auth.login"))
 
@@ -470,15 +486,49 @@ def create_app():
             # (IP e nome), que sao potes de cookie separados no navegador.
             errorlog.record(
                 "sessao_perdida", level="warning",
-                message=("mandado ao login em {} — cookie sessao: {}, lembrar-me: {}"
-                         " | chaves na sessao: {} | host: {} | ip: {}").format(
+                message=("mandado ao login em {} — chaves na sessao: {} | {} | {}"
+                         " | host: {} | ip: {}").format(
                     request.endpoint or request.path,
-                    "presente" if tinha_sessao else "ausente",
-                    "presente" if tinha_lembrete else "ausente",
                     sorted(session.keys()) or "VAZIA",
+                    _diagnostico_cookie(),
+                    _diagnostico_lembrete(),
                     request.host,
                     request.remote_addr))
         return redirect(url_for("auth.login"))
+
+    def _diagnostico_cookie():
+        """Sessao VAZIA tem duas causas muito diferentes, e o log precisa
+        separa-las: ou o cookie nao passa na assinatura (chave diferente,
+        valor corrompido/truncado — o Flask entrega sessao vazia calado), ou
+        ele assina certo e realmente esta vazio (foi sobrescrito). Tamanho
+        entra junto porque acima de ~4093 bytes o navegador corta o cookie, e
+        cortado ele sempre falha na assinatura."""
+        bruto = request.cookies.get("session")
+        if not bruto:
+            return "cookie sessao: AUSENTE"
+        s = app.session_interface.get_signing_serializer(app)
+        if s is None:
+            return f"cookie sessao: {len(bruto)}b (sem serializador)"
+        try:
+            dados = s.loads(bruto)
+            return (f"cookie sessao: {len(bruto)}b, assinatura OK, "
+                    f"conteudo={sorted(dados.keys()) or 'vazio de verdade'}")
+        except Exception as e:  # noqa: BLE001
+            return f"cookie sessao: {len(bruto)}b, ASSINATURA FALHOU ({type(e).__name__})"
+
+    def _diagnostico_lembrete():
+        """O 'lembrar-me' deveria restaurar a sessao sozinho. Se ele existe e
+        mesmo assim caiu no login, e porque tambem nao validou."""
+        bruto = request.cookies.get("remember_token")
+        if not bruto:
+            return "lembrar-me: AUSENTE"
+        try:
+            from flask_login.utils import decode_cookie
+            valor = decode_cookie(bruto)
+            return ("lembrar-me: valido" if valor
+                    else "lembrar-me: presente mas NAO VALIDA")
+        except Exception as e:  # noqa: BLE001
+            return f"lembrar-me: erro ao ler ({type(e).__name__})"
 
     # Blueprints
     from .routes.auth import bp as auth_bp
