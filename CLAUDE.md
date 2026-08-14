@@ -129,6 +129,9 @@ DVRs de câmera (Intelbras/Dahua). Same pattern as routers: encrypted `admin_pas
 ### Uptime monitoring auto-sync (`/machines/monitoring`)
 `services/monitoring.py::_sync_auto_hosts()` (run each `check_all` cycle + on the monitoring page) upserts a `MonitoredHost` (with `auto_source` = `impressora:N`/`dvr:N`/`router:N`) for every active printer/DVR/router that has a fixed IP, so they flow through the existing up/down e-mail alerting. Auto hosts are read-only in the UI (edit/delete blocked); removing/inactivating the device drops its monitor.
 
+### Cookies têm nome próprio — e isso é uma correção, não estilo
+`SESSION_COOKIE_NAME = "invensync_session"` e `REMEMBER_COOKIE_NAME = "invensync_remember"` (`config.py`). **Nunca volte aos nomes padrão.** Cookie é isolado por **domínio, nunca por porta**: este servidor (`192.168.0.54`) roda CarregLogi na `:80` e a AS na `:5000`, ambos Flask com Flask-Login. Com os nomes padrão, os três gravavam `session`/`remember_token` no mesmo domínio com `Path=/` — o **mesmo cookie** — e quem respondesse por último sobrescrevia os outros. O InvenSync então recebia de volta um cookie assinado com a chave do vizinho: assinatura inválida → sessão vazia → usuário jogado no login **sem mensagem**. Também era a causa do "Sessão expirada ou formulário inválido", já que o token CSRF mora na sessão. Diagnosticado pelo log: cookies de 78b/111b/153b/274b alternando entre `ASSINATURA FALHOU (BadTimeSignature)` e `assinatura OK` em segundos, sempre no mesmo host. Se um app novo subir neste servidor, ele precisa de nomes próprios também.
+
 ### Auth hardening
 - **Rate limiting** (`extensions.limiter`, Flask-Limiter, memory store): `auth.login` POST `10/min;40/h`, `auth.login_2fa` POST `10/min`. 429 → friendly flash + redirect.
 - **Remember-me**: login uses `login_user(user, remember=True)` + `session.permanent = True`.

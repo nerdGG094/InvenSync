@@ -475,8 +475,8 @@ def create_app():
         visita anônima a uma página protegida viraria ruído no log."""
         from flask import session
         from .services import errorlog
-        tinha_sessao = bool(request.cookies.get("session"))
-        tinha_lembrete = bool(request.cookies.get("remember_token"))
+        tinha_sessao = bool(request.cookies.get(app.config["SESSION_COOKIE_NAME"]))
+        tinha_lembrete = bool(request.cookies.get(app.config["REMEMBER_COOKIE_NAME"]))
         if tinha_sessao or tinha_lembrete:
             # As CHAVES da sessão (nunca os valores) sao o dado decisivo:
             #   vazio       -> o cookie chegou mas nao decodificou (assinatura /
@@ -503,7 +503,7 @@ def create_app():
         ele assina certo e realmente esta vazio (foi sobrescrito). Tamanho
         entra junto porque acima de ~4093 bytes o navegador corta o cookie, e
         cortado ele sempre falha na assinatura."""
-        bruto = request.cookies.get("session")
+        bruto = request.cookies.get(app.config["SESSION_COOKIE_NAME"])
         if not bruto:
             return "cookie sessao: AUSENTE"
         s = app.session_interface.get_signing_serializer(app)
@@ -519,7 +519,7 @@ def create_app():
     def _diagnostico_lembrete():
         """O 'lembrar-me' deveria restaurar a sessao sozinho. Se ele existe e
         mesmo assim caiu no login, e porque tambem nao validou."""
-        bruto = request.cookies.get("remember_token")
+        bruto = request.cookies.get(app.config["REMEMBER_COOKIE_NAME"])
         if not bruto:
             return "lembrar-me: AUSENTE"
         try:

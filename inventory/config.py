@@ -182,6 +182,29 @@ class Config:
         "pool_recycle": 1800,    # recicla conexões a cada 30 min
     }
 
+    # ------------------------------------------------------------------
+    # NOME PRÓPRIO DOS COOKIES — não é enfeite, corrige perda de sessão.
+    #
+    # Cookie é isolado por DOMÍNIO, nunca por porta. Este servidor
+    # (192.168.0.54) roda outros Flask: CarregLogi na :80 e a AS na :5000.
+    # Com o nome padrão, os três gravavam `session` e `remember_token` no
+    # mesmo domínio, com Path=/ — ou seja, o MESMO cookie. Quem respondesse
+    # por último sobrescrevia os outros, e o InvenSync recebia de volta um
+    # cookie assinado com a chave do vizinho: assinatura inválida, sessão
+    # vazia e usuário jogado no login, sem mensagem.
+    #
+    # Foi o que o log provou: cookies de tamanhos diferentes (78b, 111b,
+    # 153b, 274b) alternando entre "ASSINATURA FALHOU (BadTimeSignature)" e
+    # "assinatura OK" em segundos, sempre no mesmo host. E a mesma causa do
+    # "Sessão expirada ou formulário inválido", já que o token CSRF mora na
+    # sessão.
+    #
+    # Com nomes próprios o InvenSync fica imune ao que os vizinhos façam.
+    # NÃO renomeie de volta, e NÃO reutilize esses nomes nos outros apps.
+    # ------------------------------------------------------------------
+    SESSION_COOKIE_NAME = os.environ.get("SESSION_COOKIE_NAME", "invensync_session")
+    REMEMBER_COOKIE_NAME = os.environ.get("REMEMBER_COOKIE_NAME", "invensync_remember")
+
     SESSION_COOKIE_SAMESITE = "Lax"
     # Ative (SESSION_COOKIE_SECURE=1 no .env) ao servir por HTTPS atrás de proxy.
     SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "0") in ("1", "true", "True")
