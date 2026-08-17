@@ -66,15 +66,10 @@
      propriedade. Sem brilho/halo atrás do logo — só movimento. */
   .sys-logo-wrap { position:relative; flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
     animation:sysFlutua 4.6s ease-in-out infinite; }
-  .sys-logo, .sys-logo-ico { position:relative; z-index:1;
+  .sys-logo { position:relative; z-index:1;
     transition:transform .3s cubic-bezier(.22,1.2,.36,1); }
-  .sys-card:hover .sys-logo, .sys-card:hover .sys-logo-ico,
-  .sys-card:focus-visible .sys-logo,
-  .sys-card:focus-visible .sys-logo-ico { transform:scale(1.16) rotate(-6deg); }
-  /* Ícone no lugar do logo: ocupa a mesma caixa de 40px dos outros cartões,
-     para os três alinharem mesmo sem arquivo de imagem. */
-  .sys-logo-ico { width:40px; height:40px; display:inline-flex; align-items:center;
-    justify-content:center; font-size:1.75rem; color:#46e08a !important; }
+  .sys-card:hover .sys-logo,
+  .sys-card:focus-visible .sys-logo { transform:scale(1.16) rotate(-6deg); }
 
   /* Brilho que varre o card no hover */
   .sys-card::after { content:""; position:absolute; top:-60%; bottom:-60%; left:-70%; width:45%; z-index:2;
@@ -98,8 +93,7 @@
   @media (prefers-reduced-motion: reduce) {
     .sys-logo-wrap, .sys-row > [class*="col-"] { animation:none; }
     .sys-card::after { display:none; }
-    .sys-card:hover .sys-logo, .sys-card:focus-visible .sys-logo,
-    .sys-card:hover .sys-logo-ico, .sys-card:focus-visible .sys-logo-ico { transform:scale(1.06); }
+    .sys-card:hover .sys-logo, .sys-card:focus-visible .sys-logo { transform:scale(1.06); }
   }
 
   /* Modal do QR/KioX (fundo por classe p/ adaptar ao tema — ver theme-light.css) */
@@ -162,10 +156,7 @@
   </div>
   <div class="col-12 col-md-6 col-lg-3">
     <a href="http://192.168.0.54:5000" target="_blank" rel="noopener" class="sys-card">
-      {# Sem arquivo de logo ainda: um ícone no lugar, no mesmo invólucro dos
-         outros para herdar a flutuação e o "pop" do hover. Basta pôr o arquivo
-         em static/logos/ e trocar por um <img class="sys-logo">. #}
-      <span class="sys-logo-wrap"><i class="bi bi-calendar-week sys-logo-ico"></i></span>
+      <span class="sys-logo-wrap"><img src="{{ url_for('static', filename='logos/as.png') }}" alt="AS" class="sys-logo"></span>
       <div class="sys-txt">
         <div class="sys-name">AS</div>
         <div class="sys-sub">Agenda da sala</div>
