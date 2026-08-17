@@ -16,6 +16,17 @@ def _ultimo(app, source):
                 .order_by(ErrorLog.id.desc()).first())
 
 
+def _id_do_ultimo(app, source):
+    """Id do ultimo registro, ou 0. Serve para exigir um registro NOVO.
+
+    Sem isso o teste passa por acidente: num banco reaproveitado, `_ultimo`
+    devolve um registro de execucao anterior e a assercao aprova mesmo que a
+    requisicao atual nao tenha gerado nada. Foi assim que a renomeacao do
+    cookie passou batida aqui e so quebrou no CI, que usa banco novo."""
+    r = _ultimo(app, source)
+    return r.id if r else 0
+
+
 def test_token_trocado_deixa_registro(app):
     """'Sair de todas as sessoes' invalida o cookie — e isso tem que aparecer."""
     with app.app_context():
@@ -25,32 +36,38 @@ def test_token_trocado_deixa_registro(app):
     if not token:
         return  # instalacao sem token: a checagem nao se aplica
 
+    antes = _id_do_ultimo(app, "user_loader")
     with app.test_request_context("/"):
-        from flask_login import login_manager as _lm  # noqa: F401
         carregar = app.login_manager._user_callback
         assert carregar(f"{uid}:token-que-nao-confere") is None
 
     reg = _ultimo(app, "user_loader")
-    assert reg is not None, "token invalido nao deixou rastro"
+    assert reg is not None and reg.id > antes, "token invalido nao deixou rastro NOVO"
     assert "token de sess" in (reg.message or "")
 
 
 def test_usuario_inexistente_deixa_registro(app):
+    antes = _id_do_ultimo(app, "user_loader")
     with app.test_request_context("/"):
         carregar = app.login_manager._user_callback
         assert carregar("99999999:qualquer") is None
     reg = _ultimo(app, "user_loader")
-    assert reg and "inexistente" in (reg.message or "")
+    assert reg and reg.id > antes and "inexistente" in (reg.message or "")
 
 
 def test_redirecionado_ao_login_com_cookie_gera_registro(app):
     """Quem tinha cookie e mesmo assim caiu no login: e o caso a investigar."""
+    antes = _id_do_ultimo(app, "sessao_perdida")
     c = app.test_client()
-    c.set_cookie("session", "cookie-invalido-qualquer")
+    # Le o nome do cookie da CONFIG, nunca "session" na unha: e justamente o
+    # nome que mudou para deixar de colidir com os vizinhos do mesmo host.
+    c.set_cookie(app.config["SESSION_COOKIE_NAME"], "cookie-invalido-qualquer")
     r = c.get("/products")
     assert r.status_code == 302 and "/login" in r.headers.get("Location", "")
+
     reg = _ultimo(app, "sessao_perdida")
-    assert reg is not None, "queda com cookie presente precisa ficar registrada"
+    assert reg is not None and reg.id > antes, \
+        "queda com cookie presente precisa gerar um registro NOVO"
     msg = reg.message or ""
     # O registro tem que dizer POR QUE, nao so que caiu: aqui o cookie e
     # invalido de proposito, entao o veredito da assinatura precisa aparecer.
@@ -60,12 +77,11 @@ def test_redirecionado_ao_login_com_cookie_gera_registro(app):
 
 def test_visita_anonima_nao_polui_o_log(app):
     """Sem cookie nenhum e navegacao normal de quem nao logou — nao e incidente."""
-    antes = _ultimo(app, "sessao_perdida")
-    antes_id = antes.id if antes else 0
+    antes = _id_do_ultimo(app, "sessao_perdida")
     r = app.test_client().get("/products")
     assert r.status_code == 302
-    depois = _ultimo(app, "sessao_perdida")
-    assert (depois.id if depois else 0) == antes_id, "visita anonima virou ruido no log"
+    assert _id_do_ultimo(app, "sessao_perdida") == antes, \
+        "visita anonima virou ruido no log"
 
 
 # ---------------------------------------------------------------------------
