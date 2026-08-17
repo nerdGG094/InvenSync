@@ -73,3 +73,15 @@ jobs:
 
       - name: Run smoke tests
         run: pytest -q
+
+      # Avisa quando sair CVE nova numa dependencia. Antes ninguem era avisado:
+      # a auditoria manual achou 6 pacotes vulneraveis de uma vez, incluindo o
+      # Pillow com 18 falhas -- e e ele que processa avatar e foto do cofre,
+      # arquivo enviado por usuario.
+      #
+      # continue-on-error de proposito: uma CVE publicada num domingo nao pode
+      # travar o deploy de uma correcao urgente. O passo fica vermelho na aba
+      # do Actions e o job segue verde.
+      - name: Auditar dependencias (CVEs)
+        continue-on-error: true
+        run: pip-audit --progress-spinner off

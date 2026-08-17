@@ -1,2 +1,4 @@
 -r requirements.txt
-pytest==8.3.3
+pytest==9.0.3
+# Auditoria de vulnerabilidades das dependencias (passo do CI).
+pip-audit==2.10.1
