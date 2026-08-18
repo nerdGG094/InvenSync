@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-# Development (Flask debug server, auto-reload, binds 192.168.0.54:5090)
+# Development (Flask dev server, binds 127.0.0.1:5090 — RUN_HOST/RUN_PORT override)
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
@@ -28,7 +28,7 @@ setup\start_invensync.bat     # launches PyQt5 panel + waitress
 - No linter config and **no build step** (templates are server-rendered Jinja, assets are CDN + `inventory/static/`).
 - **Tests** (pytest smoke + feature tests in `tests/`): run with `pytest -q`. A safety guard in `tests/conftest.py` **refuses to run unless the DB looks like a test DB** (`DATABASE_URL`/`DB_NAME` contains `test`) or `INVENSYNC_ALLOW_DB_TESTS=1` is set — the suite creates/mutates rows, so never point it at production. CI runs them on push via `.github/workflows/ci.yml` (Postgres service).
 - Quick boot/smoke check: `.venv\Scripts\python.exe -c "from inventory import create_app; create_app()"`.
-- `run.py` has `debug=True` so templates reload, but **changes to `.py` files require a server restart** to take effect.
+- `run.py` **runs with debug OFF and binds `127.0.0.1`** by default — Werkzeug's interactive debugger is remote code execution, so it is opt-in via `FLASK_DEBUG=1`, and `RUN_HOST` is what exposes the dev server to the network. Consequence: with debug off there is **no auto-reload at all** — changes to templates *and* `.py` files need a restart. Production is always `serve.py` (waitress), never this file.
 
 ## Architecture
 

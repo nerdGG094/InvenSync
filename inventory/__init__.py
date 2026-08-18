@@ -412,11 +412,22 @@ def create_app():
         # (Roda ANTES de importar colaboradores para garantir que sempre exista
         # uma conta de login de administrador.)
         if not User.query.first():
+            # A senha era "admin", fixa no código. Numa instalação nova isso é
+            # uma conta de administrador com credencial pública — e ela
+            # sobrevive esquecida (foi o que aconteceu aqui: sobrou um
+            # "Administrador" sem 2FA no banco de produção). Agora sai aleatória
+            # e é IMPRESSA uma única vez, no boot; quem instala anota e troca.
+            # SEED_ADMIN_PASSWORD permite definir na instalação automatizada.
+            senha = (os.environ.get("SEED_ADMIN_PASSWORD") or "").strip() \
+                or secrets.token_urlsafe(12)
             admin = User(name="Administrador", email="admin@local",
                          is_admin=True, can_login=True)
-            admin.set_password("admin")
+            admin.set_password(senha)
             db.session.add(admin)
             db.session.commit()
+            app.logger.warning(
+                "Banco vazio: criado o admin inicial admin@local com a senha "
+                "'%s'. TROQUE no primeiro acesso e ative o 2FA.", senha)
         # Unifica colaboradores/ativos no cadastro central de pessoas (user).
         _seed_people_into_users()
         # Popula os departamentos a partir dos setores já usados nos colaboradores.

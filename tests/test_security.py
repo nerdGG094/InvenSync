@@ -123,3 +123,28 @@ def test_busca_global_nao_interpola_url_crua(app):
         html = f.read()
     assert "href=\"'+it.url+'\"" not in html, "url ainda entra crua no href"
     assert "esc(it.url)" in html
+
+
+# ---------------------------------------------------------------------------
+# S-SEED: o admin inicial tinha a senha "admin" fixa no codigo. Em instalacao
+# nova isso e uma conta de administrador com credencial publica -- e ela
+# sobrevive esquecida (sobrou uma no banco de producao, sem 2FA).
+# ---------------------------------------------------------------------------
+def test_senha_do_admin_inicial_nao_e_fixa_no_codigo():
+    import inspect
+    import inventory
+    src = inspect.getsource(inventory.create_app)
+    i = src.find('email="admin@local"')
+    assert i > 0, "nao achei o seed do admin inicial"
+    # Janela dos DOIS lados: a geracao da senha vem antes da linha do e-mail.
+    trecho = src[max(0, i - 500):i + 600]
+    assert 'set_password("admin")' not in trecho, "senha fixa voltou ao seed"
+    assert "secrets.token_urlsafe" in trecho, "o seed precisa gerar senha aleatoria"
+
+
+def test_seed_respeita_senha_do_ambiente(monkeypatch):
+    """Instalacao automatizada define SEED_ADMIN_PASSWORD; sem ela, aleatoria."""
+    import inspect
+    import inventory
+    src = inspect.getsource(inventory.create_app)
+    assert "SEED_ADMIN_PASSWORD" in src
