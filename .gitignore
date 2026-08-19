@@ -70,7 +70,3 @@ flask_output.log
 Thumbs.db
 snapshot.json
 instance/
-
-# Config do rclone (backup Drive) — contem token e senha da cifra
-rclone.conf
-**/rclone.conf
