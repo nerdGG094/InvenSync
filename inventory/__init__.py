@@ -455,14 +455,23 @@ def create_app():
         from .services import errorlog
         raw = str(user_id)
         uid, _, tok = raw.partition(":")
+        # `user_id=...` em TODOS os record daqui é obrigatorio, nao opcional:
+        # sem ele, errorlog leria current_user, que re-invoca este proprio loader
+        # (o usuario ainda nao esta em g) e recursa ate derrubar a requisicao.
+        # Passamos None enquanto o usuario nao esta confirmado no banco: o
+        # error_log.user_id e FK, entao um id inexistente faria o insert falhar.
         try:
-            u = db.session.get(User, int(uid))
+            uid_int = int(uid)
+        except (TypeError, ValueError):
+            uid_int = None
+        try:
+            u = db.session.get(User, uid_int) if uid_int is not None else None
         except Exception as e:  # noqa: BLE001 — banco fora, pool esgotado, etc.
-            errorlog.record("user_loader", exc=e,
+            errorlog.record("user_loader", exc=e, user_id=None,
                             message=f"falha ao carregar a sessão do usuário {uid}")
             return None
         if u is None:
-            errorlog.record("user_loader", level="warning",
+            errorlog.record("user_loader", level="warning", user_id=None,
                             message=f"sessão apontava para usuário inexistente ({uid})")
             return None
         # O token é obrigatório quando o usuário tem session_token (todos têm,
@@ -471,7 +480,7 @@ def create_app():
         # cookies antigos de fato.
         if (u.session_token or "") and tok != u.session_token:
             errorlog.record(
-                "user_loader", level="warning",
+                "user_loader", level="warning", user_id=u.id,
                 message=("token de sessão não confere para {} — cookie antigo, "
                          "'sair de todas as sessões', ou cookie gerado por outra "
                          "instância/SECRET_KEY").format(u.email or u.id))

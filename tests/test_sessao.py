@@ -55,6 +55,30 @@ def test_usuario_inexistente_deixa_registro(app):
     assert reg and reg.id > antes and "inexistente" in (reg.message or "")
 
 
+def test_user_loader_com_sessao_ativa_nao_recursa(app):
+    """Regressao do bug de recursao: os testes acima chamam o loader com a
+    SESSAO VAZIA, entao current_user resolvia para anonimo sem re-entrar. Numa
+    requisicao real o `_user_id` esta na sessao; se um record dentro do loader
+    tocasse current_user, ele re-invocaria o loader e recursaria ate cair. Aqui
+    forcamos o cenario real: `_user_id` na sessao + token que nao confere."""
+    with app.app_context():
+        u = User.query.filter_by(can_login=True).first()
+        assert u is not None
+        uid, token = u.id, (u.session_token or "")
+    if not token:
+        return
+
+    c = app.test_client()
+    with c.session_transaction() as s:
+        s["_user_id"] = f"{uid}:token-invalido"     # sessao "logada" mas com token errado
+        s["_fresh"] = True
+    # Uma pagina protegida: o Flask-Login chama o loader COM a sessao populada.
+    # Antes do fix isto estourava RecursionError (500) e inundava o error_log.
+    r = c.get("/products")
+    assert r.status_code == 302 and "/login" in r.headers.get("Location", ""), \
+        "deveria cair no login sem estourar; se deu 500, a recursao voltou"
+
+
 def test_redirecionado_ao_login_com_cookie_gera_registro(app):
     """Quem tinha cookie e mesmo assim caiu no login: e o caso a investigar."""
     antes = _id_do_ultimo(app, "sessao_perdida")

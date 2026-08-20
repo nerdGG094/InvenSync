@@ -128,11 +128,12 @@ def index():
     except Exception:
         db.session.rollback()
 
-    # Chamados abertos = tudo que não está resolvido/fechado
+    # Chamados abertos = tudo que não está resolvido nem cancelado
+    # ("fechado" não existe no vocabulário — ver STATUS_CHOICES em forms/tickets)
     try:
         counts["tickets_open"] = int(
             db.session.query(func.count(Ticket.id))
-            .filter(~Ticket.status.in_(["resolvido", "fechado"])).scalar() or 0
+            .filter(~Ticket.status.in_(["resolvido", "cancelado"])).scalar() or 0
         )
     except Exception:
         db.session.rollback()
@@ -160,7 +161,7 @@ def index():
         order = {"urgente": 0, "alta": 1, "media": 2, "baixa": 3}
         rows = (
             db.session.query(Ticket.priority, func.count(Ticket.id))
-            .filter(~Ticket.status.in_(["resolvido", "fechado"]))
+            .filter(~Ticket.status.in_(["resolvido", "cancelado"]))
             .group_by(Ticket.priority)
             .all()
         )

@@ -13,9 +13,21 @@ from flask_login import current_user
 
 from ..extensions import db
 
+# Sentinela: distingue "chamador não informou usuário" (aí buscamos em
+# current_user) de "chamador informou None" (usuário desconhecido, e NÃO
+# devemos tocar em current_user).
+_SEM_USUARIO = object()
 
-def record(source, exc=None, message=None, level="error"):
-    """Grava um erro no banco. Seguro para chamar de qualquer contexto."""
+
+def record(source, exc=None, message=None, level="error", user_id=_SEM_USUARIO):
+    """Grava um erro no banco. Seguro para chamar de qualquer contexto.
+
+    `user_id`: quando o chamador informa (mesmo que None), NÃO tocamos em
+    `current_user`. Isso é obrigatório para quem chama de DENTRO do
+    `user_loader` do Flask-Login: ler `current_user` ali re-invoca o próprio
+    loader (o usuário ainda não está em `g`), e com o `_user_id` presente na
+    sessão isso vira recursão infinita — uma requisição falha e derruba o app.
+    """
     try:
         from ..models.error_log import ErrorLog
         msg = message or (str(exc) if exc is not None else "")
@@ -23,14 +35,18 @@ def record(source, exc=None, message=None, level="error"):
         if exc is not None:
             tb = "".join(_tb.format_exception(type(exc), exc, exc.__traceback__))
         path = method = None
-        uid = None
+        if user_id is not _SEM_USUARIO:
+            uid = user_id                      # fornecido: nunca toca current_user
+        else:
+            uid = None
         if has_request_context():
             path = request.path
             method = request.method
-            try:
-                uid = current_user.id if current_user.is_authenticated else None
-            except Exception:  # noqa: BLE001
-                uid = None
+            if user_id is _SEM_USUARIO:
+                try:
+                    uid = current_user.id if current_user.is_authenticated else None
+                except Exception:  # noqa: BLE001
+                    uid = None
         e = ErrorLog(level=level, source=(source or "")[:120], message=(msg or "")[:500],
                      traceback=tb, path=path, method=method, user_id=uid)
         db.session.add(e)

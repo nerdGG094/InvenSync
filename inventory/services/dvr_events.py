@@ -366,7 +366,12 @@ def _escutar(app, dvr_id):
         try:
             copia, senha = _dados(app, dvr_id)
             if copia is None:
-                return                              # DVR removido/inativado
+                # DVR removido/inativado: tira a escuta do mapa de saude, senao
+                # ela fica "parada" para sempre e o /health cria alarme falso
+                # (ha_segundos so cresce). A thread encerra de vez aqui.
+                with _saude_lock:
+                    _saude.pop(dvr_id, None)
+                return
             dvr_cam._openers.pop(dvr_id, None)      # negocia digest do zero
             op, base = dvr_cam._opener(copia, senha)
             # `heartbeat` faz o DVR mandar um sinal de vida a cada N segundos, e

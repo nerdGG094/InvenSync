@@ -37,8 +37,11 @@ def _info() -> dict:
         from ..services import dvr_events
         s = dvr_events.saude()
         if s:
+            # `is None` explicito, nao `or`: ha_segundos == 0 (heartbeat no
+            # mesmo instante do /health) e saudavel, mas `0 or 1e9` daria 1e9.
             paradas = [i for i, v in s.items()
-                       if not v["ok"] or (v["ha_segundos"] or 1e9) > 300]
+                       if not v["ok"]
+                       or v["ha_segundos"] is None or v["ha_segundos"] > 300]
             out["dvr_eventos"] = {
                 "enabled": bool(current_app.config.get("DVR_EVENTS_ENABLED")),
                 "escutas": len(s),
