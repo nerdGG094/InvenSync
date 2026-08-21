@@ -456,6 +456,13 @@
         conectadoRTDB = (s.val() === true);
         if (!conectadoRTDB) {
           status.innerHTML = '<span style="color:#ffb84a">reconectando ao servidor…</span>';
+        } else {
+          // Reconectou: reescreve o rótulo. Sem este else o aviso de "reconectando"
+          // ficava na tela indefinidamente — ele só saía por efeito colateral do
+          // pintar(), que não escreve nada enquanto total === 0. Resultado: mapa
+          // exibindo a frota normalmente e o status mentindo que estava caído.
+          status.textContent = 'conectado';
+          pintar();
         }
       });
       const refDevices = firebase.database().ref('devices');
