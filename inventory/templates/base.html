@@ -191,6 +191,10 @@
        que era largo e baixo; a 28px o monograma ficava miúdo.
        Fora da régua (mobile) o logo ganha uma pastilha vermelha própria; no
        desktop a faixa inteira é vermelha e a pastilha é desfeita. */
+    /* Invólucro do monograma: existe para a camada "tech" ter uma caixa
+       exatamente do tamanho do logo para se sobrepor. */
+    .brand-mark{ position: relative; display: inline-flex; z-index: 1; }
+    .brand-mark-tech{ display: none; }   /* só entra em cena na régua */
     .brand-logo{ height: 36px; width: auto; display: inline-block; object-fit: contain;
       background: var(--band); border-radius: 10px; padding: 5px 9px;
       box-shadow: 0 0 0 1px var(--band-line); }
@@ -263,6 +267,32 @@
         0%   { transform: translateY(-130%); }
         55%  { transform: translateY(330%); }
         100% { transform: translateY(330%); }
+      }
+      /* O RAIO-X REVELA A VERSÃO "TECH" DO MONOGRAMA.
+         Não é um segundo arquivo: é o próprio is2.png usado como máscara
+         (o PNG é branco sobre transparente, então o alpha já é a forma) e
+         preenchido com verde neon riscado por linhas finas.
+         Só é ligada aqui, na régua: fora dela a <img> tem padding da pastilha
+         vermelha, e a máscara — que se ajusta à caixa do invólucro — cairia
+         desalinhada do desenho. */
+      .brand-mark-tech {
+        display: block; position: absolute; inset: 0; pointer-events: none;
+        -webkit-mask: url({{ url_for('static', filename='logos/is2.png') }}) center/contain no-repeat;
+                mask: url({{ url_for('static', filename='logos/is2.png') }}) center/contain no-repeat;
+        background:
+          repeating-linear-gradient(180deg, rgba(0,20,8,.55) 0 1px, transparent 1px 3px),
+          linear-gradient(180deg, #a8ffcb, var(--brand-2) 55%, var(--brand));
+        opacity: 0;
+        animation: brandTech 3s ease-in-out infinite;
+      }
+      /* Sincronia com o feixe: mesma duração (3s) e mesmo easing, e o pico em
+         27% — metade do trecho de descida (0→55%). Como o ease-in-out é
+         simétrico, na metade do TEMPO o feixe está na metade do CAMINHO, ou
+         seja, exatamente sobre o monograma. Mexeu em um, mexa no outro. */
+      @keyframes brandTech {
+        0%, 18%  { opacity: 0; }
+        27%      { opacity: 1; }
+        36%, 100%{ opacity: 0; }
       }
       /* Na régua a faixa já é vermelha — a pastilha do logo sai de cena.
          O z-index não é enfeite: o ::before acima é posicionado e, sem ele,
@@ -400,7 +430,8 @@
 
     /* A varredura é enfeite: quem pediu menos movimento não recebe nenhum. */
     @media (prefers-reduced-motion: reduce) {
-      .navbar-brand::before { animation: none; opacity: 0; }
+      .navbar-brand::before,
+      .brand-mark-tech { animation: none; opacity: 0; }
     }
   </style>
 </head>
@@ -412,7 +443,14 @@
     <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('intro.index') }}" title="Tela inicial">
       {# Sempre o monograma branco: o fundo dele é a faixa vermelha em qualquer
          tema, então a variante verde (para fundo claro) não serve mais aqui. #}
-      <img class="brand-logo" src="{{ url_for('static', filename='logos/is2.png') }}" alt="InvenSync">
+      <span class="brand-mark">
+        <img class="brand-logo" src="{{ url_for('static', filename='logos/is2.png') }}" alt="InvenSync">
+        {# Camada "tech": o MESMO monograma usado como máscara, preenchido com
+           verde neon riscado. Só acende no instante em que o raio-x cruza o
+           logo (ver .brand-mark-tech). aria-hidden porque é puro enfeite — o
+           texto alternativo já está na <img> acima. #}
+        <span class="brand-mark-tech" aria-hidden="true"></span>
+      </span>
       <span class="d-flex flex-column">
         <span class="brand-name">Inven<span class="sync">Sync</span></span>
         <span class="brand-tag">>> Tech-Almox</span>
