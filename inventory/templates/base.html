@@ -231,19 +231,46 @@
          lados) e o do .navbar (10px no topo) para a faixa pintar a régua
          inteira, de borda a borda — sem isso ela ficaria uma ilha no meio. */
       .navbar-brand {
-        justify-content: center; position: relative;
+        justify-content: center; position: relative; overflow: hidden;
         margin: -10px -9px 10px !important; padding: 12px 0 11px;
-        background: linear-gradient(180deg, var(--band), var(--band-2));
+        background:
+          repeating-linear-gradient(180deg, rgba(255,255,255,.045) 0 1px, transparent 1px 4px),
+          linear-gradient(180deg, var(--band), var(--band-2));
         border-bottom: 1px solid var(--band-line);
       }
-      /* Separador: fio amarelo da marca esmaecendo nas pontas, sobre a borda */
+      /* Separador: fio amarelo da marca esmaecendo nas pontas, sobre a borda.
+         Era bottom:-1px; com o overflow:hidden acima — que segura a linha do
+         raio-x dentro da faixa — aquele 1px de sangria seria cortado fora. */
       .navbar-brand::after {
-        content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+        content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; z-index: 2;
         background: linear-gradient(90deg, transparent, var(--band-accent), transparent);
       }
-      /* Na régua a faixa já é vermelha — a pastilha do logo sai de cena */
+      /* RAIO-X: uma linha clara varre a faixa de cima a baixo, POR TRÁS do
+         monograma. Anima `transform` (composita na GPU, sem repaint) e sai de
+         quadro entre uma passada e outra — é uma varredura, não um pisca-pisca
+         contínuo numa régua que fica aberta o dia inteiro.
+         Ciclo de 3s: a linha leva ~1,65s para descer (mesma velocidade de
+         antes, para não virar risco nervoso) e some por ~1,35s. */
+      .navbar-brand::before {
+        content: ""; position: absolute; left: 0; right: 0; top: 0; height: 34%;
+        z-index: 0; pointer-events: none;
+        background: linear-gradient(180deg, transparent,
+          rgba(255,231,168,.16) 42%, rgba(255,246,224,.55) 50%,
+          rgba(255,231,168,.16) 58%, transparent);
+        animation: brandRaioX 3s ease-in-out infinite;
+      }
+      @keyframes brandRaioX {
+        0%   { transform: translateY(-130%); }
+        55%  { transform: translateY(330%); }
+        100% { transform: translateY(330%); }
+      }
+      /* Na régua a faixa já é vermelha — a pastilha do logo sai de cena.
+         O z-index não é enfeite: o ::before acima é posicionado e, sem ele,
+         pintaria POR CIMA do monograma (elemento posicionado vence conteúdo
+         estático na mesma pilha) — o oposto do efeito pedido. */
       .navbar.navbar-expand-lg .brand-logo {
         background: none; box-shadow: none; padding: 0;
+        position: relative; z-index: 1;
       }
       .navbar-brand .d-flex.flex-column { display: none !important; }
       .navbar-toggler { display: none !important; }
@@ -369,6 +396,11 @@
       .navbar.navbar-expand-lg #ddPerfil .avatar-circle {
         width: 26px !important; height: 26px !important; flex-basis: 26px !important;
       }
+    }
+
+    /* A varredura é enfeite: quem pediu menos movimento não recebe nenhum. */
+    @media (prefers-reduced-motion: reduce) {
+      .navbar-brand::before { animation: none; opacity: 0; }
     }
   </style>
 </head>
