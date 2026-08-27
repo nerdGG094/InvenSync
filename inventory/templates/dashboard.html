@@ -60,12 +60,12 @@
   .sys-card:hover .sys-go { opacity:1; transform:translateX(2px); }
   .sys-go { transition:opacity .14s, transform .14s; }
 
-  /* --- Animação dos logos (KioX / CarregLogi) ---
-     O invólucro flutua (transform) e o <img> reage ao hover (transform próprio):
-     separar os dois evita que a animação infinita e o hover briguem pela mesma
-     propriedade. Sem brilho/halo atrás do logo — só movimento. */
-  .sys-logo-wrap { position:relative; flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
-    animation:sysFlutua 4.6s ease-in-out infinite; }
+  /* --- Logos (KioX / CarregLogi / AS) ---
+     Os logos ficam PARADOS: a flutuação infinita foi removida a pedido — em
+     três cards lado a lado ela puxava o olho o tempo todo, competindo com o
+     conteúdo do painel. O invólucro continua existindo para separar o hover
+     (transform do <img>) de qualquer transform futuro do wrapper. */
+  .sys-logo-wrap { position:relative; flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; }
   .sys-logo { position:relative; z-index:1;
     transition:transform .3s cubic-bezier(.22,1.2,.36,1); }
   .sys-card:hover .sys-logo,
@@ -79,19 +79,16 @@
     background:linear-gradient(90deg, transparent, rgba(0,120,60,.08), transparent); }
   .sys-card:hover::after, .sys-card:focus-visible::after { opacity:1; animation:sysBrilho .85s ease-out; }
 
-  /* Entrada dos cards (o 2º entra depois, e as flutuações ficam defasadas) */
+  /* Entrada dos cards (o 2º entra depois do 1º) */
   .sys-row > [class*="col-"] { animation:sysEntra .5s cubic-bezier(.22,1,.36,1) both; }
   .sys-row > [class*="col-"]:nth-child(2) { animation-delay:.1s; }
-  .sys-row > [class*="col-"]:nth-child(2) .sys-logo-wrap { animation-delay:-1.6s; }
   .sys-row > [class*="col-"]:nth-child(3) { animation-delay:.2s; }
-  .sys-row > [class*="col-"]:nth-child(3) .sys-logo-wrap { animation-delay:-3.1s; }
 
-  @keyframes sysFlutua { 0%,100% { transform:translateY(-3px); } 50% { transform:translateY(3px); } }
   @keyframes sysBrilho { from { transform:translateX(0) skewX(-18deg); } to { transform:translateX(440%) skewX(-18deg); } }
   @keyframes sysEntra  { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
 
   @media (prefers-reduced-motion: reduce) {
-    .sys-logo-wrap, .sys-row > [class*="col-"] { animation:none; }
+    .sys-row > [class*="col-"] { animation:none; }
     .sys-card::after { display:none; }
     .sys-card:hover .sys-logo, .sys-card:focus-visible .sys-logo { transform:scale(1.06); }
   }
