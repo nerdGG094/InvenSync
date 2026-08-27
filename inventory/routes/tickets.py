@@ -20,6 +20,7 @@ from ..models.ticket import Ticket
 from ..models.user import User
 from ..services import people, audit, mailer
 from ..services.exports import xlsx_response
+from ..services.pagination import paginate
 
 STATUS_LABELS = dict(STATUS_CHOICES)
 
@@ -152,7 +153,14 @@ def list_view():
     if sla == "late":
         items = [t for t in items if t.sla_overdue]
 
-    return render_template("tickets/list.html", items=items, q=q, status=status,
+    # Paginação POR ÚLTIMO, e isso é obrigatório: acima ainda se filtra em
+    # Python (escopo do usuário comum e o recorte de SLA atrasado). Fatiar
+    # antes desses filtros devolveria páginas pela metade e contagem errada.
+    # Os contadores do topo (totals/overdue_total) seguem vindo do banco e
+    # continuam falando do conjunto inteiro, não da página.
+    items, pag = paginate(items)
+
+    return render_template("tickets/list.html", items=items, pag=pag, q=q, status=status,
                            priority=priority, sla=sla, period=period, date_from=date_from_s,
                            date_to=date_to_s, totals=totals, overdue_total=overdue_total,
                            is_admin=current_user.is_admin)

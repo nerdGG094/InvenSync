@@ -240,3 +240,44 @@ def test_common_user_cannot_edit_or_delete(app, common_client, common_email):
 
 def test_export_requires_admin(common_client):
     assert common_client.get("/tickets/export").status_code == 403
+
+
+# --------------------------------------------------------------------------- #
+# Paginação da lista
+# --------------------------------------------------------------------------- #
+def _abre_varios(app, uid, quantos, prefixo):
+    with app.app_context():
+        for i in range(quantos):
+            ticket_repo.create_ticket(opened_by_id=uid, title=f"{MARK} {prefixo} {i:02d}",
+                                      category="outro", priority="media", status="aberto")
+
+
+def test_lista_pagina_de_20_em_20(app, auth_client, admin_email):
+    """A lista fatia em 20 por página e a 2ª página traz o resto."""
+    aid = _admin_id(app, admin_email)
+    _abre_varios(app, aid, 25, "pag")
+
+    html = auth_client.get("/tickets?period=todos&q=" + MARK).get_data(as_text=True)
+    assert html.count('class="tk-card"') == 20
+    assert "Página 1 de 2" in html
+
+    html2 = auth_client.get("/tickets?period=todos&page=2&q=" + MARK).get_data(as_text=True)
+    assert html2.count('class="tk-card"') == 5
+
+
+def test_paginacao_vem_depois_do_filtro_do_usuario_comum(app, common_client,
+                                                         admin_email, common_email):
+    """O escopo do usuário comum é aplicado ANTES de fatiar a página.
+
+    Guarda contra a regressão óbvia: paginar a lista crua e só depois filtrar
+    em Python devolveria uma página vazia — as 20 primeiras seriam do admin e
+    todas cairiam no filtro, escondendo o chamado do próprio usuário.
+    """
+    aid = _admin_id(app, admin_email)
+    cid = _common_id(app, common_email)
+    _abre_varios(app, aid, 25, "do admin")
+    _abre_varios(app, cid, 1, "meu")
+
+    html = common_client.get("/tickets?period=todos").get_data(as_text=True)
+    assert html.count('class="tk-card"') == 1
+    assert "Página 1 de" not in html      # 1 item não gera paginador
