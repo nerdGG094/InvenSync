@@ -191,10 +191,10 @@
        que era largo e baixo; a 28px o monograma ficava miúdo.
        Fora da régua (mobile) o logo ganha uma pastilha vermelha própria; no
        desktop a faixa inteira é vermelha e a pastilha é desfeita. */
-    /* Invólucro do monograma: existe para a camada "tech" ter uma caixa
-       exatamente do tamanho do logo para se sobrepor. */
-    .brand-mark{ position: relative; display: inline-flex; z-index: 1; }
-    .brand-mark-tech{ display: none; }   /* só entra em cena na régua */
+    /* Fundo Matrix da faixa da marca — adaptado de uiverse.io/tarantino421
+       ("box/matrix/code-line"). Fora da régua não existe: no mobile a marca é
+       uma pastilha pequena e a chuva de caracteres viraria chiado. */
+    .brand-matrix{ display: none; }
     .brand-logo{ height: 36px; width: auto; display: inline-block; object-fit: contain;
       background: var(--band); border-radius: 10px; padding: 5px 9px;
       box-shadow: 0 0 0 1px var(--band-line); }
@@ -234,70 +234,68 @@
          do menu. As margens negativas sangram o padding do container (9px nos
          lados) e o do .navbar (10px no topo) para a faixa pintar a régua
          inteira, de borda a borda — sem isso ela ficaria uma ilha no meio. */
+      /* A faixa da marca NÃO é mais vinho: o fundo dela é o Matrix.
+         As cores do componente ficam declaradas aqui, e não no .brand-matrix,
+         porque custom property só herda para baixo — a faixa precisa da cor de
+         fundo para não piscar vinho antes da chuva pintar, e o filho herda. */
       .navbar-brand {
+        --clr-text: #F6F4EB;
+        --clr-code-line: #43ff85;
+        --clr-matrix: #020204;
+        /* ÚNICO botão de volume da velocidade da chuva. O original usava .2s,
+           calibrado para um botão grande; nesta faixa de 58px aquilo desce
+           rápido demais. Maior = mais lento. */
+        --matrix-vel: .7s;
         justify-content: center; position: relative; overflow: hidden;
         margin: -10px -9px 10px !important; padding: 12px 0 11px;
-        background:
-          repeating-linear-gradient(180deg, rgba(255,255,255,.045) 0 1px, transparent 1px 4px),
-          linear-gradient(180deg, var(--band), var(--band-2));
-        border-bottom: 1px solid var(--band-line);
+        background: var(--clr-matrix);
+        border-bottom: 1px solid #243024;
       }
       /* Separador: fio amarelo da marca esmaecendo nas pontas, sobre a borda.
-         Era bottom:-1px; com o overflow:hidden acima — que segura a linha do
-         raio-x dentro da faixa — aquele 1px de sangria seria cortado fora. */
+         Era bottom:-1px; com o overflow:hidden acima — que segura a chuva do
+         Matrix dentro da faixa — aquele 1px de sangria seria cortado fora. */
       .navbar-brand::after {
         content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; z-index: 2;
         background: linear-gradient(90deg, transparent, var(--band-accent), transparent);
       }
-      /* RAIO-X: uma linha clara varre a faixa de cima a baixo, POR TRÁS do
-         monograma. Anima `transform` (composita na GPU, sem repaint) e sai de
-         quadro entre uma passada e outra — é uma varredura, não um pisca-pisca
-         contínuo numa régua que fica aberta o dia inteiro.
-         Ciclo de 3s: a linha leva ~1,65s para descer (mesma velocidade de
-         antes, para não virar risco nervoso) e some por ~1,35s. */
-      .navbar-brand::before {
-        content: ""; position: absolute; left: 0; right: 0; top: 0; height: 34%;
-        z-index: 0; pointer-events: none;
-        background: linear-gradient(180deg, transparent,
-          rgba(255,231,168,.16) 42%, rgba(255,246,224,.55) 50%,
-          rgba(255,231,168,.16) 58%, transparent);
-        animation: brandRaioX 3s ease-in-out infinite;
+
+      /* ---- Fundo Matrix (uiverse.io / tarantino421) ----
+         Duas adaptações em relação ao original:
+         1) O original usa z-index:-1 porque o .box dele não tem fundo próprio.
+            Aqui a faixa pinta o preto do Matrix, então -1 jogaria a chuva atrás
+            dela: vai a 0, e o monograma sobe para 1.
+         2) Fonte, colunas e VELOCIDADE encolhidas: a faixa tem ~70x58px, não
+            é um botão — ver --matrix-vel. Note que o --i de cada coluna manda
+            na duração E na distância ao mesmo tempo, então todas caem na mesma
+            velocidade; o que ele varia é o quanto cada uma percorre antes de
+            repetir, que é o que dá o desencontro entre elas.
+         O `opacity`/hover do original saiu: aqui a chuva é o fundo padrão da
+         marca, visível e correndo o tempo todo — foi o pedido. */
+      .brand-matrix {
+        display: flex; position: absolute; inset: 0; z-index: 0;
+        justify-content: center; align-items: center; gap: 2px;
+        overflow: hidden; background: var(--clr-matrix);
+        pointer-events: none;
       }
-      @keyframes brandRaioX {
-        0%   { transform: translateY(-130%); }
-        55%  { transform: translateY(330%); }
-        100% { transform: translateY(330%); }
+      .brand-matrix .code-line {
+        position: relative; display: flex; flex-direction: column-reverse;
+        min-height: .6rem; min-width: .6rem;
+        animation: matrixQueda calc(var(--matrix-vel) * var(--i)) linear infinite;
       }
-      /* O RAIO-X REVELA A VERSÃO "TECH" DO MONOGRAMA.
-         Não é um segundo arquivo: é o próprio is2.png usado como máscara
-         (o PNG é branco sobre transparente, então o alpha já é a forma) e
-         preenchido com verde neon riscado por linhas finas.
-         Só é ligada aqui, na régua: fora dela a <img> tem padding da pastilha
-         vermelha, e a máscara — que se ajusta à caixa do invólucro — cairia
-         desalinhada do desenho. */
-      .brand-mark-tech {
-        display: block; position: absolute; inset: 0; pointer-events: none;
-        -webkit-mask: url({{ url_for('static', filename='logos/is2.png') }}) center/contain no-repeat;
-                mask: url({{ url_for('static', filename='logos/is2.png') }}) center/contain no-repeat;
-        background:
-          repeating-linear-gradient(180deg, rgba(0,20,8,.55) 0 1px, transparent 1px 3px),
-          linear-gradient(180deg, #a8ffcb, var(--brand-2) 55%, var(--brand));
-        opacity: 0;
-        animation: brandTech 3s ease-in-out infinite;
+      .brand-matrix .code {
+        font-family: var(--bs-font-monospace); font-size: .5rem; line-height: 1.05;
+        color: var(--clr-code-line); opacity: .5;
+        text-shadow: 20px 100px var(--clr-code-line), -20px -50px var(--clr-code-line);
       }
-      /* Sincronia com o feixe: mesma duração (3s) e mesmo easing, e o pico em
-         27% — metade do trecho de descida (0→55%). Como o ease-in-out é
-         simétrico, na metade do TEMPO o feixe está na metade do CAMINHO, ou
-         seja, exatamente sobre o monograma. Mexeu em um, mexa no outro. */
-      @keyframes brandTech {
-        0%, 18%  { opacity: 0; }
-        27%      { opacity: 1; }
-        36%, 100%{ opacity: 0; }
+      .brand-matrix .code:first-child { color: var(--clr-text); opacity: 1; }
+      @keyframes matrixQueda {
+        0%   { transform: translateY(calc(-50% * var(--i))); }
+        100% { transform: translateY(calc(50% * var(--i))); }
       }
       /* Na régua a faixa já é vermelha — a pastilha do logo sai de cena.
-         O z-index não é enfeite: o ::before acima é posicionado e, sem ele,
-         pintaria POR CIMA do monograma (elemento posicionado vence conteúdo
-         estático na mesma pilha) — o oposto do efeito pedido. */
+         O z-index não é enfeite: o .brand-matrix é posicionado e, sem ele, a
+         chuva pintaria POR CIMA do monograma (elemento posicionado vence
+         conteúdo estático na mesma pilha) — queremos ela ATRÁS. */
       .navbar.navbar-expand-lg .brand-logo {
         background: none; box-shadow: none; padding: 0;
         position: relative; z-index: 1;
@@ -428,10 +426,9 @@
       }
     }
 
-    /* A varredura é enfeite: quem pediu menos movimento não recebe nenhum. */
+    /* A chuva é enfeite: quem pediu menos movimento fica com o quadro parado. */
     @media (prefers-reduced-motion: reduce) {
-      .navbar-brand::before,
-      .brand-mark-tech { animation: none; opacity: 0; }
+      .brand-matrix .code-line { animation: none; }
     }
   </style>
 </head>
@@ -443,14 +440,18 @@
     <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('intro.index') }}" title="Tela inicial">
       {# Sempre o monograma branco: o fundo dele é a faixa vermelha em qualquer
          tema, então a variante verde (para fundo claro) não serve mais aqui. #}
-      <span class="brand-mark">
-        <img class="brand-logo" src="{{ url_for('static', filename='logos/is2.png') }}" alt="InvenSync">
-        {# Camada "tech": o MESMO monograma usado como máscara, preenchido com
-           verde neon riscado. Só acende no instante em que o raio-x cruza o
-           logo (ver .brand-mark-tech). aria-hidden porque é puro enfeite — o
-           texto alternativo já está na <img> acima. #}
-        <span class="brand-mark-tech" aria-hidden="true"></span>
+      {# Chuva Matrix atrás do monograma (só na régua, só no hover). O --i de
+         cada coluna define velocidade E amplitude da queda no @keyframes, por
+         isso os valores são diferentes entre si: iguais, as colunas cairiam
+         em bloco. aria-hidden porque é enfeite — não há texto a anunciar. #}
+      <span class="brand-matrix" aria-hidden="true">
+        {% for col in [(4,'A1C0E7'), (7,'0X9B2F'), (5,'3K7D1A'), (8,'F0R5T2'), (6,'8Z4Q6M'), (9,'S1N7C0')] %}
+        <span class="code-line" style="--i:{{ col[0] }}">
+          {% for ch in col[1] %}<span class="code">{{ ch }}</span>{% endfor %}
+        </span>
+        {% endfor %}
       </span>
+      <img class="brand-logo" src="{{ url_for('static', filename='logos/is2.png') }}" alt="InvenSync">
       <span class="d-flex flex-column">
         <span class="brand-name">Inven<span class="sync">Sync</span></span>
         <span class="brand-tag">>> Tech-Almox</span>
