@@ -190,11 +190,11 @@
     /* Marca quadrada (monograma IS) — mais alta que o antigo logotipo deitado,
        que era largo e baixo; a 28px o monograma ficava miúdo.
        Fora da régua (mobile) o logo ganha uma pastilha vermelha própria; no
-       desktop a faixa inteira é vermelha e a pastilha é desfeita. */
-    /* Fundo Matrix da faixa da marca — adaptado de uiverse.io/tarantino421
-       ("box/matrix/code-line"). Fora da régua não existe: no mobile a marca é
-       uma pastilha pequena e a chuva de caracteres viraria chiado. */
-    .brand-matrix{ display: none; }
+       desktop a faixa inteira vira a bandeira e a pastilha é desfeita. */
+    /* Bandeira do Brasil como fundo da faixa da marca (7 de Setembro).
+       Fora da régua não existe: no mobile a marca é uma pastilha de 36px, sem
+       espaço para desenhar bandeira nenhuma. */
+    .brand-brasil{ display: none; }
     .brand-logo{ height: 36px; width: auto; display: inline-block; object-fit: contain;
       background: var(--band); border-radius: 10px; padding: 5px 9px;
       box-shadow: 0 0 0 1px var(--band-line); }
@@ -234,67 +234,76 @@
          do menu. As margens negativas sangram o padding do container (9px nos
          lados) e o do .navbar (10px no topo) para a faixa pintar a régua
          inteira, de borda a borda — sem isso ela ficaria uma ilha no meio. */
-      /* A faixa da marca NÃO é mais vinho: o fundo dela é o Matrix.
-         As cores do componente ficam declaradas aqui, e não no .brand-matrix,
-         porque custom property só herda para baixo — a faixa precisa da cor de
-         fundo para não piscar vinho antes da chuva pintar, e o filho herda. */
+      /* O fundo da faixa da marca é a BANDEIRA DO BRASIL (7 de Setembro).
+         As cores ficam declaradas aqui, e não no .brand-brasil, porque custom
+         property só herda para baixo — a faixa precisa do verde por conta
+         própria, senão pisca outro fundo antes da bandeira pintar. */
       .navbar-brand {
-        --clr-text: #F6F4EB;
-        --clr-code-line: #43ff85;
-        --clr-matrix: #020204;
-        /* ÚNICO botão de volume da velocidade da chuva. O original usava .2s,
-           calibrado para um botão grande; nesta faixa de 58px aquilo desce
-           rápido demais. Maior = mais lento. */
-        --matrix-vel: .7s;
+        --br-verde:   #009739;
+        --br-amarelo: #FFDF00;
+        --br-azul:    #002776;
         justify-content: center; position: relative; overflow: hidden;
         margin: -10px -9px 10px !important; padding: 12px 0 11px;
-        background: var(--clr-matrix);
-        border-bottom: 1px solid #243024;
+        background: var(--br-verde);
+        border-bottom: 1px solid #0b5a2a;
       }
       /* Separador: fio amarelo da marca esmaecendo nas pontas, sobre a borda.
-         Era bottom:-1px; com o overflow:hidden acima — que segura a chuva do
-         Matrix dentro da faixa — aquele 1px de sangria seria cortado fora. */
+         Era bottom:-1px; com o overflow:hidden acima — que segura a bandeira
+         dentro da faixa — aquele 1px de sangria seria cortado fora. */
       .navbar-brand::after {
         content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; z-index: 2;
         background: linear-gradient(90deg, transparent, var(--band-accent), transparent);
       }
 
-      /* ---- Fundo Matrix (uiverse.io / tarantino421) ----
-         Duas adaptações em relação ao original:
-         1) O original usa z-index:-1 porque o .box dele não tem fundo próprio.
-            Aqui a faixa pinta o preto do Matrix, então -1 jogaria a chuva atrás
-            dela: vai a 0, e o monograma sobe para 1.
-         2) Fonte, colunas e VELOCIDADE encolhidas: a faixa tem ~70x58px, não
-            é um botão — ver --matrix-vel. Note que o --i de cada coluna manda
-            na duração E na distância ao mesmo tempo, então todas caem na mesma
-            velocidade; o que ele varia é o quanto cada uma percorre antes de
-            repetir, que é o que dá o desencontro entre elas.
-         O `opacity`/hover do original saiu: aqui a chuva é o fundo padrão da
-         marca, visível e correndo o tempo todo — foi o pedido. */
-      .brand-matrix {
-        display: flex; position: absolute; inset: 0; z-index: 0;
-        justify-content: center; align-items: center; gap: 2px;
-        overflow: hidden; background: var(--clr-matrix);
+      /* ---- BANDEIRA DO BRASIL, desenhada em CSS ----
+         Sem arquivo de imagem: campo verde + losango recortado por clip-path +
+         disco azul. Num espaço de ~70x58px um PNG de bandeira ficaria borrado,
+         e um SVG seria mais um arquivo para manter — as três formas são
+         geométricas, o CSS dá conta.
+         O .brand-brasil é posicionado e tem z-index, então ABRE uma pilha
+         própria: os z-index dos filhos abaixo só valem aqui dentro, e o
+         monograma (z-index 1 na faixa) segue acima da bandeira inteira. */
+      .brand-brasil {
+        display: block; position: absolute; inset: 0; z-index: 0;
+        overflow: hidden; background: var(--br-verde);
         pointer-events: none;
       }
-      .brand-matrix .code-line {
-        position: relative; display: flex; flex-direction: column-reverse;
-        min-height: .6rem; min-width: .6rem;
-        animation: matrixQueda calc(var(--matrix-vel) * var(--i)) linear infinite;
+      .bb-losango {
+        position: absolute; inset: 0; z-index: 1; background: var(--br-amarelo);
+        clip-path: polygon(50% 8%, 92% 50%, 50% 92%, 8% 50%);
       }
-      .brand-matrix .code {
-        font-family: var(--bs-font-monospace); font-size: .5rem; line-height: 1.05;
-        color: var(--clr-code-line); opacity: .5;
-        text-shadow: 20px 100px var(--clr-code-line), -20px -50px var(--clr-code-line);
+      .bb-globo {
+        position: absolute; z-index: 2; left: 50%; top: 50%;
+        width: 46%; aspect-ratio: 1; transform: translate(-50%, -50%);
+        border-radius: 50%; background: var(--br-azul);
       }
-      .brand-matrix .code:first-child { color: var(--clr-text); opacity: 1; }
-      @keyframes matrixQueda {
-        0%   { transform: translateY(calc(-50% * var(--i))); }
-        100% { transform: translateY(calc(50% * var(--i))); }
+      /* O monograma é BRANCO e fica bem no meio da faixa. Sobre o disco azul
+         ele lê perfeitamente, mas as pontas invadem o amarelo — e branco sobre
+         #FFDF00 é ilegível. Esta sombra escurece só o miolo, onde o logo está,
+         e deixa as quinas verdes e amarelas acesas. Sem ela a bandeira come o
+         logo: não é ajuste estético. */
+      .brand-brasil::after {
+        content: ""; position: absolute; inset: 0; z-index: 3;
+        background: radial-gradient(ellipse at center,
+          rgba(0,0,0,.55), rgba(0,0,0,.18) 62%, rgba(0,0,0,0));
       }
-      /* Na régua a faixa já é vermelha — a pastilha do logo sai de cena.
-         O z-index não é enfeite: o .brand-matrix é posicionado e, sem ele, a
-         chuva pintaria POR CIMA do monograma (elemento posicionado vence
+      /* Brilho de tecido: uma faixa clara atravessa a bandeira de tempos em
+         tempos, como pano ao vento. Mesmo padrão do .sys-card::after do
+         painel — anima transform e fica fora de quadro entre as passadas, em
+         vez de animar sem parar numa régua que fica aberta o dia inteiro. */
+      .bb-brilho {
+        position: absolute; z-index: 4; top: -40%; bottom: -40%; left: -60%; width: 45%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,.22), transparent);
+        animation: brBrilho 5s ease-in-out infinite;
+      }
+      @keyframes brBrilho {
+        0%   { transform: translateX(0) skewX(-18deg); }
+        45%  { transform: translateX(330%) skewX(-18deg); }
+        100% { transform: translateX(330%) skewX(-18deg); }
+      }
+      /* Na régua a faixa já é a bandeira — a pastilha do logo sai de cena.
+         O z-index não é enfeite: o .brand-brasil é posicionado e, sem ele, a
+         bandeira pintaria POR CIMA do monograma (elemento posicionado vence
          conteúdo estático na mesma pilha) — queremos ela ATRÁS. */
       .navbar.navbar-expand-lg .brand-logo {
         background: none; box-shadow: none; padding: 0;
@@ -426,9 +435,10 @@
       }
     }
 
-    /* A chuva é enfeite: quem pediu menos movimento fica com o quadro parado. */
+    /* O vento é enfeite: quem pediu menos movimento fica com a bandeira
+       parada — ela continua lá, só não venta. */
     @media (prefers-reduced-motion: reduce) {
-      .brand-matrix .code-line { animation: none; }
+      .bb-brilho { animation: none; opacity: 0; }
     }
   </style>
 </head>
@@ -438,18 +448,15 @@
     {# O logo leva à Apresentação (tela inicial), não ao Painel — o Painel já
        tem o próprio ícone na régua. #}
     <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('intro.index') }}" title="Tela inicial">
-      {# Sempre o monograma branco: o fundo dele é a faixa vermelha em qualquer
+      {# Sempre o monograma branco: o fundo dele é a faixa colorida em qualquer
          tema, então a variante verde (para fundo claro) não serve mais aqui. #}
-      {# Chuva Matrix atrás do monograma (só na régua, só no hover). O --i de
-         cada coluna define velocidade E amplitude da queda no @keyframes, por
-         isso os valores são diferentes entre si: iguais, as colunas cairiam
-         em bloco. aria-hidden porque é enfeite — não há texto a anunciar. #}
-      <span class="brand-matrix" aria-hidden="true">
-        {% for col in [(4,'A1C0E7'), (7,'0X9B2F'), (5,'3K7D1A'), (8,'F0R5T2'), (6,'8Z4Q6M'), (9,'S1N7C0')] %}
-        <span class="code-line" style="--i:{{ col[0] }}">
-          {% for ch in col[1] %}<span class="code">{{ ch }}</span>{% endfor %}
-        </span>
-        {% endfor %}
+      {# Bandeira do Brasil atrás do monograma (7 de Setembro), só na régua.
+         Toda desenhada em CSS — ver .brand-brasil. aria-hidden porque é
+         enfeite: não há informação aqui que um leitor de tela deva anunciar. #}
+      <span class="brand-brasil" aria-hidden="true">
+        <span class="bb-losango"></span>
+        <span class="bb-globo"></span>
+        <span class="bb-brilho"></span>
       </span>
       <img class="brand-logo" src="{{ url_for('static', filename='logos/is2.png') }}" alt="InvenSync">
       <span class="d-flex flex-column">
