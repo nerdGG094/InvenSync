@@ -212,10 +212,16 @@ def _rects_do_payload(texto):
         return []
 
     def limpa(r):
+        # Exige EXATAMENTE 4 números. O fallback por regex pode casar um Rect
+        # truncado (ex.: [798,116]); sem este guard, `limpa` devolveria uma lista
+        # curta que passa no filtro `if r` e depois estoura IndexError/ValueError
+        # em _mesmo_objeto (b[2]/b[3]) ou ao gravar (rect_x1..= rect) — o que
+        # derruba o ciclo de leitura e força a reconexão do listener.
         try:
-            return [int(v) for v in r[:4]]
+            vals = [int(v) for v in r[:4]]
         except (ValueError, TypeError):
             return None
+        return vals if len(vals) == 4 else None
 
     try:
         dados = json.loads(corpo[ini:])
