@@ -495,9 +495,15 @@ def create_app():
         visita anônima a uma página protegida viraria ruído no log."""
         from flask import session
         from .services import errorlog
+        from .routes.auth import PENDING_KEY
         tinha_sessao = bool(request.cookies.get(app.config["SESSION_COOKIE_NAME"]))
         tinha_lembrete = bool(request.cookies.get(app.config["REMEMBER_COOKIE_NAME"]))
-        if tinha_sessao or tinha_lembrete:
+        # 2FA em andamento (senha ok, aguardando o código) NÃO é sessão perdida:
+        # a sessão só tem `pending_2fa_uid` e ainda não há `_user_id`. Um poller de
+        # fundo (ex.: tickets.api_recent) batendo aqui nesse meio-tempo é esperado
+        # — logar isso só polui o log e mascara as colisões de cookie de verdade.
+        em_2fa = bool(session.get(PENDING_KEY))
+        if (tinha_sessao or tinha_lembrete) and not em_2fa:
             # As CHAVES da sessão (nunca os valores) sao o dado decisivo:
             #   vazio       -> o cookie chegou mas nao decodificou (assinatura /
             #                  SECRET_KEY diferente) ou expirou
