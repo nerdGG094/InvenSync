@@ -157,5 +157,8 @@ def snapshot(d, pw, ch, ttl=5.0, timeout=8.0):
 
     _registrar(d.id, True)
     with _lock:
-        _cache[key] = (now, data)
+        # Carimba com o tempo AGORA (após o fetch, que pode levar até `timeout`):
+        # usar o `now` do início gravaria a entrada já vencida e, com TTL live
+        # baixo, todo frame re-bateria no DVR — exatamente a carga que evitamos.
+        _cache[key] = (time.time(), data)
     return data

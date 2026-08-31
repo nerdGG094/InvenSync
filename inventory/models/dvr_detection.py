@@ -6,8 +6,9 @@ class DvrDetection(db.Model):
 
     Quem classifica é o próprio DVR — o InvenSync só escuta o fluxo de eventos
     (`services/dvr_events.py`) e guarda o histórico. O retângulo vem na escala
-    0-8191 do fabricante; `rect_*_pct` já converte para % da imagem, que é o que
-    o navegador precisa para desenhar a caixa sobre o vídeo.
+    1024 do fabricante (MEDIDA — ver `ESCALA` abaixo; NÃO é 0-8191); `rect_pct`
+    já converte para % da imagem, que é o que o navegador precisa para desenhar
+    a caixa sobre o vídeo.
     """
     __tablename__ = "dvr_detection"
 
@@ -19,7 +20,7 @@ class DvrDetection(db.Model):
     # human | vehicle
     object_type = db.Column(db.String(12), nullable=False, index=True)
 
-    # Retângulo do objeto na escala do DVR (0-8191). Nulo se o evento não trouxe.
+    # Retângulo do objeto na escala do DVR (1024 — ver ESCALA). Nulo se ausente.
     rect_x1 = db.Column(db.Integer, nullable=True)
     rect_y1 = db.Column(db.Integer, nullable=True)
     rect_x2 = db.Column(db.Integer, nullable=True)
