@@ -149,3 +149,58 @@ def test_dev_commit_py_nao_derruba_o_commit():
                 "BACKUP_SCHEDULER_ENABLED"):
         assert var in fonte, f"{var} precisa ser desligado no script efemero"
     assert "sys.exit(0)" in fonte
+
+
+def test_commit_de_rotina_nao_vira_card(app):
+    """O CARREG-LOGI comita um backup automatico a cada 15 min: isso sozinho
+    encheria o board de cards inuteis."""
+    _purgar(app)
+    from inventory.services import dev_commit
+    with app.app_context():
+        rotinas = ["Backup automatico 2026-09-01 10:05:09 PYTEST",
+                   "backup automático 2026-09-01 10:20:09 PYTEST",
+                   "WIP PYTEST ajustando o layout",
+                   "auto-commit PYTEST do agendador"]
+        # hash distinto por caso: com o mesmo hash, o dedupe mascararia a regra
+        for i, assunto in enumerate(rotinas):
+            r = dev_commit.registrar(mensagem=assunto, hash_curto=f"a1b2c{i}d")
+            assert r["acao"] == "ignorado", assunto
+        # controle: um commit normal com hash igual aos de cima passa
+        ok = dev_commit.registrar(mensagem="feat: PYTEST controle da rotina",
+                                  hash_curto="a1b2c9d")
+        assert ok["acao"] == "criou"
+
+
+def test_projeto_vira_primeira_tag(app, limpar):
+    """O board recebe varios repositorios — o card precisa dizer de onde veio."""
+    from inventory.extensions import db
+    from inventory.models.dev import DevTask
+    from inventory.services import dev_commit
+    with app.app_context():
+        r = dev_commit.registrar(mensagem="fix(menu): PYTEST vindo de outro repo",
+                                 hash_curto="333c1111", projeto="CARREG-LOGI")
+        limpar.append(r["task_id"])
+        t = db.session.get(DevTask, r["task_id"])
+        assert t.tags == "carreg-logi, fix, menu"
+
+
+def test_mesmo_titulo_em_projetos_diferentes_nao_se_mistura(app, limpar):
+    """Dois repos podem ter o mesmo assunto de commit sem ser o mesmo trabalho."""
+    from inventory.services import dev_commit
+    with app.app_context():
+        a = dev_commit.registrar(mensagem="docs: PYTEST atualiza o CLAUDE.md",
+                                 hash_curto="444d1111", projeto="invensync")
+        b = dev_commit.registrar(mensagem="docs: PYTEST atualiza o CLAUDE.md",
+                                 hash_curto="555e1111", projeto="carreg-logi")
+        limpar.extend([a["task_id"], b["task_id"]])
+        assert a["acao"] == "criou" and b["acao"] == "criou"
+        assert a["task_id"] != b["task_id"]
+
+
+def test_hook_serve_qualquer_repo(app):
+    """O hook instalado em outro projeto chama o dev_commit.py do InvenSync."""
+    import pathlib
+    hook = pathlib.Path("setup/hooks/post-commit").read_text(encoding="utf-8")
+    assert "@INVENSYNC@" in hook          # modelo: caminho entra na instalacao
+    assert "--repo" in hook               # e o commit lido e o do repo local
+    assert pathlib.Path("dev_commit.py").read_text(encoding="utf-8").count("--repo") >= 1

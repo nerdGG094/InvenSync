@@ -1,6 +1,8 @@
 """Registra commits no board DEV — o kanban se alimenta do que a gente edita.
 
-Chamado pelo hook `post-commit` (via `dev_commit.py` na raiz). A regra:
+Chamado pelo hook `post-commit` (via `dev_commit.py` na raiz), tanto deste
+repositorio quanto de outros (CARREG-LOGI, ...) — o board e de todos, e cada
+card leva o nome do projeto como primeira tag. A regra:
 
 * commit cuja mensagem cita ``#12``  -> vira **atualizacao** da tarefa 12;
 * commit com titulo igual ao de um card recente (3 dias, fora de "Concluido")
@@ -39,10 +41,22 @@ _RE_CABECALHO = re.compile(r"^(?P<tipo>[a-z]+)(?:\((?P<escopo>[^)]+)\))?!?:\s*")
 # que explica a regra no corpo ("[skip-kanban] ignora o commit") nao pode
 # ignorar a si mesma — foi o que aconteceu no commit que criou este arquivo.
 _RE_PULAR = re.compile(r"\[(skip[- ]kanban|no[- ]kanban)\]", re.I)
+# Commits de rotina que nao sao "trabalho": o CARREG-LOGI comita um backup
+# automatico a cada 15 min, o que sozinho encheria o board de cards inuteis.
+# Sobrescrevivel por DEV_COMMIT_IGNORAR (regex, aplicada ao assunto).
+IGNORAR_PADRAO = r"^(backup autom[aá]tico|wip\b|auto[- ]?commit)"
 
 
 def _cfg(nome: str, padrao: str) -> str:
     return (os.environ.get(nome) or padrao).strip()
+
+
+def _e_rotina(assunto: str) -> bool:
+    """Commit automatico/rotineiro que nao merece card."""
+    try:
+        return bool(re.search(_cfg("DEV_COMMIT_IGNORAR", IGNORAR_PADRAO), assunto, re.I))
+    except re.error:      # regex mal configurada no .env nao pode quebrar o hook
+        return bool(re.search(IGNORAR_PADRAO, assunto, re.I))
 
 
 def _usuario():
@@ -64,13 +78,17 @@ def _ja_registrado(hash_curto: str) -> bool:
     return bool(DevTask.query.filter(DevTask.code_ref.ilike(alvo)).first())
 
 
-def _card_recente(titulo: str):
-    """Card com o mesmo titulo, recente e ainda aberto (pega o --amend)."""
+def _card_recente(titulo: str, projeto: str = ""):
+    """Card com o mesmo titulo, recente e ainda aberto (pega o --amend).
+
+    Filtra pelo projeto: dois repositorios podem ter commits de mesmo titulo
+    ("CLAUDE.md: ...") sem serem o mesmo trabalho."""
     limite = datetime.now() - timedelta(days=DIAS_DEDUPE)
-    return (DevTask.query
-            .filter(DevTask.title == titulo, DevTask.status != "done",
-                    DevTask.created_at >= limite)
-            .order_by(DevTask.id.desc()).first())
+    q = DevTask.query.filter(DevTask.title == titulo, DevTask.status != "done",
+                             DevTask.created_at >= limite)
+    if projeto:
+        q = q.filter(DevTask.tags.ilike(f"%{projeto}%"))
+    return q.order_by(DevTask.id.desc()).first()
 
 
 def _partes(mensagem: str):
@@ -80,14 +98,14 @@ def _partes(mensagem: str):
     return assunto, corpo
 
 
-def _classificar(assunto: str):
-    """(prioridade, tags) a partir do cabecalho convencional `tipo(escopo):`."""
+def _classificar(assunto: str, projeto: str = ""):
+    """(prioridade, tags) a partir do cabecalho convencional `tipo(escopo):`.
+
+    O projeto entra sempre como primeira tag — o board recebe varios repos."""
     m = _RE_CABECALHO.match(assunto or "")
-    if not m:
-        return "media", None
-    tipo = (m.group("tipo") or "").lower()
-    escopo = (m.group("escopo") or "").strip().lower()
-    tags = [t for t in (tipo, escopo) if t]
+    tipo = (m.group("tipo") or "").lower() if m else ""
+    escopo = (m.group("escopo") or "").strip().lower() if m else ""
+    tags = [t for t in (projeto.lower(), tipo, escopo) if t]
     return _PRIORIDADE.get(tipo, "media"), (", ".join(tags) or None)
 
 
@@ -107,13 +125,15 @@ def _texto_update(assunto: str, corpo: str, arquivos, autor: str | None) -> str:
 
 
 def registrar(mensagem: str, hash_curto: str = "", url_commit: str = "",
-              arquivos=None, autor: str = "") -> dict:
+              arquivos=None, autor: str = "", projeto: str = "") -> dict:
     """Joga um commit no board. Devolve o que foi feito (para o log do hook)."""
     assunto, corpo = _partes(mensagem)
     if not assunto:
         return {"acao": "ignorado", "motivo": "mensagem vazia"}
     if assunto.startswith("Merge ") or _RE_PULAR.search(assunto):
         return {"acao": "ignorado", "motivo": "merge ou [skip-kanban]"}
+    if _e_rotina(assunto):
+        return {"acao": "ignorado", "motivo": "commit de rotina (backup/wip)"}
     if _ja_registrado(hash_curto):
         return {"acao": "ignorado", "motivo": f"commit {hash_curto} ja registrado"}
 
@@ -128,11 +148,11 @@ def registrar(mensagem: str, hash_curto: str = "", url_commit: str = "",
         tarefa = db.session.get(DevTask, int(m.group(1)))
     # 2) mesmo titulo, card recente e aberto -> foi um --amend/continuacao
     if tarefa is None:
-        tarefa = _card_recente(assunto[:200])
+        tarefa = _card_recente(assunto[:200], projeto)
     criado = False
 
     if tarefa is None:
-        prioridade, tags = _classificar(assunto)
+        prioridade, tags = _classificar(assunto, projeto)
         sprint = _sprint_ativa()
         status = _cfg("DEV_COMMIT_STATUS", STATUS_PADRAO)
         if status not in ("backlog", "todo", "doing", "review", "done"):

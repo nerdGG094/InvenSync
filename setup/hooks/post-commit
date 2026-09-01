@@ -1,18 +1,20 @@
 #!/bin/sh
-# InvenSync — joga o commit recem-feito no board DEV (kanban de desenvolvimento).
+# InvenSync - joga o commit recem-feito no board DEV (kanban de desenvolvimento).
 #
-# Instalado por setup/instalar_hooks.ps1 em .git/hooks/post-commit.
-# O trabalho de verdade esta em dev_commit.py (raiz do projeto).
+# Serve a QUALQUER repositorio: o board e compartilhado, e o trabalho de verdade
+# esta sempre em dev_commit.py do InvenSync (que fala com o banco). O caminho do
+# InvenSync abaixo e preenchido na instalacao por setup/instalar_hooks.ps1.
 #
 # Este hook NUNCA pode falhar um commit: o commit ja aconteceu quando ele roda,
 # entao qualquer problema vira aviso e o hook sai com 0.
 
-raiz="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
-[ -n "$raiz" ] || exit 0
+invensync="@INVENSYNC@"
+repo="$(git rev-parse --show-toplevel 2>/dev/null)"
+[ -n "$repo" ] || exit 0
 
-py="$raiz/.venv/Scripts/python.exe"      # Windows
-[ -x "$py" ] || py="$raiz/.venv/bin/python"
-[ -x "$py" ] || { echo "dev_commit: .venv nao encontrado — kanban nao atualizado." >&2; exit 0; }
+py="$invensync/.venv/Scripts/python.exe"      # Windows
+[ -x "$py" ] || py="$invensync/.venv/bin/python"
+[ -x "$py" ] || { echo "dev_commit: .venv do InvenSync nao encontrado — kanban nao atualizado." >&2; exit 0; }
 
-"$py" "$raiz/dev_commit.py" HEAD
+"$py" "$invensync/dev_commit.py" HEAD --repo "$repo"
 exit 0
