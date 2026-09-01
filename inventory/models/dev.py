@@ -45,6 +45,15 @@ class DevTask(db.Model):
     code_ref = db.Column(db.String(300), nullable=True)      # commit/branch/PR/link
     position = db.Column(db.Integer, nullable=False, default=0, server_default="0")
 
+    due_date = db.Column(db.Date, nullable=True)             # prazo
+    # Quando entrou em "done". Existe separado de updated_at porque este muda a
+    # cada edição — sem done_at não dá para medir ciclo nem desenhar burndown.
+    done_at = db.Column(db.DateTime, nullable=True)
+    # Chamado que originou a tarefa (o app já tem helpdesk; fecha o ciclo)
+    ticket_id = db.Column(db.Integer, db.ForeignKey("ticket.id", ondelete="SET NULL"),
+                          nullable=True, index=True)
+    ticket = db.relationship("Ticket", backref=db.backref("dev_tasks", lazy="dynamic"))
+
     created_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
     created_by = db.relationship("User", foreign_keys=[created_by_id])
     created_at = db.Column(db.DateTime, server_default=db.func.now())
@@ -53,6 +62,25 @@ class DevTask(db.Model):
     @property
     def tag_list(self):
         return [t.strip() for t in (self.tags or "").split(",") if t.strip()]
+
+    @property
+    def checklist_total(self) -> int:
+        return self.checklist.count()
+
+    @property
+    def checklist_feitos(self) -> int:
+        return self.checklist.filter_by(done=True).count()
+
+    @property
+    def checklist_pct(self) -> int:
+        total = self.checklist_total
+        return round(self.checklist_feitos * 100 / total) if total else 0
+
+    @property
+    def atrasada(self) -> bool:
+        """Passou do prazo e ainda não terminou."""
+        from datetime import date
+        return bool(self.due_date and self.status != "done" and self.due_date < date.today())
 
     def __repr__(self) -> str:
         return f"<DevTask id={self.id} {self.status} {self.title!r}>"
@@ -77,3 +105,22 @@ class DevUpdate(db.Model):
 
     def __repr__(self) -> str:
         return f"<DevUpdate id={self.id} task={self.task_id}>"
+
+
+class DevChecklistItem(db.Model):
+    """Subtarefa de um card — é o "%" que aparece no board."""
+    __tablename__ = "dev_checklist"
+
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey("dev_task.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    task = db.relationship("DevTask", backref=db.backref(
+        "checklist", lazy="dynamic", cascade="all, delete-orphan",
+        order_by="DevChecklistItem.position"))
+    text = db.Column(db.String(200), nullable=False)
+    done = db.Column(db.Boolean, nullable=False, default=False, server_default="false")
+    position = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+
+    def __repr__(self) -> str:
+        return f"<DevChecklistItem id={self.id} task={self.task_id} done={self.done}>"

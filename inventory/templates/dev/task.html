@@ -40,9 +40,51 @@
         {% if t.sprint %}<span class="badge bg-info-subtle text-info-emphasis"><i class="bi bi-flag"></i> {{ t.sprint.name }}</span>{% endif %}
         {% if t.assignee %}<span class="badge bg-success-subtle text-success-emphasis"><i class="bi bi-person"></i> {{ t.assignee.name }}</span>{% endif %}
         {% for tag in t.tag_list %}<span class="badge bg-secondary-subtle text-secondary-emphasis">#{{ tag }}</span>{% endfor %}
+        {% if t.due_date %}
+        <span class="badge bg-{{ 'danger' if t.atrasada else 'secondary' }}-subtle text-{{ 'danger' if t.atrasada else 'secondary' }}-emphasis">
+          <i class="bi bi-calendar-event"></i> Prazo {{ t.due_date.strftime('%d/%m/%Y') }}{% if t.atrasada %} — atrasada{% endif %}
+        </span>
+        {% endif %}
+        {% if t.ticket %}
+        <a href="{{ url_for('tickets.detail', tid=t.ticket_id) }}" class="badge bg-info-subtle text-info-emphasis text-decoration-none">
+          <i class="bi bi-life-preserver"></i> {{ t.ticket.code or ('Chamado #' ~ t.ticket.id) }}
+        </a>
+        {% endif %}
       </div>
       {% if t.code_ref %}<div class="mb-2">{{ refline(t.code_ref) }}</div>{% endif %}
       {% if t.description %}<div style="white-space:pre-wrap">{{ t.description }}</div>{% else %}<div class="text-muted small">Sem descrição.</div>{% endif %}
+    </div>
+
+    {# ---- Checklist (subtarefas): o "%" que aparece no card ---- #}
+    <div class="table-card p-3 mb-3">
+      <h2 class="h6 mb-2"><i class="bi bi-check2-square text-success me-1"></i> Checklist
+        {% if t.checklist_total %}<span class="text-muted small">({{ t.checklist_feitos }}/{{ t.checklist_total }} — {{ t.checklist_pct }}%)</span>{% endif %}
+      </h2>
+      {% if t.checklist_total %}
+      <div class="progress mb-2" style="height:6px">
+        <div class="progress-bar bg-success" style="width:{{ t.checklist_pct }}%"></div>
+      </div>
+      <ul class="list-unstyled mb-2">
+        {% for item in t.checklist %}
+        <li class="d-flex align-items-center gap-2 py-1 border-bottom border-secondary-subtle">
+          <form method="post" action="{{ url_for('dev.checklist_toggle', cid=item.id) }}" class="d-inline">
+            <button class="btn btn-sm btn-link p-0 text-decoration-none" title="{{ 'Desmarcar' if item.done else 'Marcar como feito' }}">
+              <i class="bi bi-{{ 'check-square-fill text-success' if item.done else 'square' }}"></i>
+            </button>
+          </form>
+          <span class="flex-grow-1 small {{ 'text-muted text-decoration-line-through' if item.done }}">{{ item.text }}</span>
+          <form method="post" action="{{ url_for('dev.checklist_delete', cid=item.id) }}" class="d-inline"
+                onsubmit="return confirm('Remover “{{ item.text }}” da checklist?');">
+            <button class="btn btn-sm btn-link p-0 text-danger" title="Remover"><i class="bi bi-x-lg"></i></button>
+          </form>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      <form method="post" action="{{ url_for('dev.checklist_add', tid=t.id) }}" class="input-group input-group-sm">
+        <input class="form-control" name="text" maxlength="200" placeholder="Adicionar item da checklist...">
+        <button class="btn btn-outline-light"><i class="bi bi-plus-lg"></i></button>
+      </form>
     </div>
 
     {# ---- Updates: aqui o dev registra o que editou + commit ---- #}

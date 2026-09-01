@@ -26,6 +26,10 @@ class DevTaskForm(FlaskForm):
                               validators=[Optional()])
     tags = StringField("Tags", validators=[Optional(), Length(max=200)])
     code_ref = StringField("Código (commit/branch/PR/link)", validators=[Optional(), Length(max=300)])
+    due_date = DateField("Prazo", validators=[Optional()])
+    # choices preenchidas na rota (0 = nenhum); vincula a tarefa a um chamado
+    ticket_id = SelectField("Chamado de origem", coerce=int, choices=[],
+                            validate_choice=False, validators=[Optional()])
     submit = SubmitField("Salvar")
 
 

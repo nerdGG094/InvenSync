@@ -90,32 +90,42 @@
 
 {# ---------- KPIs ---------- #}
 <div class="row g-2 g-md-3 mb-3">
-  <div class="col-6 col-lg-3">
+  <div class="col-6 col-lg-2">
     <div class="kpi-card">
       <div class="rot"><i class="bi bi-list-check"></i> Total de tarefas</div>
       <div class="num">{{ st.total }}</div>
       <div class="sub">{{ st.concluidas }} concluída{{ 's' if st.concluidas != 1 }}</div>
     </div>
   </div>
-  <div class="col-6 col-lg-3">
+  <div class="col-6 col-lg-2">
     <div class="kpi-card">
       <div class="rot"><i class="bi bi-hourglass-split"></i> Em andamento</div>
       <div class="num">{{ st.andamento }}</div>
       <div class="sub">Fazendo + Revisão</div>
     </div>
   </div>
-  <div class="col-6 col-lg-3">
+  <div class="col-6 col-lg-2">
     <div class="kpi-card">
       <div class="rot"><i class="bi bi-git"></i> Atualizações</div>
       <div class="num">{{ st.updates_periodo }}</div>
       <div class="sub">nos últimos {{ st.dias }} dias</div>
     </div>
   </div>
-  <div class="col-6 col-lg-3">
+  <div class="col-6 col-lg-2">
     <div class="kpi-card">
       <div class="rot"><i class="bi bi-clock-history"></i> Ciclo médio</div>
       <div class="num">{{ st.dias_medios if st.dias_medios is not none else '—' }}{% if st.dias_medios is not none %}<span class="sub"> dias</span>{% endif %}</div>
-      <div class="sub">da criação à última alteração</div>
+      <div class="sub">da criação até concluir</div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-4">
+    <div class="kpi-card">
+      <div class="rot"><i class="bi bi-calendar-x"></i> Prazo</div>
+      <div class="num {{ 'text-danger' if st.atrasadas }}">{{ st.atrasadas|length }}</div>
+      <div class="sub">
+        {% if st.atrasadas %}<a href="{{ url_for('dev.board', atrasadas='1') }}" class="text-danger">atrasada{{ 's' if st.atrasadas|length != 1 }}</a>{% else %}nenhuma atrasada{% endif %}
+        · {{ st.vencendo }} vencendo em 7d
+      </div>
     </div>
   </div>
 </div>
@@ -136,6 +146,12 @@
       <div class="barra flex-grow-1"><span style="width:{{ st.sprint.pct }}%"></span></div>
       <span class="small text-muted">{{ st.sprint.feitas }}/{{ st.sprint.total }} ({{ st.sprint.pct }}%)</span>
     </div>
+    {% if st.sprint.burndown %}
+    <div class="ch-wrap sm mb-2"><canvas id="chBurndown"></canvas></div>
+    {% else %}
+    <p class="text-muted small mb-2"><i class="bi bi-info-circle"></i>
+      Defina início e fim (com pelo menos 2 dias) na sprint para ver o burndown.</p>
+    {% endif %}
     <div class="d-flex flex-wrap gap-2">
       {% for slug, label in [('backlog','Backlog'),('todo','A fazer'),('doing','Fazendo'),('review','Revisão'),('done','Concluído')] %}
       <a href="{{ url_for('dev.board', sprint=st.sprint.sprint.id) }}" class="badge bg-secondary-subtle text-secondary-emphasis text-decoration-none">
@@ -274,7 +290,8 @@
     atividade: {{ st.atividade|tojson }},
     status:    {{ st.por_status|tojson }},
     projeto:   {{ st.por_projeto|tojson }},
-    prio:      {{ st.por_prioridade|tojson }}
+    prio:      {{ st.por_prioridade|tojson }},
+    burndown:  {{ (st.sprint.burndown if st.sprint else {})|tojson }}
   };
   const hasV = d => d && d.labels && d.labels.length && (d.data||[]).some(v=>v>0);
   const CHARTS = [];
@@ -329,6 +346,22 @@
       label:'Tarefas',data:DATA.prio.data,backgroundColor:bg,borderRadius:4,borderWidth:0}]},
       options:{responsive:true,maintainAspectRatio:false,scales:axes(),
         plugins:{legend:{display:false}}}}));
+  })();
+
+  // 5) Burndown da sprint — duas séries de MESMA unidade (tarefas restantes),
+  //    então um eixo só. "Ideal" é a reta do total até zero; a real usa
+  //    done_at e simplesmente para no dia de hoje (null no futuro), em vez de
+  //    despencar até zero e fingir que a sprint acabou.
+  (function(){ const el=document.getElementById('chBurndown');
+    if(!el||!DATA.burndown||!DATA.burndown.labels) return;
+    reg(new Chart(el,{type:'line',data:{labels:DATA.burndown.labels,datasets:[
+      {label:'Restante',data:DATA.burndown.real,borderColor:PAL[0],backgroundColor:'transparent',
+       tension:.25,borderWidth:2,pointRadius:0,pointHoverRadius:5,spanGaps:false},
+      {label:'Ideal',data:DATA.burndown.ideal,borderColor:PAL[1],backgroundColor:'transparent',
+       borderDash:[5,4],tension:0,borderWidth:2,pointRadius:0,pointHoverRadius:4}
+    ]},options:{responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      scales:axes(),plugins:{legend:{position:'top'}}}}));
   })();
 
   // Tabela equivalente de cada gráfico (obrigatória: alguns tons do tema claro

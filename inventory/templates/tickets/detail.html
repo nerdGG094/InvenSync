@@ -192,6 +192,22 @@
 
   <!-- Coluna lateral: metadados -->
   <div class="col-12 col-lg-4">
+    {# Tarefas do board DEV que nasceram deste chamado. Só admin — o módulo DEV
+       é admin-only, e um link que dá 403 é pior do que link nenhum. #}
+    {% if current_user.is_admin and t.dev_tasks.count() %}
+    <div class="table-card p-3 mb-3">
+      <h3 class="h6 mb-2"><i class="bi bi-kanban text-success me-1"></i> No board DEV
+        <span class="text-muted small">({{ t.dev_tasks.count() }})</span></h3>
+      <ul class="list-unstyled mb-0">
+        {% for d in t.dev_tasks %}
+        <li class="py-1 d-flex align-items-center gap-2">
+          <a href="{{ url_for('dev.task_detail', tid=d.id) }}" class="small text-decoration-none flex-grow-1">{{ d.title }}</a>
+          <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ d.status }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
     <div class="table-card p-3">
       <h3 class="h6 mb-3"><i class="bi bi-info-circle text-success me-1"></i> Detalhes</h3>
       <dl class="meta-list mb-0">

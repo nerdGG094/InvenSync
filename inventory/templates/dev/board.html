@@ -57,6 +57,20 @@
     text-transform:uppercase; letter-spacing:.02em; }
   .dev-av img{ width:100%; height:100%; object-fit:cover; display:block; }
   .dev-av.criador{ opacity:.6; border-style:dashed; }
+  /* Prazo estourado: vermelho + ícone; a cor sozinha não carrega o aviso. */
+  .dev-chip.venceu{ background:rgba(244,67,54,.14); border-color:#7a2b25; color:#ff9d95; }
+  /* Checklist: barra fina + contagem (o "%" do card) */
+  .chk{ display:flex; align-items:center; gap:.35rem; margin-top:.35rem; }
+  .chk-barra{ flex:1; height:5px; border-radius:99px; background:#0f1a13; border:1px solid #2a3a29;
+    overflow:hidden; }
+  .chk-barra > span{ display:block; height:100%; background:#00c853; }
+  .chk-n{ font-size:.62rem; color:#8fb0a0; white-space:nowrap; }
+  /* Comentário rápido no card */
+  .dev-coment{ position:relative; z-index:2; margin-top:.4rem; }
+  .dev-coment textarea{ font-size:.75rem; background:#0f1a13; border-color:#2a3a29; color:#dceede; }
+  /* Alvo de soltar entre dois cards (reordenar dentro da coluna) */
+  .dev-card.solta-antes{ box-shadow:0 -3px 0 -1px #46e08a; }
+  .dev-card.solta-depois{ box-shadow:0 3px 0 -1px #46e08a; }
   .dev-card.p-critica{ border-left-color:#f44336; } .dev-card.p-alta{ border-left-color:#ffb020; }
   .dev-card.p-media{ border-left-color:#0dcaf0; } .dev-card.p-baixa{ border-left-color:#5c6b5c; }
 
@@ -130,12 +144,30 @@
       <option value="backlog" {{ 'selected' if sprint_sel=='backlog' }}>— Backlog (sem sprint) —</option>
       {% for s in sprints %}<option value="{{ s.id }}" {{ 'selected' if sprint_sel==(s.id|string) }}>{{ s.name }}{% if s.status=='ativa' %} ● ativa{% endif %}</option>{% endfor %}
     </select>
+    <select class="form-select" name="resp" style="max-width:190px" data-autosubmit>
+      <option value="">Todos os responsáveis</option>
+      <option value="ninguem" {{ 'selected' if resp_sel=='ninguem' }}>— sem responsável —</option>
+      {% for uid, nome in pessoas %}<option value="{{ uid }}" {{ 'selected' if resp_sel==(uid|string) }}>{{ nome }}</option>{% endfor %}
+    </select>
+    <select class="form-select" name="projeto" style="max-width:160px" data-autosubmit>
+      <option value="">Todos os projetos</option>
+      {% for p in projetos %}<option value="{{ p }}" {{ 'selected' if projeto_sel==p }}>{{ p }}</option>{% endfor %}
+    </select>
+    <select class="form-select" name="prio" style="max-width:150px" data-autosubmit>
+      <option value="">Toda prioridade</option>
+      {% for sl, lb in prioridades %}<option value="{{ sl }}" {{ 'selected' if prio_sel==sl }}>{{ lb }}</option>{% endfor %}
+    </select>
+    <div class="form-check form-switch m-0 ms-1">
+      <input class="form-check-input" type="checkbox" role="switch" id="fAtrasadas"
+             name="atrasadas" value="1" {{ 'checked' if atrasadas_sel }} data-autosubmit>
+      <label class="form-check-label small" for="fAtrasadas">Só atrasadas</label>
+    </div>
     <button class="btn btn-primary btn-icon" type="submit"><i class="bi bi-funnel"></i></button>
-    {% if q or sprint_sel %}<a href="{{ url_for('dev.board') }}" class="btn btn-outline-light btn-icon"><i class="bi bi-x-lg"></i></a>{% endif %}
+    {% if q or sprint_sel or resp_sel or projeto_sel or prio_sel or atrasadas_sel %}<a href="{{ url_for('dev.board') }}" class="btn btn-outline-light btn-icon" title="Limpar filtros"><i class="bi bi-x-lg"></i></a>{% endif %}
   </form>
 </div>
 
-{% set volta = url_for('dev.board', sprint=sprint_sel, q=q) %}
+{% set volta = url_for('dev.board', sprint=sprint_sel, q=q, resp=resp_sel, projeto=projeto_sel, prio=prio_sel, atrasadas='1' if atrasadas_sel else '') %}
 <div class="dev-board">
   {% for slug, label in statuses %}
   {% set ci = loop.index0 %}
@@ -164,7 +196,19 @@
         {% if t.tag_list|length > 2 %}<span class="dev-chip" title="{{ t.tag_list|join(', ') }}">+{{ t.tag_list|length - 2 }}</span>{% endif %}
         {% set nups = t.updates.count() %}
         {% if nups %}<span class="dev-chip"><i class="bi bi-chat-left-text"></i> {{ nups }}</span>{% endif %}
+        {% if t.ticket %}<span class="dev-chip" title="Chamado {{ t.ticket.code or t.ticket.id }}: {{ t.ticket.title }}"><i class="bi bi-life-preserver"></i> {{ t.ticket.code or ('#' ~ t.ticket.id) }}</span>{% endif %}
+        {% if t.due_date %}
+        <span class="dev-chip {{ 'venceu' if t.atrasada }}" title="Prazo: {{ t.due_date.strftime('%d/%m/%Y') }}">
+          <i class="bi bi-calendar-event"></i> {{ t.due_date.strftime('%d/%m') }}</span>
+        {% endif %}
       </div>
+      {% set ctot = t.checklist_total %}
+      {% if ctot %}
+      <div class="chk" title="Checklist: {{ t.checklist_feitos }} de {{ ctot }}">
+        <span class="chk-barra"><span style="width:{{ t.checklist_pct }}%"></span></span>
+        <span class="chk-n"><i class="bi bi-check2-square"></i> {{ t.checklist_feitos }}/{{ ctot }}</span>
+      </div>
+      {% endif %}
       <div class="dev-acoes">
         <form method="post" action="{{ url_for('dev.task_move', tid=t.id) }}">
           <input type="hidden" name="sprint" value="{{ sprint_sel }}">
@@ -186,8 +230,19 @@
           {% endif %}
         </form>
         <span class="sep"></span>
+        <button type="button" class="dev-btn" data-comentar title="Comentar"><i class="bi bi-chat-left-text"></i></button>
         <a class="dev-btn" href="{{ url_for('dev.task_edit', tid=t.id) }}" title="Editar"><i class="bi bi-pencil"></i></a>
       </div>
+      {# Comentário rápido: escreve sem sair do board (a timeline é a mesma) #}
+      <form class="dev-coment" method="post" action="{{ url_for('dev.task_update', tid=t.id) }}" hidden>
+        <input type="hidden" name="next" value="{{ volta }}">
+        <textarea name="body" rows="2" class="form-control form-control-sm"
+                  placeholder="O que aconteceu nesta tarefa?"></textarea>
+        <div class="d-flex gap-1 mt-1">
+          <button class="dev-btn ok" type="submit"><i class="bi bi-send"></i> Enviar</button>
+          <button class="dev-btn" type="button" data-cancelar>Cancelar</button>
+        </div>
+      </form>
     </div>
     {% else %}
     <div class="dev-empty">sem itens</div>
@@ -221,6 +276,9 @@
   // responde JSON com X-Requested-With). Sem arrastar (toque/teclado), os
   // botoes de icone do card fazem o mesmo por POST normal.
   var STATUS = {{ statuses|tojson }};
+  // O id na URL e trocado pelo do 1o card da coluna — a rota so precisa de uma
+  // tarefa para saber de qual coluna e a ordem que esta sendo gravada.
+  var URL_REORDENAR = "{{ url_for('dev.task_reordenar', tid=987654321) }}";
   var metaTok = document.querySelector('meta[name="csrf-token"]');
   var TOKEN = metaTok ? metaTok.getAttribute('content') : '';
   var arrastado = null;
@@ -291,38 +349,115 @@
     });
   });
 
+  function enviar(url, dados){
+    dados.append('csrf_token', TOKEN);
+    return fetch(url, {method:'POST', body:dados, credentials:'same-origin',
+                       headers:{'X-Requested-With':'fetch'}})
+      .then(function(r){ if (!r.ok) throw new Error('falhou'); return r; });
+  }
+
+  // Grava a ordem da coluna (1..N) depois de soltar
+  function salvarOrdem(corpo){
+    var cards = Array.prototype.slice.call(corpo.querySelectorAll('.dev-card'));
+    if (!cards.length) return Promise.resolve();
+    var dados = new FormData();
+    cards.forEach(function(c){ dados.append('ordem', c.dataset.tid); });
+    return enviar(URL_REORDENAR.replace('987654321', cards[0].dataset.tid), dados);
+  }
+
+  // Onde soltar dentro da coluna: antes ou depois do card sob o cursor
+  function vizinho(corpo, y){
+    var cards = Array.prototype.slice.call(corpo.querySelectorAll('.dev-card:not(.arrastando)'));
+    for (var i = 0; i < cards.length; i++){
+      var r = cards[i].getBoundingClientRect();
+      if (y < r.top + r.height / 2) return cards[i];
+    }
+    return null;
+  }
+
+  function limparMarcas(){
+    document.querySelectorAll('.solta-antes,.solta-depois').forEach(function(c){
+      c.classList.remove('solta-antes','solta-depois'); });
+  }
+
   document.querySelectorAll('.dev-col-body').forEach(function(corpo){
     corpo.addEventListener('dragover', function(e){
-      if (!arrastado || arrastado.parentElement === corpo) return;
+      if (!arrastado) return;
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
-      corpo.classList.add('alvo');
+      limparMarcas();
+      if (arrastado.parentElement === corpo){
+        // reordenar: marca o ponto de insercao
+        var ref = vizinho(corpo, e.clientY);
+        if (ref) ref.classList.add('solta-antes');
+        else {
+          var ultimos = corpo.querySelectorAll('.dev-card:not(.arrastando)');
+          if (ultimos.length) ultimos[ultimos.length-1].classList.add('solta-depois');
+        }
+      } else {
+        corpo.classList.add('alvo');
+      }
     });
     corpo.addEventListener('dragleave', function(e){
-      if (!corpo.contains(e.relatedTarget)) corpo.classList.remove('alvo');
+      if (!corpo.contains(e.relatedTarget)) { corpo.classList.remove('alvo'); limparMarcas(); }
     });
     corpo.addEventListener('drop', function(e){
       corpo.classList.remove('alvo');
+      limparMarcas();
       if (!arrastado) return;
       e.preventDefault();
       var card = arrastado, origem = card.parentElement, destino = corpo.dataset.drop;
-      if (origem === corpo || indice(destino) < 0) return;
-      var form = card.querySelector('form');
-      corpo.appendChild(card);
-      ajustarCard(card, destino);
-      atualizarColuna(origem);
-      atualizarColuna(corpo);
+      if (indice(destino) < 0) return;
+      var ref = vizinho(corpo, e.clientY);
+      var mudouColuna = (origem !== corpo);
+
+      if (ref) corpo.insertBefore(card, ref); else corpo.appendChild(card);
+
+      if (mudouColuna){
+        ajustarCard(card, destino);
+        atualizarColuna(origem);
+        atualizarColuna(corpo);
+        var dados = new FormData();
+        dados.append('status', destino);
+        enviar(card.querySelector('form').action, dados)
+          .then(function(){ return salvarOrdem(corpo); })
+          .catch(function(){ location.reload(); });
+      } else {
+        // mesma coluna: so a ordem mudou
+        salvarOrdem(corpo).catch(function(){ location.reload(); });
+      }
+    });
+  });
+
+  // ---- Comentário rápido no card ----
+  document.querySelectorAll('[data-comentar]').forEach(function(bt){
+    var card = bt.closest('.dev-card');
+    var form = card ? card.querySelector('.dev-coment') : null;
+    if (!form) return;
+    bt.addEventListener('click', function(){
+      form.hidden = !form.hidden;
+      if (!form.hidden) form.querySelector('textarea').focus();
+    });
+    var cancelar = form.querySelector('[data-cancelar]');
+    if (cancelar) cancelar.addEventListener('click', function(){ form.hidden = true; });
+    form.addEventListener('submit', function(e){
+      var texto = (form.querySelector('textarea').value || '').trim();
+      if (!texto) { e.preventDefault(); return; }
+      e.preventDefault();
       var dados = new FormData();
-      dados.append('status', destino);
-      dados.append('csrf_token', TOKEN);
-      fetch(form.action, {
-        method: 'POST', body: dados, credentials: 'same-origin',
-        headers: {'X-Requested-With': 'fetch'}
-      }).then(function(r){
-        if (!r.ok) throw new Error('falhou');
-      }).catch(function(){
-        location.reload();   // servidor recusou: volta ao estado real
-      });
+      dados.append('body', texto);
+      enviar(form.action, dados).then(function(){
+        form.querySelector('textarea').value = '';
+        form.hidden = true;
+        // o contador de comentários do card sobe na hora
+        var chip = card.querySelector('.dev-chip .bi-chat-left-text');
+        if (chip) { var el = chip.parentElement;
+          el.textContent = ' ' + ((parseInt(el.textContent.trim(), 10) || 0) + 1);
+          el.prepend(chip); }
+        else { var meta = card.querySelector('.meta');
+          if (meta) meta.insertAdjacentHTML('beforeend',
+            '<span class="dev-chip"><i class="bi bi-chat-left-text"></i> 1</span>'); }
+      }).catch(function(){ form.submit(); });   // sem JS/servidor: envia normal
     });
   });
 })();

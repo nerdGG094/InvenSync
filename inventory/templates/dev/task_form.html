@@ -35,6 +35,16 @@
           </div>
         </div>
         <div class="row g-3 mt-1">
+          <div class="col-6 col-md-3">
+            {{ form.due_date.label(class="form-label fw-semibold") }}
+            {{ form.due_date(class="form-control", type="date") }}
+          </div>
+          <div class="col-6 col-md-5">
+            {{ form.ticket_id.label(class="form-label fw-semibold") }}
+            {{ form.ticket_id(class="form-select") }}
+          </div>
+        </div>
+        <div class="row g-2 mb-2">
           <div class="col-12 col-md-5">
             {{ form.tags.label(class="form-label fw-semibold") }}
             {{ form.tags(class="form-control", placeholder="ex.: bug, cftv, backend") }}

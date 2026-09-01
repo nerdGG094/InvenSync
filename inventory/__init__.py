@@ -99,6 +99,15 @@ def _run_light_migrations():
         'UPDATE ticket t SET requester_id = u.id FROM "user" u '
         'WHERE t.requester_id IS NULL AND t.requester IS NOT NULL '
         "AND lower(btrim(t.requester)) = lower(btrim(u.name))",
+        # Board DEV: prazo, data de conclusao e vinculo com chamado
+        'ALTER TABLE dev_task ADD COLUMN IF NOT EXISTS due_date DATE',
+        'ALTER TABLE dev_task ADD COLUMN IF NOT EXISTS done_at TIMESTAMP',
+        'ALTER TABLE dev_task ADD COLUMN IF NOT EXISTS ticket_id INTEGER '
+        'REFERENCES ticket(id) ON DELETE SET NULL',
+        # Cards ja concluidos antes da coluna existir: aproxima pela ultima
+        # alteracao, senao ficariam de fora do burndown e do ciclo medio.
+        "UPDATE dev_task SET done_at = updated_at "
+        "WHERE status = 'done' AND done_at IS NULL",
     ]
     for sql in stmts:
         try:
@@ -397,7 +406,7 @@ def create_app():
     from .models.smart_plug_schedule import SmartPlugSchedule
     from .models.printer_reading import PrinterReading
     from .models.dvr import Dvr
-    from .models.dev import DevSprint, DevTask, DevUpdate
+    from .models.dev import DevSprint, DevTask, DevUpdate, DevChecklistItem
     from .models.dvr_detection import DvrDetection
 
     # Cria tabelas e semente inicial

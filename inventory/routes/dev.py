@@ -8,7 +8,7 @@ from ..repositories import dev_repo
 from ..forms.dev import (DevTaskForm, DevSprintForm, STATUS_CHOICES, PRIORITY_CHOICES)
 from ..models.dev import DevTask, DevSprint
 from ..models.user import User
-from ..services import audit
+from ..services import audit, mailer
 
 bp = Blueprint("dev", __name__)
 
@@ -29,6 +29,14 @@ def _assignee_choices():
     return [(0, "— ninguém —")] + [(u.id, u.name) for u in users if (u.name or "").strip()]
 
 
+def _ticket_choices():
+    """Chamados abertos/recentes para vincular a tarefa (0 = nenhum)."""
+    from ..models.ticket import Ticket
+    tickets = (Ticket.query.order_by(Ticket.id.desc()).limit(60).all())
+    return [(0, "— nenhum —")] + [
+        (t.id, f"{t.code or ('#' + str(t.id))} — {(t.title or '')[:60]}") for t in tickets]
+
+
 def _sprint_choices():
     return [(0, "— sem sprint (backlog) —")] + [
         (s.id, s.name) for s in dev_repo.active_sprints()]
@@ -37,6 +45,10 @@ def _sprint_choices():
 def _fill_choices(form, task=None):
     form.assignee_id.choices = _assignee_choices()
     form.sprint_id.choices = _sprint_choices()
+    form.ticket_id.choices = _ticket_choices()
+    # o chamado vinculado pode ser antigo demais para entrar na lista dos 60
+    if task is not None and task.ticket_id and task.ticket_id not in [c[0] for c in form.ticket_id.choices]:
+        form.ticket_id.choices.append((task.ticket_id, f"chamado #{task.ticket_id}"))
     # garante que o item atual apareça mesmo se a sprint já foi concluída
     if task is not None and task.sprint_id and task.sprint_id not in [c[0] for c in form.sprint_id.choices]:
         form.sprint_id.choices.append((task.sprint_id, task.sprint.name if task.sprint else "sprint"))
@@ -55,7 +67,33 @@ def _task_kwargs(form):
         assignee_id=(form.assignee_id.data or None),
         tags=s(form.tags.data),
         code_ref=s(form.code_ref.data),
+        due_date=form.due_date.data or None,
+        ticket_id=(form.ticket_id.data or None),
     )
+
+
+def _avisar_responsavel(t, antes_id=None):
+    """E-mail a quem acabou de assumir a tarefa. Best-effort: o mailer e no-op
+    sem MAIL_ENABLED e nunca deixa a rota cair por causa de SMTP."""
+    if not t.assignee_id or t.assignee_id == antes_id:
+        return
+    if t.assignee_id == getattr(current_user, "id", None):
+        return                      # quem se atribuiu ja sabe
+    try:
+        url = url_for("dev.task_detail", tid=t.id, _external=True)
+    except Exception:               # noqa: BLE001 — fora de request/SERVER_NAME
+        url = f"/dev/task/{t.id}"
+    linhas = ["Você foi definido como responsável pela tarefa DEV:", "", t.title,
+              f"Status: {STATUS_META.get(t.status, t.status)} | "
+              f"Prioridade: {PRIORITY_META.get(t.priority, t.priority)}"]
+    if t.due_date:
+        linhas.append(f"Prazo: {t.due_date.strftime('%d/%m/%Y')}")
+    linhas += ["", url]
+    corpo = "\n".join(linhas)
+    try:
+        mailer.notify_user(t.assignee, "[DEV] Tarefa atribuida a voce", corpo)
+    except Exception:               # noqa: BLE001
+        pass
 
 
 # ----- Painel -----
@@ -73,12 +111,23 @@ def board():
     q = (request.args.get("q") or "").strip()
     sprint = (request.args.get("sprint") or "").strip()   # '', 'backlog' ou id
     sprint_id = "backlog" if sprint == "backlog" else (int(sprint) if sprint.isdigit() else None)
-    cols = dev_repo.board(sprint_id=sprint_id, q=q or None)
+    resp = (request.args.get("resp") or "").strip()
+    projeto = (request.args.get("projeto") or "").strip()
+    prio = (request.args.get("prio") or "").strip()
+    atrasadas = request.args.get("atrasadas") == "1"
+    cols = dev_repo.board(sprint_id=sprint_id, q=q or None,
+                          assignee_id=("ninguem" if resp == "ninguem"
+                                       else (int(resp) if resp.isdigit() else None)),
+                          projeto=projeto or None, priority=prio or None,
+                          atrasadas=atrasadas)
     totais = {s: len(v) for s, v in cols.items()}
     return render_template("dev/board.html", cols=cols, totais=totais,
                            statuses=STATUS_CHOICES, status_meta=STATUS_META,
                            priority_meta=PRIORITY_META, sprints=dev_repo.list_sprints(),
-                           sprint_sel=sprint, q=q,
+                           sprint_sel=sprint, q=q, resp_sel=resp, projeto_sel=projeto,
+                           prio_sel=prio, atrasadas_sel=atrasadas,
+                           pessoas=_assignee_choices()[1:], projetos=dev_repo.PROJETOS,
+                           prioridades=PRIORITY_CHOICES,
                            total=sum(totais.values()))
 
 
@@ -94,6 +143,7 @@ def task_new():
             form.sprint_id.data = int(sp)
     if form.validate_on_submit():
         t = dev_repo.create_task(created_by_id=current_user.id, **_task_kwargs(form))
+        _avisar_responsavel(t)
         audit.record("create", "dev_task", t.id, f"Criou tarefa DEV '{t.title}'")
         flash("Tarefa criada!", "success")
         return redirect(url_for("dev.task_detail", tid=t.id))
@@ -106,7 +156,9 @@ def task_edit(tid):
     form = DevTaskForm(obj=t)
     _fill_choices(form, t)
     if form.validate_on_submit():
+        antes = t.assignee_id
         dev_repo.update_task(t, **_task_kwargs(form))
+        _avisar_responsavel(t, antes)
         audit.record("update", "dev_task", t.id, f"Editou tarefa DEV '{t.title}'")
         flash("Tarefa atualizada!", "success")
         return redirect(url_for("dev.task_detail", tid=t.id))
@@ -132,6 +184,45 @@ def task_move(tid):
     return redirect(url_for("dev.board", sprint=request.form.get("sprint") or ""))
 
 
+@bp.route("/task/<int:tid>/reordenar", methods=["POST"])
+def task_reordenar(tid):
+    """Nova ordem da coluna depois de arrastar um card para cima/baixo."""
+    t = dev_repo.get_task(tid)
+    ordem = request.form.getlist("ordem") or (request.form.get("ordem") or "").split(",")
+    dev_repo.reordenar(t, ordem)
+    if request.headers.get("X-Requested-With") == "fetch":
+        return jsonify(ok=True)
+    return redirect(request.form.get("next") or url_for("dev.board"))
+
+
+@bp.route("/task/<int:tid>/checklist", methods=["POST"])
+def checklist_add(tid):
+    t = dev_repo.get_task(tid)
+    texto = (request.form.get("text") or "").strip()
+    if texto:
+        dev_repo.add_checklist(t, texto)
+    else:
+        flash("Escreva o item da checklist.", "warning")
+    return redirect(url_for("dev.task_detail", tid=t.id))
+
+
+@bp.route("/checklist/<int:cid>/toggle", methods=["POST"])
+def checklist_toggle(cid):
+    item = dev_repo.get_checklist_item(cid)
+    dev_repo.toggle_checklist(item)
+    if request.headers.get("X-Requested-With") == "fetch":
+        return jsonify(ok=True, done=item.done, pct=item.task.checklist_pct)
+    return redirect(url_for("dev.task_detail", tid=item.task_id))
+
+
+@bp.route("/checklist/<int:cid>/delete", methods=["POST"])
+def checklist_delete(cid):
+    item = dev_repo.get_checklist_item(cid)
+    tid = item.task_id
+    dev_repo.delete_checklist(item)
+    return redirect(url_for("dev.task_detail", tid=tid))
+
+
 @bp.route("/task/<int:tid>/update", methods=["POST"])
 def task_update(tid):
     t = dev_repo.get_task(tid)
@@ -143,7 +234,10 @@ def task_update(tid):
         dev_repo.add_update(t, current_user.id, body or "(sem texto)", code_ref)
         audit.record("update", "dev_task", t.id, f"Atualizou tarefa DEV '{t.title}'")
         flash("Atualização registrada.", "success")
-    return redirect(url_for("dev.task_detail", tid=t.id))
+    # comentario rapido feito no card do board (fetch): nao redireciona
+    if request.headers.get("X-Requested-With") == "fetch":
+        return jsonify(ok=True, total=t.updates.count())
+    return redirect(request.form.get("next") or url_for("dev.task_detail", tid=t.id))
 
 
 @bp.route("/task/<int:tid>/delete", methods=["POST"])
