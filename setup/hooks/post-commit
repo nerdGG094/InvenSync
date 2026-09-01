@@ -1,0 +1,18 @@
+#!/bin/sh
+# InvenSync — joga o commit recem-feito no board DEV (kanban de desenvolvimento).
+#
+# Instalado por setup/instalar_hooks.ps1 em .git/hooks/post-commit.
+# O trabalho de verdade esta em dev_commit.py (raiz do projeto).
+#
+# Este hook NUNCA pode falhar um commit: o commit ja aconteceu quando ele roda,
+# entao qualquer problema vira aviso e o hook sai com 0.
+
+raiz="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+[ -n "$raiz" ] || exit 0
+
+py="$raiz/.venv/Scripts/python.exe"      # Windows
+[ -x "$py" ] || py="$raiz/.venv/bin/python"
+[ -x "$py" ] || { echo "dev_commit: .venv nao encontrado — kanban nao atualizado." >&2; exit 0; }
+
+"$py" "$raiz/dev_commit.py" HEAD
+exit 0
