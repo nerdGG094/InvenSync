@@ -7,6 +7,7 @@
     <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ sprints|length }}</span>
   </h1>
   <div class="d-flex gap-2">
+    <a href="{{ url_for('dev.index') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-speedometer2"></i> Painel</a>
     <a href="{{ url_for('dev.board') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-kanban"></i> Board</a>
     <a href="{{ url_for('dev.sprint_new') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle"></i> Nova Sprint</a>
   </div>

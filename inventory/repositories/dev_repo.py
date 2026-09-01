@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from typing import List, Optional
 
 from sqlalchemy import case, or_
@@ -117,3 +118,112 @@ def add_update(task: DevTask, user_id, body, code_ref=None) -> DevUpdate:
     db.session.add(u)
     db.session.commit()
     return u
+
+
+# ----- Dashboard -----
+# Projetos que alimentam o board (a 1a tag dos cards criados pelo hook de
+# commit). Lista explicita de proposito: sem ela, um card com tags "bug, dev"
+# viraria um "projeto" chamado bug. Ao ligar um repo novo, acrescente aqui.
+PROJETOS = ("invensync", "carreg-logi", "kiox")
+
+STATUS_LABEL = {"backlog": "Backlog", "todo": "A fazer", "doing": "Fazendo",
+                "review": "Revisão", "done": "Concluído"}
+PRIORIDADE_LABEL = {"baixa": "Baixa", "media": "Média", "alta": "Alta",
+                    "critica": "Crítica"}
+PARADA_DIAS = 7
+
+
+def _projeto_de(tags: str) -> str:
+    itens = [t.strip().lower() for t in (tags or "").split(",") if t.strip()]
+    for p in PROJETOS:
+        if p in itens:
+            return p
+    return "sem projeto"
+
+
+def estatisticas(dias: int = 30) -> dict:
+    """Numeros e series do painel DEV, a partir dos lancamentos do board."""
+    agora = datetime.now()
+    desde = agora - timedelta(days=dias)
+
+    por_status = dict(db.session.query(DevTask.status, db.func.count(DevTask.id))
+                      .group_by(DevTask.status).all())
+    por_prio = dict(db.session.query(DevTask.priority, db.func.count(DevTask.id))
+                    .group_by(DevTask.priority).all())
+
+    # Projeto sai da 1a tag: le so (id, tags), nao a tabela inteira
+    projetos = {}
+    for (tags,) in db.session.query(DevTask.tags).all():
+        p = _projeto_de(tags)
+        projetos[p] = projetos.get(p, 0) + 1
+
+    # Atividade: atualizacoes (commits) por dia, com os dias vazios preenchidos
+    brutos = dict(db.session.query(db.func.date(DevUpdate.created_at),
+                                   db.func.count(DevUpdate.id))
+                  .filter(DevUpdate.created_at >= desde)
+                  .group_by(db.func.date(DevUpdate.created_at)).all())
+    brutos = {(d.isoformat() if hasattr(d, "isoformat") else str(d)): n
+              for d, n in brutos.items()}
+    dias_serie, valores = [], []
+    for i in range(dias - 1, -1, -1):
+        d = (agora - timedelta(days=i)).date()
+        dias_serie.append(d.strftime("%d/%m"))
+        valores.append(brutos.get(d.isoformat(), 0))
+
+    total = sum(por_status.values())
+    concluidas = por_status.get("done", 0)
+    andamento = por_status.get("doing", 0) + por_status.get("review", 0)
+    fila = por_status.get("backlog", 0) + por_status.get("todo", 0)
+
+    # Tempo medio da criacao ate a ultima alteracao dos cards concluidos.
+    # E aproximado: `updated_at` muda a cada edicao, nao so ao concluir.
+    prontos = (DevTask.query.filter(DevTask.status == "done",
+                                    DevTask.created_at.isnot(None),
+                                    DevTask.updated_at.isnot(None)).all())
+    dias_medios = None
+    if prontos:
+        soma = sum(max((t.updated_at - t.created_at).total_seconds(), 0) for t in prontos)
+        dias_medios = round(soma / len(prontos) / 86400, 1)
+
+    # Cards parados: em andamento e sem toque ha mais de PARADA_DIAS
+    paradas = (DevTask.query
+               .filter(DevTask.status.in_(("doing", "review")),
+                       DevTask.updated_at < agora - timedelta(days=PARADA_DIAS))
+               .order_by(DevTask.updated_at.asc()).limit(8).all())
+
+    recentes = (DevUpdate.query.options(joinedload(DevUpdate.task),
+                                        joinedload(DevUpdate.user))
+                .order_by(DevUpdate.created_at.desc()).limit(10).all())
+
+    sprint = DevSprint.query.filter_by(status="ativa").order_by(DevSprint.id.desc()).first()
+    sprint_info = None
+    if sprint:
+        cont = dict(db.session.query(DevTask.status, db.func.count(DevTask.id))
+                    .filter(DevTask.sprint_id == sprint.id)
+                    .group_by(DevTask.status).all())
+        tot_s = sum(cont.values())
+        feitas = cont.get("done", 0)
+        restam = None
+        if sprint.end_date:
+            restam = (sprint.end_date - agora.date()).days
+        sprint_info = {"sprint": sprint, "total": tot_s, "feitas": feitas,
+                       "pct": round(feitas * 100 / tot_s) if tot_s else 0,
+                       "por_status": cont, "dias_restantes": restam}
+
+    def serie(d: dict, rotulos: dict, ordem=None):
+        chaves = ordem or sorted(d, key=lambda k: -d[k])
+        chaves = [k for k in chaves if d.get(k)]
+        return {"labels": [rotulos.get(k, k) for k in chaves],
+                "data": [d[k] for k in chaves],
+                "chaves": chaves}
+
+    return {
+        "total": total, "concluidas": concluidas, "andamento": andamento, "fila": fila,
+        "updates_periodo": sum(valores), "dias_medios": dias_medios, "dias": dias,
+        "por_status": serie(por_status, STATUS_LABEL, list(STATUS_LABEL)),
+        "por_prioridade": serie(por_prio, PRIORIDADE_LABEL, ["baixa", "media", "alta", "critica"]),
+        "por_projeto": serie(projetos, {}),
+        "atividade": {"labels": dias_serie, "data": valores},
+        "paradas": paradas, "recentes": recentes, "sprint": sprint_info,
+        "parada_dias": PARADA_DIAS,
+    }

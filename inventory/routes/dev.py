@@ -58,8 +58,17 @@ def _task_kwargs(form):
     )
 
 
-# ----- Board -----
+# ----- Painel -----
 @bp.route("")
+def index():
+    """Painel do modulo: atalhos + analises do que foi lancado no board."""
+    return render_template("dev/index.html", st=dev_repo.estatisticas(),
+                           status_meta=STATUS_META, priority_meta=PRIORITY_META,
+                           sprints=dev_repo.list_sprints())
+
+
+# ----- Board -----
+@bp.route("/board")
 def board():
     q = (request.args.get("q") or "").strip()
     sprint = (request.args.get("sprint") or "").strip()   # '', 'backlog' ou id

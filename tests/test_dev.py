@@ -14,7 +14,7 @@ def test_criar_tarefa_aparece_no_board(app, auth_client):
         "sprint_id": "0", "assignee_id": "0", "tags": "bug, dev",
         "code_ref": "abc123"}, follow_redirects=True)
     assert r.status_code == 200
-    b = auth_client.get("/dev").data
+    b = auth_client.get("/dev/board").data
     assert "PYTEST tarefa board".encode() in b
     with app.app_context():
         t = DevTask.query.filter_by(title="PYTEST tarefa board").first()
@@ -66,10 +66,10 @@ def test_sprint_e_filtro_do_board(app, auth_client):
         t2 = dev_repo.create_task(title="PYTEST no backlog", status="todo")
         t1id, t2id = t1.id, t2.id
     # filtrando pela sprint só mostra a tarefa da sprint
-    b = auth_client.get(f"/dev?sprint={sid}").data
+    b = auth_client.get(f"/dev/board?sprint={sid}").data
     assert b"PYTEST na sprint" in b and b"PYTEST no backlog" not in b
     # backlog (sem sprint)
-    bb = auth_client.get("/dev?sprint=backlog").data
+    bb = auth_client.get("/dev/board?sprint=backlog").data
     assert b"PYTEST no backlog" in bb and b"PYTEST na sprint" not in bb
     with app.app_context():
         for i in (t1id, t2id):
@@ -87,7 +87,7 @@ def test_board_cabe_na_tela_e_tem_botoes_de_mover(app, auth_client):
     with app.app_context():
         t = dev_repo.create_task(title="PYTEST layout", status="doing")
         tid = t.id
-    html = auth_client.get("/dev").data.decode("utf-8", "ignore")
+    html = auth_client.get("/dev/board").data.decode("utf-8", "ignore")
     # colunas flexiveis, sem rolagem horizontal do board
     assert "overflow-x:auto" not in html.split(".dev-board{")[1].split("}")[0]
     assert "flex:1 1 0" in html
@@ -115,7 +115,7 @@ def test_arrastar_card_responde_json(app, auth_client):
     assert r.status_code == 200 and r.is_json
     assert r.get_json() == {"ok": True, "status": "review"}
     # o board precisa entregar os cards arrastaveis e as colunas como alvo
-    html = auth_client.get("/dev").data.decode("utf-8", "ignore")
+    html = auth_client.get("/dev/board").data.decode("utf-8", "ignore")
     assert 'draggable="true"' in html and 'data-drop="doing"' in html
     with app.app_context():
         assert db.session.get(DevTask, tid).status == "review"
@@ -137,7 +137,7 @@ def test_card_mostra_avatar_do_responsavel_e_do_criador(app, auth_client):
         t = dev_repo.create_task(title="PYTEST avatar", status="todo",
                                  assignee_id=dono.id, created_by_id=autor.id)
         tid, dono_id, autor_id = t.id, dono.id, autor.id
-    html = auth_client.get("/dev").data.decode("utf-8", "ignore")
+    html = auth_client.get("/dev/board").data.decode("utf-8", "ignore")
     # responsavel tem foto -> <img> do avatar; criador sem foto -> iniciais
     assert "uploads/avatars/pytest-foto.png" in html
     assert 'title="Responsável: PYTEST Fulano Avatar"' in html
@@ -148,3 +148,61 @@ def test_card_mostra_avatar_do_responsavel_e_do_criador(app, auth_client):
         for uid in (dono_id, autor_id):
             db.session.delete(db.session.get(User, uid))
         db.session.commit()
+
+
+def test_painel_dev_e_a_home_do_modulo(app, auth_client, common_client):
+    """/dev abre o painel (com atalhos); o board fica em /dev/board."""
+    r = auth_client.get("/dev")
+    assert r.status_code == 200
+    html = r.data.decode("utf-8", "ignore")
+    assert "/dev/board" in html and "/dev/sprints" in html   # atalhos
+    assert "chAtividade" in html and "chStatus" in html      # graficos
+    assert auth_client.get("/dev/board").status_code == 200
+    assert common_client.get("/dev").status_code in (403, 302)
+
+
+def test_painel_conta_e_classifica_o_que_esta_no_board(app, auth_client):
+    from inventory.extensions import db
+    from inventory.models.dev import DevTask
+    from inventory.repositories import dev_repo
+    with app.app_context():
+        antes = dev_repo.estatisticas()
+        t1 = dev_repo.create_task(title="PYTEST painel doing", status="doing",
+                                  priority="alta", tags="kiox, feat")
+        t2 = dev_repo.create_task(title="PYTEST painel done", status="done")
+        dev_repo.add_update(t1, None, "commit de teste", "abc123")
+        ids = [t1.id, t2.id]
+
+        st = dev_repo.estatisticas()
+        assert st["total"] == antes["total"] + 2
+        assert st["andamento"] == antes["andamento"] + 1
+        assert st["concluidas"] == antes["concluidas"] + 1
+        # a tag do projeto vira fatia do grafico por projeto
+        assert "kiox" in st["por_projeto"]["labels"]
+        # a atualizacao entra na serie de atividade (ultimo dia)
+        assert st["atividade"]["data"][-1] >= 1
+        assert len(st["atividade"]["labels"]) == st["dias"]
+
+        for i in ids:
+            from inventory.models.dev import DevUpdate
+            DevUpdate.query.filter_by(task_id=i).delete()
+            db.session.delete(db.session.get(DevTask, i))
+        db.session.commit()
+
+
+def test_projeto_so_sai_de_tag_conhecida(app):
+    """Uma tag qualquer ("bug") nao pode virar um projeto no grafico."""
+    from inventory.repositories.dev_repo import _projeto_de
+    assert _projeto_de("carreg-logi, fix, menu") == "carreg-logi"
+    assert _projeto_de("kiox") == "kiox"
+    assert _projeto_de("bug, dev") == "sem projeto"
+    assert _projeto_de(None) == "sem projeto"
+
+
+def test_painel_usa_a_paleta_validada(app, auth_client):
+    """A paleta e a mesma dos outros paineis — validada, nao escolhida no olho."""
+    painel = auth_client.get("/dev").data.decode("utf-8", "ignore")
+    for cor in ("#3987e5", "#d95926", "#199e70"):     # slots 1-3 do tema escuro
+        assert cor in painel
+    assert "chart-tabela.js" in painel                # tabela equivalente
+    assert "#00c853" not in painel.split("const PAL")[1][:400]   # verde da marca nao e serie

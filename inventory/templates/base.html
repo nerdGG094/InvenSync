@@ -628,7 +628,7 @@
           </a>
           <ul class="dropdown-menu" aria-labelledby="ddMais">
             <li class="dd-title"><i class="bi bi-three-dots"></i> Mais módulos</li>
-            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('dev.') %}active{% endif %}" href="{{ url_for('dev.board') }}"><i class="bi bi-kanban me-2"></i> DEV <span class="text-muted small">(sprints/board)</span></a></li>
+            <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('dev.') %}active{% endif %}" href="{{ url_for('dev.index') }}"><i class="bi bi-kanban me-2"></i> DEV <span class="text-muted small">(painel/board)</span></a></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('smartplugs.') %}active{% endif %}" href="{{ url_for('smartplugs.list_view') }}"><i class="bi bi-plug me-2"></i> Tomadas Inteligentes</a></li>
             <li><a class="dropdown-item" href="{{ url_for('kiox.index') }}" target="_blank" rel="noopener"><i class="bi bi-geo-alt me-2"></i> Kiox <span class="text-muted small">(mapa)</span></a></li>
             <li><a class="dropdown-item {% if request.endpoint and request.endpoint.startswith('rede.') %}active{% endif %}" href="{{ url_for('rede.index') }}"><i class="bi bi-diagram-3 me-2"></i> Rede (ARP)</a></li>

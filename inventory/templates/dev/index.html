@@ -1,0 +1,341 @@
+{% extends "base.html" %}
+{% block title %}DEV — Painel{% endblock %}
+
+{% block extra_head %}
+<style>
+  .dev-atalhos{ display:flex; flex-wrap:wrap; gap:.6rem; margin-bottom:1.1rem; }
+  .dev-atalho{ flex:1 1 170px; display:flex; align-items:center; gap:.7rem; text-decoration:none;
+    background:#15211a; border:1px solid #243024; border-radius:14px; padding:.75rem .9rem;
+    color:#dceede; transition:transform .1s, border-color .1s; }
+  .dev-atalho:hover{ transform:translateY(-2px); border-color:#3f6b46; color:#eafff0; }
+  .dev-atalho .ic{ width:38px; height:38px; flex:0 0 38px; border-radius:11px; display:flex;
+    align-items:center; justify-content:center; background:#0f1a13; border:1px solid #243024;
+    color:#46e08a; font-size:1.05rem; }
+  .dev-atalho .tt{ font-weight:600; font-size:.86rem; line-height:1.2; }
+  .dev-atalho .sb{ font-size:.68rem; color:#7d9b8a; }
+
+  .kpi-card{ background:#15211a; border:1px solid #243024; border-radius:16px; padding:.85rem 1rem;
+    height:100%; }
+  .kpi-card .rot{ font-size:.68rem; text-transform:uppercase; letter-spacing:.04em; color:#7d9b8a;
+    display:flex; align-items:center; gap:.35rem; }
+  .kpi-card .num{ font-size:1.75rem; font-weight:700; color:#eafff0; line-height:1.15; margin-top:.2rem; }
+  .kpi-card .sub{ font-size:.68rem; color:#6f8a7b; }
+
+  .ch-card{ background:#15211a; border:1px solid #243024; border-radius:16px; height:100%;
+    display:flex; flex-direction:column; }
+  .ch-card .ch-head{ padding:.85rem 1.05rem; border-bottom:1px solid #1f2c24; font-weight:600;
+    color:#dceede; display:flex; align-items:center; gap:.5rem; font-size:.88rem; }
+  .ch-card .ch-head .bi{ color:#46e08a; }
+  .ch-card .ch-body{ padding:1rem 1.05rem; flex:1; }
+  .ch-wrap{ position:relative; height:250px; }
+  .ch-wrap.sm{ height:210px; }
+  .ch-foot{ color:#6f8a7b; font-size:.7rem; padding:0 1.05rem .85rem; }
+
+  .barra{ height:8px; border-radius:99px; background:#0f1a13; border:1px solid #243024;
+    overflow:hidden; }
+  .barra > span{ display:block; height:100%; background:#00c853; }
+
+  .lista{ list-style:none; margin:0; padding:0; }
+  .lista li{ display:flex; gap:.6rem; align-items:flex-start; padding:.55rem 0;
+    border-bottom:1px solid #1f2c24; }
+  .lista li:last-child{ border-bottom:0; }
+  .lista .av{ width:26px; height:26px; flex:0 0 26px; border-radius:50%; overflow:hidden;
+    display:inline-flex; align-items:center; justify-content:center; background:#0f1a13;
+    border:1px solid #2e4b3b; color:#7ee0a4; font-size:.6rem; font-weight:700; }
+  .lista .av img{ width:100%; height:100%; object-fit:cover; }
+  .lista .txt{ min-width:0; flex:1; }
+  .lista .tt{ font-size:.8rem; color:#eafff0; font-weight:600; text-decoration:none;
+    display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lista .dd{ font-size:.7rem; color:#7d9b8a; overflow:hidden; text-overflow:ellipsis;
+    white-space:nowrap; }
+  .lista .qd{ font-size:.66rem; color:#6f8a7b; white-space:nowrap; }
+
+  html[data-theme="light"] .dev-atalho,
+  html[data-theme="light"] .kpi-card,
+  html[data-theme="light"] .ch-card{ background:#fff; border-color:#e2e8e4; color:#173a28; }
+  html[data-theme="light"] .kpi-card .num,
+  html[data-theme="light"] .lista .tt{ color:#173a28; }
+  html[data-theme="light"] .ch-card .ch-head{ color:#173a28; border-bottom-color:#eef2ef; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set pr_cls = {'critica':'danger','alta':'warning','media':'info','baixa':'secondary'} %}
+<div class="page-header">
+  {# Sem botões aqui: os cards de atalho logo abaixo levam aos mesmos caminhos. #}
+  <h1 class="ph-title"><span class="ph-icon"><i class="bi bi-speedometer2"></i></span> DEV
+    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ st.total }} tarefas</span>
+  </h1>
+</div>
+
+{# ---------- Atalhos do módulo ---------- #}
+<div class="dev-atalhos">
+  <a class="dev-atalho" href="{{ url_for('dev.board') }}">
+    <span class="ic"><i class="bi bi-kanban"></i></span>
+    <span><span class="tt">Kanban</span><br><span class="sb">{{ st.andamento }} em andamento</span></span>
+  </a>
+  <a class="dev-atalho" href="{{ url_for('dev.sprints') }}">
+    <span class="ic"><i class="bi bi-flag"></i></span>
+    <span><span class="tt">Sprints</span><br><span class="sb">{{ sprints|length }} cadastrada{{ 's' if sprints|length != 1 }}</span></span>
+  </a>
+  <a class="dev-atalho" href="{{ url_for('dev.board', sprint='backlog') }}">
+    <span class="ic"><i class="bi bi-inbox"></i></span>
+    <span><span class="tt">Backlog</span><br><span class="sb">{{ st.fila }} na fila</span></span>
+  </a>
+  <a class="dev-atalho" href="{{ url_for('dev.task_new') }}">
+    <span class="ic"><i class="bi bi-plus-lg"></i></span>
+    <span><span class="tt">Nova tarefa</span><br><span class="sb">entra no backlog</span></span>
+  </a>
+</div>
+
+{# ---------- KPIs ---------- #}
+<div class="row g-2 g-md-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="rot"><i class="bi bi-list-check"></i> Total de tarefas</div>
+      <div class="num">{{ st.total }}</div>
+      <div class="sub">{{ st.concluidas }} concluída{{ 's' if st.concluidas != 1 }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="rot"><i class="bi bi-hourglass-split"></i> Em andamento</div>
+      <div class="num">{{ st.andamento }}</div>
+      <div class="sub">Fazendo + Revisão</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="rot"><i class="bi bi-git"></i> Atualizações</div>
+      <div class="num">{{ st.updates_periodo }}</div>
+      <div class="sub">nos últimos {{ st.dias }} dias</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="rot"><i class="bi bi-clock-history"></i> Ciclo médio</div>
+      <div class="num">{{ st.dias_medios if st.dias_medios is not none else '—' }}{% if st.dias_medios is not none %}<span class="sub"> dias</span>{% endif %}</div>
+      <div class="sub">da criação à última alteração</div>
+    </div>
+  </div>
+</div>
+
+{# ---------- Sprint ativa ---------- #}
+{% if st.sprint %}
+<div class="ch-card mb-3">
+  <div class="ch-head"><i class="bi bi-flag"></i> Sprint ativa — {{ st.sprint.sprint.name }}
+    {% if st.sprint.dias_restantes is not none %}
+      <span class="badge bg-{{ 'danger' if st.sprint.dias_restantes < 0 else ('warning' if st.sprint.dias_restantes <= 3 else 'secondary') }}-subtle text-{{ 'danger' if st.sprint.dias_restantes < 0 else ('warning' if st.sprint.dias_restantes <= 3 else 'secondary') }}-emphasis ms-auto">
+        {% if st.sprint.dias_restantes < 0 %}atrasada {{ -st.sprint.dias_restantes }}d{% else %}faltam {{ st.sprint.dias_restantes }}d{% endif %}
+      </span>
+    {% endif %}
+  </div>
+  <div class="ch-body">
+    {% if st.sprint.sprint.goal %}<p class="text-muted small mb-2">{{ st.sprint.sprint.goal }}</p>{% endif %}
+    <div class="d-flex align-items-center gap-2 mb-2">
+      <div class="barra flex-grow-1"><span style="width:{{ st.sprint.pct }}%"></span></div>
+      <span class="small text-muted">{{ st.sprint.feitas }}/{{ st.sprint.total }} ({{ st.sprint.pct }}%)</span>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      {% for slug, label in [('backlog','Backlog'),('todo','A fazer'),('doing','Fazendo'),('review','Revisão'),('done','Concluído')] %}
+      <a href="{{ url_for('dev.board', sprint=st.sprint.sprint.id) }}" class="badge bg-secondary-subtle text-secondary-emphasis text-decoration-none">
+        {{ label }}: {{ st.sprint.por_status.get(slug, 0) }}</a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# ---------- Gráficos ---------- #}
+<div class="row g-2 g-md-3 mb-3">
+  <div class="col-12 col-lg-7">
+    <div class="ch-card">
+      <div class="ch-head"><i class="bi bi-activity"></i> Atividade — últimos {{ st.dias }} dias</div>
+      <div class="ch-body"><div class="ch-wrap"><canvas id="chAtividade"></canvas></div></div>
+      <div class="ch-foot">Atualizações registradas nos cards (cada commit gera uma).</div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-5">
+    <div class="ch-card">
+      <div class="ch-head"><i class="bi bi-diagram-3"></i> Onde estão as tarefas</div>
+      <div class="ch-body"><div class="ch-wrap"><canvas id="chStatus"></canvas></div></div>
+      <div class="ch-foot">Quantidade por coluna do kanban.</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-6">
+    <div class="ch-card">
+      <div class="ch-head"><i class="bi bi-folder2-open"></i> Tarefas por projeto</div>
+      <div class="ch-body"><div class="ch-wrap sm"><canvas id="chProjeto"></canvas></div></div>
+      <div class="ch-foot">Vem da primeira tag do card, gravada pelo hook de commit.</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-6">
+    <div class="ch-card">
+      <div class="ch-head"><i class="bi bi-flag"></i> Tarefas por prioridade</div>
+      <div class="ch-body"><div class="ch-wrap sm"><canvas id="chPrioridade"></canvas></div></div>
+      <div class="ch-foot">Escala ordenada: o tom mais escuro é a prioridade mais alta.</div>
+    </div>
+  </div>
+</div>
+
+{# ---------- Listas ---------- #}
+<div class="row g-2 g-md-3">
+  <div class="col-12 col-lg-7">
+    <div class="ch-card">
+      <div class="ch-head"><i class="bi bi-clock"></i> Últimas atualizações</div>
+      <div class="ch-body">
+        {% if st.recentes %}
+        <ul class="lista">
+          {% for u in st.recentes %}
+          <li>
+            <span class="av" title="{{ u.user.name if u.user else 'sistema' }}">
+              {%- if u.user and u.user.photo %}<img src="{{ url_for('static', filename='uploads/avatars/' ~ u.user.photo) }}" alt="">
+              {%- elif u.user %}{{ u.user.initials }}{% else %}<i class="bi bi-robot"></i>{% endif -%}
+            </span>
+            <span class="txt">
+              <a class="tt" href="{{ url_for('dev.task_detail', tid=u.task_id) }}">{{ u.task.title if u.task else 'tarefa' }}</a>
+              <span class="dd">{{ u.body.splitlines()[0] if u.body else '' }}</span>
+            </span>
+            <span class="qd">{{ u.created_at.strftime('%d/%m %H:%M') if u.created_at else '' }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="empty-state"><i class="bi bi-inbox"></i> Nenhuma atualização ainda.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-5">
+    <div class="ch-card">
+      <div class="ch-head"><i class="bi bi-exclamation-triangle"></i> Paradas há mais de {{ st.parada_dias }} dias</div>
+      <div class="ch-body">
+        {% if st.paradas %}
+        <ul class="lista">
+          {% for t in st.paradas %}
+          <li>
+            <span class="txt">
+              <a class="tt" href="{{ url_for('dev.task_detail', tid=t.id) }}">{{ t.title }}</a>
+              <span class="dd">
+                <span class="badge bg-{{ pr_cls.get(t.priority,'secondary') }}-subtle text-{{ pr_cls.get(t.priority,'secondary') }}-emphasis">{{ priority_meta.get(t.priority, t.priority) }}</span>
+                {{ status_meta.get(t.status, t.status) }}
+              </span>
+            </span>
+            <span class="qd">{{ t.updated_at.strftime('%d/%m') if t.updated_at else '' }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="empty-state"><i class="bi bi-check-circle"></i> Nada parado. Tudo em movimento.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
+        integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ"
+        crossorigin="anonymous"></script>
+<script src="{{ url_for('static', filename='js/chart-tabela.js') }}"></script>
+<script nonce="{{ csp_nonce() }}">
+(function(){
+  if (typeof Chart === 'undefined') return;
+
+  const LIGHT = document.documentElement.getAttribute('data-theme') === 'light';
+  const TICK = LIGHT ? 'rgba(26,43,34,.85)' : 'rgba(255,255,255,.78)';
+  const GRID = LIGHT ? 'rgba(20,40,28,.12)' : 'rgba(255,255,255,.07)';
+  /* MESMA paleta validada dos outros painéis (ver dashboard.html). A ordem dos
+     slots é o mecanismo de segurança — os pares vizinhos foram medidos sob
+     daltonismo nas duas superfícies deste app. Não reordenar nem acrescentar
+     uma 9ª cor sem rodar o validador. */
+  const PAL = LIGHT
+    ? ['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#008300','#4a3aa7','#e34948']
+    : ['#3987e5','#d95926','#199e70','#c98500','#d55181','#008300','#9085e9','#e66767'];
+  /* Rampa ordinal (uma cor só, clara→escura) para a escala ORDENADA de prioridade. */
+  const RAMP = ['#86b6ef','#3987e5','#256abf','#184f95'];
+  const SURF = LIGHT ? '#ffffff' : '#15211a';
+  const rgba=(hex,a)=>{const h=hex.replace('#','');const n=parseInt(h,16);
+    return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;};
+
+  Chart.defaults.color = TICK;
+  Chart.defaults.font.family = "system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
+  Chart.defaults.plugins.legend.labels.boxWidth = 12;
+  Chart.defaults.plugins.legend.labels.usePointStyle = true;
+  Chart.defaults.plugins.tooltip.backgroundColor = LIGHT ? 'rgba(255,255,255,.98)' : 'rgba(8,16,11,.95)';
+  Chart.defaults.plugins.tooltip.titleColor = LIGHT ? '#173a28' : '#eafff0';
+  Chart.defaults.plugins.tooltip.bodyColor = LIGHT ? '#1a2b22' : '#dceede';
+  Chart.defaults.plugins.tooltip.borderColor = LIGHT ? '#cfe3d6' : '#2e6b45';
+  Chart.defaults.plugins.tooltip.borderWidth = 1;
+  Chart.defaults.plugins.tooltip.padding = 10;
+
+  const DATA = {
+    atividade: {{ st.atividade|tojson }},
+    status:    {{ st.por_status|tojson }},
+    projeto:   {{ st.por_projeto|tojson }},
+    prio:      {{ st.por_prioridade|tojson }}
+  };
+  const hasV = d => d && d.labels && d.labels.length && (d.data||[]).some(v=>v>0);
+  const CHARTS = [];
+  const reg = c => { CHARTS.push(c); return c; };
+  const axes = () => ({
+    x:{ ticks:{color:TICK,maxRotation:0,autoSkip:true,maxTicksLimit:10}, grid:{color:GRID} },
+    y:{ beginAtZero:true, ticks:{color:TICK,precision:0}, grid:{color:GRID} }
+  });
+
+  // 1) Atividade por dia — série única (uma cor; a área é só ênfase da linha)
+  (function(){ const el=document.getElementById('chAtividade'); if(!el||!DATA.atividade.labels) return;
+    const ctx=el.getContext('2d');
+    const g=ctx.createLinearGradient(0,0,0,240);
+    g.addColorStop(0, rgba(PAL[0],.38)); g.addColorStop(1, rgba(PAL[0],0));
+    reg(new Chart(el,{type:'line',data:{labels:DATA.atividade.labels,datasets:[{
+      label:'Atualizações',data:DATA.atividade.data,borderColor:PAL[0],backgroundColor:g,
+      fill:true,tension:.35,borderWidth:2,pointRadius:0,pointHoverRadius:5}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        interaction:{mode:'index',intersect:false},
+        scales:axes(),plugins:{legend:{display:false}}}}));
+  })();
+
+  // 2) Tarefas por coluna — 5 categorias nominais comparando grandeza: barra
+  //    horizontal de UMA cor. Pintar cada barra de uma cor inventaria
+  //    categorias e codificaria o comprimento duas vezes.
+  (function(){ const el=document.getElementById('chStatus'); if(!el||!hasV(DATA.status)) return;
+    reg(new Chart(el,{type:'bar',data:{labels:DATA.status.labels,datasets:[{
+      label:'Tarefas',data:DATA.status.data,backgroundColor:PAL[0],borderRadius:4,borderWidth:0}]},
+      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+        scales:{x:{beginAtZero:true,ticks:{color:TICK,precision:0},grid:{color:GRID}},
+                y:{ticks:{color:TICK},grid:{display:false}}},
+        plugins:{legend:{display:false}}}}));
+  })();
+
+  // 3) Projeto é IDENTIDADE: cor presa ao nome, nunca à posição na lista — a
+  //    ordem muda conforme a contagem, e quem aprendeu "kiox é verde" seria
+  //    enganado no dia seguinte.
+  (function(){ const el=document.getElementById('chProjeto'); if(!el||!hasV(DATA.projeto)) return;
+    const CORES = {'invensync':PAL[0],'carreg-logi':PAL[1],'kiox':PAL[2],'sem projeto':PAL[7]};
+    const bg = DATA.projeto.labels.map((l,i)=>CORES[String(l).toLowerCase()] || PAL[i%PAL.length]);
+    reg(new Chart(el,{type:'doughnut',data:{labels:DATA.projeto.labels,datasets:[{
+      data:DATA.projeto.data,backgroundColor:bg,borderColor:SURF,borderWidth:2}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
+        plugins:{legend:{position:'bottom'}}}}));
+  })();
+
+  // 4) Prioridade é escala ORDENADA -> rampa ordinal (crítica = passo mais escuro)
+  (function(){ const el=document.getElementById('chPrioridade'); if(!el||!hasV(DATA.prio)) return;
+    const n=DATA.prio.labels.length;
+    const bg=DATA.prio.labels.map((_,i)=>RAMP[Math.round(i*(RAMP.length-1)/Math.max(1,n-1))]);
+    reg(new Chart(el,{type:'bar',data:{labels:DATA.prio.labels,datasets:[{
+      label:'Tarefas',data:DATA.prio.data,backgroundColor:bg,borderRadius:4,borderWidth:0}]},
+      options:{responsive:true,maintainAspectRatio:false,scales:axes(),
+        plugins:{legend:{display:false}}}}));
+  })();
+
+  // Tabela equivalente de cada gráfico (obrigatória: alguns tons do tema claro
+  // ficam abaixo de 3:1, então precisa existir caminho sem cor até o valor)
+  if (window.tabelaDoGrafico) {
+    CHARTS.forEach(function(c){ window.tabelaDoGrafico(c, {cartao:'.ch-card', cabeca:'.ch-head'}); });
+  }
+})();
+</script>
+{% endblock %}
