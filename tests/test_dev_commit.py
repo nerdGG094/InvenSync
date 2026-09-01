@@ -105,6 +105,17 @@ def test_merge_e_skip_kanban_sao_ignorados(app):
             hash_curto="9997777")["acao"] == "ignorado"
 
 
+def test_skip_kanban_no_corpo_nao_ignora_o_commit(app, limpar):
+    """Mensagem que EXPLICA o marcador no corpo nao pode ignorar a si mesma."""
+    from inventory.services import dev_commit
+    with app.app_context():
+        r = dev_commit.registrar(
+            mensagem="feat: PYTEST documenta a regra\n\nUse [skip-kanban] para pular.",
+            hash_curto="222b9999")
+        assert r["acao"] == "criou"
+        limpar.append(r["task_id"])
+
+
 def test_card_fica_com_o_usuario_configurado(app, monkeypatch):
     """Os cards automaticos nascem no nome do usuario de DEV_COMMIT_USER_EMAIL."""
     _purgar(app)

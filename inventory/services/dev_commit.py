@@ -35,7 +35,9 @@ _PRIORIDADE = {"fix": "alta", "hotfix": "critica", "revert": "alta",
 
 _RE_TAREFA = re.compile(r"#(\d+)")
 _RE_CABECALHO = re.compile(r"^(?P<tipo>[a-z]+)(?:\((?P<escopo>[^)]+)\))?!?:\s*")
-# Marcadores que mandam ignorar o commit (merge, ou pedido explicito).
+# Marcador que manda ignorar o commit. Procurado SO no assunto: uma mensagem
+# que explica a regra no corpo ("[skip-kanban] ignora o commit") nao pode
+# ignorar a si mesma — foi o que aconteceu no commit que criou este arquivo.
 _RE_PULAR = re.compile(r"\[(skip[- ]kanban|no[- ]kanban)\]", re.I)
 
 
@@ -110,7 +112,7 @@ def registrar(mensagem: str, hash_curto: str = "", url_commit: str = "",
     assunto, corpo = _partes(mensagem)
     if not assunto:
         return {"acao": "ignorado", "motivo": "mensagem vazia"}
-    if assunto.startswith("Merge ") or _RE_PULAR.search(mensagem or ""):
+    if assunto.startswith("Merge ") or _RE_PULAR.search(assunto):
         return {"acao": "ignorado", "motivo": "merge ou [skip-kanban]"}
     if _ja_registrado(hash_curto):
         return {"acao": "ignorado", "motivo": f"commit {hash_curto} ja registrado"}
