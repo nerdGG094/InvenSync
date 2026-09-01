@@ -76,3 +76,48 @@ def test_sprint_e_filtro_do_board(app, auth_client):
             db.session.delete(db.session.get(DevTask, i))
         db.session.delete(db.session.get(DevSprint, sid))
         db.session.commit()
+
+
+def test_board_cabe_na_tela_e_tem_botoes_de_mover(app, auth_client):
+    """O board divide a largura entre as colunas (nada de scroll lateral) e cada
+    card traz botoes de mover com icone."""
+    from inventory.extensions import db
+    from inventory.models.dev import DevTask
+    from inventory.repositories import dev_repo
+    with app.app_context():
+        t = dev_repo.create_task(title="PYTEST layout", status="doing")
+        tid = t.id
+    html = auth_client.get("/dev").data.decode("utf-8", "ignore")
+    # colunas flexiveis, sem rolagem horizontal do board
+    assert "overflow-x:auto" not in html.split(".dev-board{")[1].split("}")[0]
+    assert "flex:1 1 0" in html
+    # botoes de movimentacao no card (voltar / avancar / concluir)
+    assert 'name="status" value="todo"' in html
+    assert 'name="status" value="review"' in html
+    assert 'name="status" value="done"' in html
+    assert "bi-arrow-left" in html and "bi-arrow-right" in html
+    with app.app_context():
+        db.session.delete(db.session.get(DevTask, tid))
+        db.session.commit()
+
+
+def test_arrastar_card_responde_json(app, auth_client):
+    """Arrastar-e-soltar move via fetch: o endpoint responde JSON (sem
+    re-renderizar o board inteiro a cada card arrastado)."""
+    from inventory.extensions import db
+    from inventory.models.dev import DevTask
+    from inventory.repositories import dev_repo
+    with app.app_context():
+        t = dev_repo.create_task(title="PYTEST arrastar", status="todo")
+        tid = t.id
+    r = auth_client.post(f"/dev/task/{tid}/move", data={"status": "review"},
+                         headers={"X-Requested-With": "fetch"})
+    assert r.status_code == 200 and r.is_json
+    assert r.get_json() == {"ok": True, "status": "review"}
+    # o board precisa entregar os cards arrastaveis e as colunas como alvo
+    html = auth_client.get("/dev").data.decode("utf-8", "ignore")
+    assert 'draggable="true"' in html and 'data-drop="doing"' in html
+    with app.app_context():
+        assert db.session.get(DevTask, tid).status == "review"
+        db.session.delete(db.session.get(DevTask, tid))
+        db.session.commit()

@@ -1,5 +1,6 @@
 # inventory/routes/dev.py — módulo DEV (backlog/sprints/board estilo Monday), admin/dev
-from flask import (Blueprint, render_template, request, redirect, url_for, flash, abort)
+from flask import (Blueprint, render_template, request, redirect, url_for, flash, abort,
+                   jsonify)
 from flask_login import login_required, current_user
 
 from ..extensions import db
@@ -114,6 +115,9 @@ def task_detail(tid):
 def task_move(tid):
     t = dev_repo.get_task(tid)
     dev_repo.move_task(t, (request.form.get("status") or "").strip())
+    # arrastar-e-soltar no board: responde JSON em vez de re-renderizar a pagina
+    if request.headers.get("X-Requested-With") == "fetch":
+        return jsonify(ok=True, status=t.status)
     if request.form.get("next"):
         return redirect(request.form.get("next"))
     return redirect(url_for("dev.board", sprint=request.form.get("sprint") or ""))
