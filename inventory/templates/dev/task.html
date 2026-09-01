@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}{{ t.title }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .upd{ display:flex; gap:.6rem; padding:.6rem 0; border-top:1px dashed #243024; }
+  .upd .av{ width:30px; height:30px; border-radius:50%; background:#1a3427; color:#8affb9;
+    display:flex; align-items:center; justify-content:center; font-size:.72rem; font-weight:700; flex:none; }
+  .upd .bd{ flex:1; min-width:0; }
+  .upd .hd{ font-size:.76rem; color:#8fb0a0; }
+  .upd .msg{ white-space:pre-wrap; color:#dceede; margin-top:.15rem; }
+  .code-ref{ font-family:var(--bs-font-monospace,monospace); font-size:.76rem; }
+  html[data-theme="light"] .upd .msg{ color:#173a28; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set pr_cls = {'critica':'danger','alta':'warning','media':'info','baixa':'secondary'} %}
+{% macro refline(ref) -%}
+  {% if ref %}{% if ref.startswith('http') %}<a href="{{ ref }}" target="_blank" rel="noopener" class="code-ref"><i class="bi bi-git"></i> {{ ref }}</a>{% else %}<span class="code-ref"><i class="bi bi-git"></i> {{ ref }}</span>{% endif %}{% endif %}
+{%- endmacro %}
+
+<div class="page-header">
+  <h1 class="ph-title"><span class="ph-icon"><i class="bi bi-card-checklist"></i></span> {{ t.title }}</h1>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('dev.task_edit', tid=t.id) }}" class="btn btn-outline-light btn-sm"><i class="bi bi-pencil"></i> Editar</a>
+    <a href="{{ url_for('dev.board') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Board</a>
+    <form method="post" action="{{ url_for('dev.task_delete', tid=t.id) }}" onsubmit="return confirm('Excluir a tarefa “{{ t.title }}”?');">
+      <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+    </form>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-lg-8">
+    <div class="table-card p-3 mb-3">
+      <div class="d-flex flex-wrap gap-2 mb-2">
+        <span class="badge bg-{{ pr_cls.get(t.priority,'secondary') }}-subtle text-{{ pr_cls.get(t.priority,'secondary') }}-emphasis">{{ priority_meta.get(t.priority, t.priority) }}</span>
+        <span class="badge bg-secondary-subtle text-secondary-emphasis"><i class="bi bi-diagram-3"></i> {{ status_meta.get(t.status, t.status) }}</span>
+        {% if t.sprint %}<span class="badge bg-info-subtle text-info-emphasis"><i class="bi bi-flag"></i> {{ t.sprint.name }}</span>{% endif %}
+        {% if t.assignee %}<span class="badge bg-success-subtle text-success-emphasis"><i class="bi bi-person"></i> {{ t.assignee.name }}</span>{% endif %}
+        {% for tag in t.tag_list %}<span class="badge bg-secondary-subtle text-secondary-emphasis">#{{ tag }}</span>{% endfor %}
+      </div>
+      {% if t.code_ref %}<div class="mb-2">{{ refline(t.code_ref) }}</div>{% endif %}
+      {% if t.description %}<div style="white-space:pre-wrap">{{ t.description }}</div>{% else %}<div class="text-muted small">Sem descrição.</div>{% endif %}
+    </div>
+
+    {# ---- Updates: aqui o dev registra o que editou + commit ---- #}
+    <div class="table-card p-3">
+      <h2 class="h6 mb-2"><i class="bi bi-chat-left-text text-success me-1"></i> Atualizações
+        <span class="text-muted small">({{ t.updates.count() }})</span></h2>
+      <form method="post" action="{{ url_for('dev.task_update', tid=t.id) }}" class="mb-3">
+        <textarea class="form-control mb-2" name="body" rows="2" placeholder="O que você editou/entregou? (ex.: ajustei o cache do snapshot)"></textarea>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-git"></i></span>
+          <input class="form-control" name="code_ref" placeholder="commit / branch / link do PR (opcional)">
+          <button class="btn btn-primary"><i class="bi bi-send"></i> Registrar</button>
+        </div>
+      </form>
+      {% set ups = t.updates.all()|reverse|list %}
+      {% for u in ups %}
+      <div class="upd">
+        <div class="av">{{ (u.user.initials if u.user else '?') }}</div>
+        <div class="bd">
+          <div class="hd">{{ u.user.name if u.user else '—' }} · {{ u.created_at.strftime('%d/%m %H:%M') }}</div>
+          <div class="msg">{{ u.body }}</div>
+          {% if u.code_ref %}<div class="mt-1">{{ refline(u.code_ref) }}</div>{% endif %}
+        </div>
+      </div>
+      {% else %}
+      <div class="text-muted small">Nenhuma atualização ainda. Registre o que você editou acima.</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# ---- Mover rápido de status ---- #}
+  <div class="col-12 col-lg-4">
+    <div class="table-card p-3">
+      <div class="section-label"><i class="bi bi-arrow-left-right"></i> Mover para</div>
+      <div class="d-flex flex-column gap-1">
+        {% for sl, lb in statuses %}
+        <form method="post" action="{{ url_for('dev.task_move', tid=t.id) }}">
+          <input type="hidden" name="status" value="{{ sl }}">
+          <input type="hidden" name="next" value="{{ url_for('dev.task_detail', tid=t.id) }}">
+          <button class="btn btn-sm w-100 {{ 'btn-primary' if sl==t.status else 'btn-outline-light' }}" {{ 'disabled' if sl==t.status }}>{{ lb }}</button>
+        </form>
+        {% endfor %}
+      </div>
+      <div class="text-muted mt-3" style="font-size:.7rem">
+        Criada por {{ t.created_by.name if t.created_by else '—' }} em {{ t.created_at.strftime('%d/%m/%Y') }}.
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

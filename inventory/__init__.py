@@ -397,6 +397,7 @@ def create_app():
     from .models.smart_plug_schedule import SmartPlugSchedule
     from .models.printer_reading import PrinterReading
     from .models.dvr import Dvr
+    from .models.dev import DevSprint, DevTask, DevUpdate
     from .models.dvr_detection import DvrDetection
 
     # Cria tabelas e semente inicial
@@ -596,6 +597,7 @@ def create_app():
     from .routes.rede import bp as rede_bp              # descoberta de rede via ARP (admin)
     from .routes.intro import bp as intro_bp            # Apresentação (todos)
     from .routes.dvr import bp as dvr_bp                # CFTV / DVRs (admin)
+    from .routes.dev import bp as dev_bp                # DEV (backlog/sprints/board)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -636,6 +638,7 @@ def create_app():
     app.register_blueprint(rede_bp, url_prefix="/rede")          # descoberta de rede (admin)
     app.register_blueprint(intro_bp, url_prefix="/apresentacao")  # Apresentação (todos)
     app.register_blueprint(dvr_bp, url_prefix="/cftv")           # CFTV / DVRs (admin)
+    app.register_blueprint(dev_bp, url_prefix="/dev")           # DEV board/backlog/sprints
 
     # ===== Controle de acesso por módulo =====
     # Usuários comuns (não-admin) só acessam Chamados e o próprio Perfil.

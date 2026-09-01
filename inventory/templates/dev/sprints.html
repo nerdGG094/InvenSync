@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}DEV — Sprints{% endblock %}
+{% block content %}
+{% set st = {'ativa':('Ativa','success'),'planejada':('Planejada','info'),'concluida':('Concluída','secondary')} %}
+<div class="page-header">
+  <h1 class="ph-title"><span class="ph-icon"><i class="bi bi-flag"></i></span> Sprints
+    <span class="badge bg-success-subtle text-success-emphasis ph-count">{{ sprints|length }}</span>
+  </h1>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('dev.board') }}" class="btn btn-outline-light btn-sm"><i class="bi bi-kanban"></i> Board</a>
+    <a href="{{ url_for('dev.sprint_new') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle"></i> Nova Sprint</a>
+  </div>
+</div>
+
+{% if sprints %}
+<div class="row g-3">
+  {% for s in sprints %}
+  {% set m = st.get(s.status, ('—','secondary')) %}
+  <div class="col-12 col-md-6 col-xl-4">
+    <div class="table-card p-3 h-100">
+      <div class="d-flex justify-content-between align-items-start gap-2">
+        <div class="min-w-0">
+          <div class="fw-semibold text-truncate">{{ s.name }}</div>
+          <div class="text-muted small">
+            {% if s.start_date %}{{ s.start_date.strftime('%d/%m') }}{% endif %}{% if s.end_date %} → {{ s.end_date.strftime('%d/%m') }}{% endif %}
+          </div>
+        </div>
+        <span class="badge bg-{{ m[1] }}-subtle text-{{ m[1] }}-emphasis">{{ m[0] }}</span>
+      </div>
+      {% if s.goal %}<div class="small text-muted mt-2" style="white-space:pre-wrap">{{ s.goal }}</div>{% endif %}
+      <div class="d-flex justify-content-between align-items-center mt-3">
+        <a href="{{ url_for('dev.board', sprint=s.id) }}" class="btn btn-sm btn-outline-light"><i class="bi bi-list-task"></i> {{ s.tasks.count() }} tarefas</a>
+        <div class="d-flex gap-1">
+          <a href="{{ url_for('dev.sprint_edit', sid=s.id) }}" class="btn btn-sm btn-outline-light btn-icon"><i class="bi bi-pencil"></i></a>
+          <form method="post" action="{{ url_for('dev.sprint_delete', sid=s.id) }}" class="d-inline" onsubmit="return confirm('Excluir a sprint “{{ s.name }}”? As tarefas voltam ao backlog.');">
+            <button class="btn btn-sm btn-outline-danger btn-icon"><i class="bi bi-trash"></i></button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="table-card"><div class="empty-state"><i class="bi bi-flag"></i> Nenhuma sprint ainda. Crie a primeira.</div></div>
+{% endif %}
+{% endblock %}

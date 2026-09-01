@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+{% macro fe(f) -%}{% if f.errors %}<div class="invalid-feedback d-block">{{ f.errors[0] }}</div>{% endif %}{%- endmacro %}
+<div class="container d-flex justify-content-center py-2">
+  <div class="card shadow-sm w-100" style="max-width:640px">
+    <div class="card-header d-flex align-items-center justify-content-between">
+      <span class="fw-semibold d-flex align-items-center gap-2"><i class="bi bi-flag text-success"></i> {{ title }}</span>
+      <a href="{{ url_for('dev.sprints') }}" class="btn btn-sm btn-outline-light"><i class="bi bi-arrow-left"></i> Sprints</a>
+    </div>
+    <div class="card-body">
+      <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+        <div class="mb-3">
+          {{ form.name.label(class="form-label fw-semibold") }}
+          {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""), placeholder="Ex.: Sprint 12 — Câmeras", autofocus=True) }}
+          {{ fe(form.name) }}
+        </div>
+        <div class="row g-3">
+          <div class="col-6 col-md-4">
+            {{ form.start_date.label(class="form-label fw-semibold") }}
+            {{ form.start_date(class="form-control") }}
+          </div>
+          <div class="col-6 col-md-4">
+            {{ form.end_date.label(class="form-label fw-semibold") }}
+            {{ form.end_date(class="form-control") }}
+          </div>
+          <div class="col-12 col-md-4">
+            {{ form.status.label(class="form-label fw-semibold") }}
+            {{ form.status(class="form-select") }}
+          </div>
+        </div>
+        <div class="mt-3">
+          {{ form.goal.label(class="form-label fw-semibold") }}
+          {{ form.goal(class="form-control", rows=3, placeholder="Objetivo/foco da sprint") }}
+        </div>
+        <div class="d-flex justify-content-end gap-2 mt-4">
+          <a href="{{ url_for('dev.sprints') }}" class="btn btn-outline-light">Cancelar</a>
+          {{ form.submit(class="btn btn-primary") }}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
