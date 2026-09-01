@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 from sqlalchemy import case, or_
+from sqlalchemy.orm import joinedload
 
 from ..extensions import db
 from ..models.dev import DevSprint, DevTask, DevUpdate
@@ -66,6 +67,10 @@ def board(sprint_id=None, q=None) -> dict:
         like = f"%{q.strip()}%"
         query = query.filter(or_(DevTask.title.ilike(like), DevTask.tags.ilike(like),
                                  DevTask.code_ref.ilike(like)))
+    # os cards mostram responsavel/criador (avatar) e sprint: carrega junto,
+    # senao sao 3 consultas por card
+    query = query.options(joinedload(DevTask.assignee), joinedload(DevTask.created_by),
+                          joinedload(DevTask.sprint))
     tarefas = query.order_by(DevTask.position.asc(), DevTask.id.desc()).all()
     cols = {s: [] for s in STATUSES}
     for t in tarefas:

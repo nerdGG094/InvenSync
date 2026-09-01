@@ -121,3 +121,30 @@ def test_arrastar_card_responde_json(app, auth_client):
         assert db.session.get(DevTask, tid).status == "review"
         db.session.delete(db.session.get(DevTask, tid))
         db.session.commit()
+
+
+def test_card_mostra_avatar_do_responsavel_e_do_criador(app, auth_client):
+    """O card traz a foto (ou as iniciais) de quem e responsavel e de quem criou."""
+    from inventory.extensions import db
+    from inventory.models.dev import DevTask
+    from inventory.models.user import User
+    from inventory.repositories import dev_repo
+    with app.app_context():
+        dono = User(name="PYTEST Fulano Avatar", photo="pytest-foto.png")
+        autor = User(name="PYTEST Ciclano Autor")
+        db.session.add_all([dono, autor])
+        db.session.commit()
+        t = dev_repo.create_task(title="PYTEST avatar", status="todo",
+                                 assignee_id=dono.id, created_by_id=autor.id)
+        tid, dono_id, autor_id = t.id, dono.id, autor.id
+    html = auth_client.get("/dev").data.decode("utf-8", "ignore")
+    # responsavel tem foto -> <img> do avatar; criador sem foto -> iniciais
+    assert "uploads/avatars/pytest-foto.png" in html
+    assert 'title="Responsável: PYTEST Fulano Avatar"' in html
+    assert 'title="Criada por: PYTEST Ciclano Autor"' in html
+    assert "PY" in html   # iniciais do criador
+    with app.app_context():
+        db.session.delete(db.session.get(DevTask, tid))
+        for uid in (dono_id, autor_id):
+            db.session.delete(db.session.get(User, uid))
+        db.session.commit()
