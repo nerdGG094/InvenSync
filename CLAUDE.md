@@ -249,17 +249,23 @@ Notable optional toggles:
 ### Front-end dependencies (CDN)
 All pinned to exact versions, and everything loaded via `<script src>`/`<link>` carries **SRI + `crossorigin`** (bootstrap, bootstrap-icons, gsap, chart.js) — the CSP allows the whole jsdelivr origin, so integrity is what actually pins the bytes. `chart.js` used to be unpinned (`npm/chart.js` = whatever is newest), which meant a breaking release would take out both dashboards with no local change. **ES-module imports cannot carry `integrity`** (three.js in `bolhas.js`, mermaid in `docs/index.html`) — for those, the exact version pin is the only protection. Re-computing a hash after a version bump: `curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A`.
 
-## Próximos passos / TODO
-### Câmeras em tempo real (go2rtc) — no ar; falta reiniciar o InvenSync
-Implantado neste servidor: serviço **`go2rtc`** (NSSM, início automático, log em
+## Operação
+### Câmeras em tempo real (go2rtc) — implantado e em produção
+Neste servidor: serviço **`go2rtc`** (NSSM, início automático, log em
 `go2rtc\go2rtc.log` rotacionando em 5 MB) rodando o go2rtc v1.9.14 + ffmpeg 8.1.2
-em `InventarioAlmox\go2rtc\`; `go2rtc.yaml` com **34 câmeras** em **720p**;
-regras de firewall 1984/TCP e 8555/TCP+UDP restritas a `192.168.0.0/24`;
-`GO2RTC_URL` no `.env`.
+em `InventarioAlmox\go2rtc\`; regras de firewall 1984/TCP e 8555/TCP+UDP restritas
+a `192.168.0.0/24`; `GO2RTC_URL` (`http://192.168.0.54:1984`) no `.env`, já lido
+pelo app. Conferido em 14/09/2026: **5 DVRs elegíveis, 102 canais em 720p**, e o
+`go2rtc.yaml` bate exatamente com o cadastro (102 streams publicados na API).
 
-Pendências:
-1. **Reiniciar o InvenSync** para ele ler o `GO2RTC_URL` (o serviço go2rtc já está no ar).
-2. Regerar o `go2rtc.yaml` (CFTV → Tempo real) e `Restart-Service go2rtc` sempre que
-   cadastrar/alterar um DVR.
-3. Opcional: subir a resolução dos **snapshots** da grade mexendo na config `Snap`
+Rotina, não pendência:
+1. Ao cadastrar/alterar um DVR, regerar o `go2rtc.yaml` (CFTV → Tempo real) e
+   `Restart-Service go2rtc` — o yaml é gerado a partir do cadastro e não se
+   atualiza sozinho.
+2. Opcional: subir a resolução dos **snapshots** da grade mexendo na config `Snap`
    dos DVRs (hoje 704x480 no `.134` e 352x240 no `.136`) — mexe no aparelho, não no app.
+
+## Próximos passos / TODO
+- **Backup sem cópia offsite**: `backup_db.mirror_status()` retorna
+  `configured: False` — os 30 dumps vivem no mesmo disco do banco. Configurar
+  `BACKUP_MIRROR_DIR` (outro disco/NAS) e/ou `BACKUP_UPLOAD_CMD` (rclone → Drive).
