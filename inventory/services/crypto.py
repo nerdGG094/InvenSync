@@ -45,10 +45,11 @@ def looks_encrypted(token) -> bool:
 def is_encrypted(token) -> bool:
     if not token:
         return False
+    f = _fernet()
     try:
-        _fernet().decrypt(token.encode("utf-8"))
+        f.decrypt(token.encode("utf-8"))
         return True
-    except (InvalidToken, Exception):  # noqa: BLE001
+    except (InvalidToken, AttributeError, TypeError, ValueError):
         return False
 
 
@@ -59,9 +60,17 @@ class DecryptError(Exception):
 def decrypt(token):
     if not token:
         return token or ""
+    # `_fernet()` fica FORA do try de propósito: falta de contexto de app ou
+    # VAULT_KEY quebrada são erro de configuração e precisam aparecer. Dentro
+    # do try eles eram engolidos e um texto puro voltava como se estivesse tudo
+    # certo — a falha só apareceria quando alguém usasse a senha errada.
+    f = _fernet()
     try:
-        return _fernet().decrypt(token.encode("utf-8")).decode("utf-8")
-    except (InvalidToken, Exception):  # noqa: BLE001
+        return f.decrypt(token.encode("utf-8")).decode("utf-8")
+    # InvalidToken: chave errada/corrompido. Os demais: `token` não é str utf-8
+    # (bytes não tem .encode, payload decifrado inválido). Erro de programação
+    # ou de configuração sobe.
+    except (InvalidToken, AttributeError, TypeError, ValueError):
         # Se o valor TEM estrutura de token mas não decifra, é chave errada/
         # corrupção — não devolva o ciphertext como se fosse a senha.
         if looks_encrypted(token):
