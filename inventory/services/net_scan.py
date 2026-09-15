@@ -15,7 +15,8 @@ import ipaddress
 import re
 import socket
 import subprocess
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FTimeout
+import time
+from concurrent.futures import ThreadPoolExecutor
 
 from ..extensions import db
 
@@ -152,13 +153,24 @@ def scan(app, sweep=False):
         ips = [ip for ip, _ in unicos]
 
         nomes = {}
-        with ThreadPoolExecutor(max_workers=32) as ex:
+        # Teto TOTAL da resolução de nomes, não por IP: o timeout por future era
+        # gasto um a um, então N hosts lentos somavam N × timeout.
+        limite = time.monotonic() + (8.0 if sweep else 5.0)
+        ex = ThreadPoolExecutor(max_workers=32)
+        try:
             futs = {ip: ex.submit(_nome, ip, sweep) for ip in ips}
             for ip, f in futs.items():
                 try:
-                    nomes[ip] = f.result(timeout=(4.0 if sweep else 2.5))
-                except (FTimeout, Exception):  # noqa: BLE001
+                    nomes[ip] = f.result(timeout=max(0.0, limite - time.monotonic()))
+                except Exception:  # noqa: BLE001 — inclui o timeout do future
                     nomes[ip] = ""
+        finally:
+            # `with ThreadPoolExecutor(...)` fazia shutdown(wait=True) na saída:
+            # esperava TODAS as buscas, inclusive as que já haviam estourado o
+            # timeout acima — um PTR lento segurava a varredura inteira e o
+            # timeout não valia de nada. Aqui a resposta sai na hora; o que
+            # sobrou é cancelado (fila) ou morre sozinho (já rodando).
+            ex.shutdown(wait=False, cancel_futures=True)
 
         devs = [{"ip": ip, "mac": mac, "name": nomes.get(ip, "")}
                 for ip, mac in unicos]
