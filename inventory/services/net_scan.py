@@ -129,12 +129,35 @@ def _subnets_alvo(app):
     return subs
 
 
+# Teto TOTAL do ping-sweep. No caso típico ele nem é alcançado (1024 alvos / 64
+# trabalhadores ≈ 16 levas de ~0,4s), mas no pior caso cada ping vai até 2s e a
+# conta dava ~32s de request.
+_SWEEP_TETO = 20.0
+
+
 def _sweep(app):
+    """Popula a tabela ARP pingando as /24 conhecidas. Best-effort e com teto.
+
+    Os pings que não couberam no teto **continuam rodando** e ainda populam o
+    ARP — só não chegam a tempo desta leitura. Na prática aparecem na varredura
+    seguinte, porque o cache ARP dura alguns minutos.
+    """
     alvos = [str(h) for net in _subnets_alvo(app) for h in net.hosts()]
     if not alvos:
         return
-    with ThreadPoolExecutor(max_workers=64) as ex:
-        list(ex.map(_ping, alvos[:1024]))   # teto de segurança
+    limite = time.monotonic() + _SWEEP_TETO
+    ex = ThreadPoolExecutor(max_workers=64)
+    try:
+        futs = [ex.submit(_ping, ip) for ip in alvos[:1024]]   # teto de segurança
+        for f in futs:
+            try:
+                f.result(timeout=max(0.0, limite - time.monotonic()))
+            except Exception:  # noqa: BLE001 — inclui o timeout do future
+                pass
+    finally:
+        # Mesmo motivo do `scan()`: `with ThreadPoolExecutor(...)` faria
+        # shutdown(wait=True) e esperaria TODOS os pings restantes.
+        ex.shutdown(wait=False, cancel_futures=True)
 
 
 def scan(app, sweep=False):

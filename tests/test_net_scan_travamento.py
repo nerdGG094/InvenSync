@@ -59,3 +59,31 @@ def test_varredura_devolve_o_nome_quando_o_dns_responde(app, monkeypatch):
     devs = net_scan.scan(app, sweep=False)
     assert devs == [{"ip": "192.168.0.54", "mac": "aa-bb-cc-dd-ee-01",
                      "name": "servidor.local"}]
+
+
+# ----- Backlog DEV #31: o mesmo padrao sobrou no _sweep -----
+def test_sweep_tem_teto_total(app, monkeypatch):
+    """O ping-sweep nao pode segurar o request ate o ultimo ping voltar."""
+    from inventory.services import net_scan
+
+    # duas /24 = 508 alvos; cada ping "trava"
+    import ipaddress
+    monkeypatch.setattr(net_scan, "_subnets_alvo",
+                        lambda app: {ipaddress.ip_network("192.168.0.0/24"),
+                                     ipaddress.ip_network("10.0.0.0/24")})
+    monkeypatch.setattr(net_scan, "_ping", lambda ip: time.sleep(30))
+    monkeypatch.setattr(net_scan, "_SWEEP_TETO", 2.0)   # encurta p/ o teste
+
+    inicio = time.monotonic()
+    net_scan._sweep(app)
+    gasto = time.monotonic() - inicio
+    assert gasto < 12, f"_sweep levou {gasto:.1f}s — voltou a esperar todos os pings"
+
+
+def test_sweep_sem_alvos_nao_faz_nada(app, monkeypatch):
+    from inventory.services import net_scan
+    monkeypatch.setattr(net_scan, "_subnets_alvo", lambda app: set())
+    chamou = []
+    monkeypatch.setattr(net_scan, "_ping", lambda ip: chamou.append(ip))
+    net_scan._sweep(app)
+    assert chamou == []
