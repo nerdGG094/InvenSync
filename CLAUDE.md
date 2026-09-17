@@ -68,10 +68,12 @@ There is no separate "employee" table anymore. `models/user.py` is the central r
 - `monitoring.py` — background uptime scheduler started in `create_app()` when `MONITORING_ENABLED`.
 - `alerts.py` — proactive-alerts scheduler (`ALERTS_ENABLED`): low stock, expiring licenses/warranties, stuck tickets. **Upserts a single auto-announcement** (title `AUTO_TITLE`) in Central de Avisos + daily **e-mail** digest. `alerts.publish(app)` is also triggerable from the announcements page button.
 - `crypto.py` — Fernet symmetric encryption for secrets at rest; key derived from `VAULT_KEY` (falls back to `SECRET_KEY`). `encrypt`/`decrypt` (tolerant of legacy plaintext), `looks_encrypted` (structural check — never re-ciphers a token). Used by the **credentials vault** and the **routers** module. **`VAULT_KEY` must never change** or existing ciphertext is unrecoverable.
+  **`_fernet()` is called outside the `try`, on purpose**, and the `except` lists what can actually happen (`InvalidToken, AttributeError, TypeError, ValueError`). It used to be `except (InvalidToken, Exception)` — redundant (Exception already covers InvalidToken) and, worse, it swallowed **configuration** errors with it: outside an app context or with a broken `VAULT_KEY`, `_fernet()` raised, the value didn't "look like a token", and plaintext came back as if all were well — the failure would only surface when someone used the wrong password. Never widen it back to bare `Exception`.
 - `snmp_printer.py` — reads network printers via **SNMP** (Printer-MIB pages/supplies + Brother private toner OID) with an **IPP fallback** (`pyipp`) for Canon that only exposes state/alerts. `query(ip)` is best-effort → `{"ok": bool, ...}`.
 - `printer_monitor.py` — background scheduler (`PRINTER_MONITOR_ENABLED`): scans active network printers, writes `PrinterReading` history, **e-mails TI once per supply-low event**, and **auto-registers a stock OUT movement** when a supply jumps back up (toner/drum swap detected — compares to the last DB reading, robust to restarts).
 - `router_ctl.py` — probes a router's admin panel (online/latency + Basic-Auth vs form detection) for the routers control panel; `auth_url`/`base_url` helpers. Best-effort.
 - `net_scan.py` — ARP-based network discovery for the `/rede` module: reads `arp -a`, filters, reverse-DNS names in parallel; optional ping-sweep of known /24s; `active_set()` returns current ARP MACs/IPs (no DNS) for the machine-card live status. Best-effort.
+  **Never use `with ThreadPoolExecutor(...)` here** — its exit calls `shutdown(wait=True)`, which waits for **every** future, including the ones whose `result(timeout=…)` already expired. That silently voided the timeout and one slow PTR froze the whole scan (a test catches it: reverting the fix makes the run jump from 20s to 94s). Both pools now use a **total** deadline (`time.monotonic()` budget, not per-IP — per-IP meant N slow hosts summed N × timeout) and exit with `shutdown(wait=False, cancel_futures=True)`. Pings cut by the ceiling keep running and still populate the ARP table; they just land on the next scan, which is why cutting them is safe.
 - `dvr_cam.py` — snapshot proxy for the CFTV cameras (`/cgi-bin/snapshot.cgi`, Digest); serves the JPEG in-memory (never to disk) with a short per-(dvr,channel) cache. Reuses `router_ctl.probe` for DVR status.
 - `tuya.py` / `plug_scheduler.py` — smart-plug (Tuya/NeoAvant LAN) control + scheduled on/off, backing the `/tomadas` module.
 - `backup_scheduler.py` — periodic PostgreSQL dumps for the `/backups` module. `errorlog.py` — captured error log for `/errors`.
@@ -244,6 +246,8 @@ Notable optional toggles:
 ## Deploy
 `atualizar.bat` (repo root): `git pull` → `pip install -r requirements.txt` → boot-check (`create_app()`) → **restart via `setup\reiniciar.ps1`**. The restart used to be a printed reminder; it is now a step, because the reminder was the single source of production failure — **every one of the 42 entries in the `/errors` log**, across 4 separate deploys, is `Could not build url for endpoint '…'`, i.e. new templates running on the old process. The boot-check runs *before* anything is killed, so a broken pull leaves the old version serving.
 
+**Upgrading a native Python dep while the app runs** (`cryptography`, `psycopg`, …): pip cannot delete a `.pyd` that the running process has loaded, so on Windows it **renames the folder to `~<name>`** in `site-packages` and installs the new one beside it. The upgrade works, but the running process keeps the old module in memory until a restart, and the `~` folders pile up (four had accumulated before anyone noticed). After restarting, delete them: `rm -rf .venv/Lib/site-packages/~*`. When the dep touches secrets, prove the vault survived before trusting it — decrypt existing rows with the real `VAULT_KEY`, don't just round-trip a new value.
+
 `setup\reiniciar.ps1` stops the app, starts it, and then polls `/health` — a deploy that doesn't come back reports failure instead of passing silently. **It selects processes by `ExecutablePath` under the project root, never by process name or command line**: this server runs other Python apps, and CARREG-LOGI's launcher has a byte-identical command line (`".venv\Scripts\pythonw.exe" "launcher.py"`). Filtering any other way kills the neighbours.
 
 ### Front-end dependencies (CDN)
@@ -266,6 +270,14 @@ Rotina, não pendência:
    dos DVRs (hoje 704x480 no `.134` e 352x240 no `.136`) — mexe no aparelho, não no app.
 
 ## Próximos passos / TODO
-- **Backup sem cópia offsite**: `backup_db.mirror_status()` retorna
+**A fila de verdade é o backlog do board DEV** (`/dev/board?sprint=backlog`), não esta
+lista — ele é alimentado pelos commits e cada card carrega a medição que o motivou.
+O que fica aqui é só o que precisa de decisão humana antes de virar trabalho:
+
+- **Backup sem cópia offsite** (card #28): `backup_db.mirror_status()` retorna
   `configured: False` — os 30 dumps vivem no mesmo disco do banco. Configurar
   `BACKUP_MIRROR_DIR` (outro disco/NAS) e/ou `BACKUP_UPLOAD_CMD` (rclone → Drive).
+  Depende de escolher o destino.
+- **Retenção do `dvr_detection`** (card #30): 291k linhas / 48 MB hoje, ~570k / ~95 MB
+  aos 90 dias de `DVR_DETECT_KEEP_DAYS`, e isso entra em todo dump. Depende de decidir
+  se 90 dias de histórico de detecção servem para alguma coisa.
