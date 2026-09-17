@@ -3,6 +3,11 @@
 *.env
 !.env.example
 
+# Ajustes locais do Claude Code: guardam comandos ja aprovados, e um deles
+# pode carregar credencial (as regras daqui tinham a senha do Postgres em
+# texto puro). E arquivo por maquina -- nunca deve subir.
+.claude/settings.local.json
+
 # === Python ===
 __pycache__/
 *.py[cod]
