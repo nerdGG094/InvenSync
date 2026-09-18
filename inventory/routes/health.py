@@ -13,6 +13,33 @@ bp = Blueprint("health", __name__)
 _START = time.time()
 
 
+def _coletor(modulo, ligado: bool, intervalo: int) -> dict:
+    """Saúde de um coletor de fundo a partir do carimbo do último ciclo.
+
+    Tolera 3 ciclos (com piso de 5 min) antes de chamar de parado, para um
+    ciclo mais demorado não virar alarme falso. Enquanto o primeiro ciclo não
+    fecha, `ha_segundos` é None: aí a régua é o tempo de vida do processo, já
+    que a thread dorme alguns segundos antes de começar.
+
+    Desligado por configuração **não é** `stale` -- um agendador que ninguém
+    quer não é uma falha, e marcá-lo como problema ensinaria a ignorar o campo.
+    """
+    try:
+        s = modulo.saude()
+    except Exception:  # noqa: BLE001
+        return {"enabled": ligado, "running": False, "ha_segundos": None, "stale": False}
+    ha = s.get("ha_segundos")
+    limite = max(intervalo * 3, 300)
+    if not ligado or not s.get("rodando"):
+        parado = False
+    elif ha is None:
+        parado = (time.time() - _START) > (intervalo + limite)
+    else:
+        parado = ha > limite
+    return {"enabled": ligado, "running": bool(s.get("rodando")),
+            "ha_segundos": ha, "stale": parado}
+
+
 def _info() -> dict:
     """Informações operacionais (não afetam o status crítico)."""
     out = {}
@@ -48,6 +75,27 @@ def _info() -> dict:
                 "paradas": paradas,
                 "stale": bool(paradas),
             }
+    except Exception:  # noqa: BLE001
+        pass
+    # Coletores periódicos (impressoras e tomadas). Mesma lição do CFTV: a
+    # thread existir não prova nada -- a escuta dos DVRs passou 6 dias "viva",
+    # parada num read() sem timeout. O sinal é o ciclo parar de avançar, e o
+    # sintoma desses dois seria igualmente silencioso: a baixa de toner
+    # simplesmente deixa de acontecer, o horário programado simplesmente não
+    # dispara. (O backup não precisa disto: `last_backup` já mede o resultado,
+    # que é um sinal melhor que o estado da thread.)
+    try:
+        from ..services import printer_monitor, plug_scheduler
+        out["printer_monitor"] = _coletor(
+            printer_monitor,
+            bool(current_app.config.get("PRINTER_MONITOR_ENABLED")),
+            max(10, int(current_app.config.get("PRINTER_MONITOR_MINUTES", 60) or 60)) * 60,
+        )
+        out["plug_scheduler"] = _coletor(
+            plug_scheduler,
+            bool(current_app.config.get("PLUG_SCHEDULER_ENABLED")),
+            30,      # acorda 2x por minuto
+        )
     except Exception:  # noqa: BLE001
         pass
     # E-mail configurado?

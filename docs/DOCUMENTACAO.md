@@ -1238,6 +1238,13 @@ flowchart LR
 - **`/health` é público, mas econômico**: status, uptime e checagem do banco para qualquer um;
   detalhes de infraestrutura (último backup, agendadores, escutas do CFTV, erro real do banco) só
   para quem chama de `127.0.0.1` — ou seja, o launcher.
+- **Os coletores de fundo se reportam ao `/health`** (`monitoring`, `alerts`, `dvr_events`,
+  `printer_monitor`, `plug_scheduler`): cada um guarda em memória quando fechou o último ciclo, e o
+  `/health` devolve `{enabled, running, ha_segundos, stale}`. **Thread viva não prova nada** — a
+  escuta dos DVRs passou 6 dias "viva", parada num `read()` sem timeout —, então o que vale é o
+  relógio do ciclo, com tolerância de 3 intervalos. Agendador desligado por configuração nunca é
+  `stale`. O backup fica de fora de propósito: `last_backup` mede o resultado, sinal melhor que o
+  estado da thread.
 
 ---
 

@@ -15,6 +15,11 @@ from ..extensions import db
 _started = False
 _lock = threading.Lock()
 
+# Quando o último ciclo terminou (time.time()) — ver `saude()`. O agendador
+# acorda 2x por minuto; se este carimbo parar de avançar, algum horário
+# programado deixou de disparar sem nenhum sintoma visível na tela.
+_ultimo_ciclo = None
+
 
 def run_due(app):
     """Dispara as regras devidas neste minuto. Retorna quantas disparou."""
@@ -110,6 +115,7 @@ def start_scheduler(app):
     check_min = max(1, int(app.config.get("PLUG_OFFLINE_CHECK_MINUTES", 10) or 10))
 
     def loop():
+        global _ultimo_ciclo
         time.sleep(20)  # deixa o servidor subir
         proxima_checagem = 0.0
         while True:
@@ -119,6 +125,7 @@ def start_scheduler(app):
                 if time.monotonic() >= proxima_checagem:
                     proxima_checagem = time.monotonic() + check_min * 60
                     check_offline(app)
+                _ultimo_ciclo = time.time()
             except Exception:  # noqa: BLE001
                 try:
                     with app.app_context():
@@ -128,3 +135,13 @@ def start_scheduler(app):
             time.sleep(30)   # 2x por minuto: nenhum minuto é pulado
 
     threading.Thread(target=loop, daemon=True, name="plug-scheduler").start()
+
+
+def saude() -> dict:
+    """Estado do agendador, em memória — consumido pelo `/health`."""
+    return {
+        "rodando": _started,
+        "ultimo_ciclo": _ultimo_ciclo,
+        "ha_segundos": (None if _ultimo_ciclo is None
+                        else round(time.time() - _ultimo_ciclo, 1)),
+    }

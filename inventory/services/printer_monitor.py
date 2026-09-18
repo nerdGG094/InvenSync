@@ -16,6 +16,12 @@ from ..extensions import db
 _started = False
 _lock = threading.Lock()
 
+# Quando a última varredura terminou (time.time()). É o que o /health olha:
+# thread viva não prova nada -- a escuta do CFTV ficou 6 dias "viva", travada
+# num read() sem timeout, e ninguém viu. O que denuncia é o ciclo parar de
+# avançar.
+_ultimo_ciclo = None
+
 # Estado em memória do "já avisei": machine_id -> {"toner": bool, "drum": bool}.
 # (A detecção de troca NÃO usa memória — compara com a última leitura do banco.)
 _alerted = {}
@@ -147,10 +153,12 @@ def start_scheduler(app):
     intervalo = max(10, int(app.config.get("PRINTER_MONITOR_MINUTES", 60) or 60)) * 60
 
     def loop():
+        global _ultimo_ciclo
         time.sleep(40)   # deixa o servidor subir antes da 1ª coleta
         while True:
             try:
                 collect_once(app)
+                _ultimo_ciclo = time.time()
             except Exception:  # noqa: BLE001
                 try:
                     with app.app_context():
@@ -160,3 +168,17 @@ def start_scheduler(app):
             time.sleep(intervalo)
 
     threading.Thread(target=loop, daemon=True, name="printer-monitor").start()
+
+
+def saude() -> dict:
+    """Estado da coleta, em memória — consumido pelo `/health`.
+
+    `ha_segundos` é None enquanto a primeira varredura não terminou (a thread
+    espera 40s para o servidor subir).
+    """
+    return {
+        "rodando": _started,
+        "ultimo_ciclo": _ultimo_ciclo,
+        "ha_segundos": (None if _ultimo_ciclo is None
+                        else round(time.time() - _ultimo_ciclo, 1)),
+    }
