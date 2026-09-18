@@ -3,6 +3,7 @@ from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
 from wtforms import (
     StringField, TextAreaField, SubmitField, IntegerField, DecimalField,
+    HiddenField,
     SelectField, DateField, BooleanField,
 )
 from wtforms.validators import DataRequired, Length, Email, Optional, NumberRange
@@ -61,4 +62,15 @@ class MovementForm(FlaskForm):
     responsible_user = SelectField("Usuário responsável", validators=[Optional()], choices=[])
     responsible_sector = StringField("Setor", validators=[Optional(), Length(max=120)])
     note = TextAreaField("Observação", validators=[Optional()])
+    # Troca de celular: quando a saída é de um aparelho para quem já tem um, a
+    # tela pergunta o que aconteceu com o antigo (ver services/troca_celular.py).
+    troca_mobile_id = HiddenField(validators=[Optional()])
+    troca_destino = SelectField(
+        "O aparelho antigo",
+        choices=[("nada", "Continua com a pessoa"),
+                 ("estoque", "Voltou ao estoque"),
+                 ("manutencao", "Foi para manutenção")],
+        default="nada", validators=[Optional()])
+    troca_product_id = SelectField("Material correspondente", coerce=int,
+                                   validators=[Optional()], choices=[])
     submit = SubmitField("Registrar")

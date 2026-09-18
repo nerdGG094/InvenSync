@@ -51,6 +51,9 @@ def _run_light_migrations():
         'ALTER TABLE "user" ADD COLUMN IF NOT EXISTS department_id INTEGER REFERENCES department(id)',
         'ALTER TABLE machine ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES "user"(id)',
         'ALTER TABLE mobile_device ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES "user"(id)',
+        # Celulares: material do Estoque correspondente ao aparelho. Gravado na
+        # devolução (troca) para que o modelo só precise ser apontado uma vez.
+        'ALTER TABLE mobile_device ADD COLUMN IF NOT EXISTS product_id INTEGER REFERENCES product(id)',
         # Impressoras: material de toner/cilindro (Estoque) p/ baixa automática na troca.
         'ALTER TABLE machine ADD COLUMN IF NOT EXISTS toner_product_id INTEGER REFERENCES product(id)',
         'ALTER TABLE machine ADD COLUMN IF NOT EXISTS drum_product_id INTEGER REFERENCES product(id)',

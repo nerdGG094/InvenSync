@@ -855,6 +855,32 @@ sequenceDiagram
 
 ---
 
+### 9.7 Troca de celular (a saída do novo devolve o antigo)
+
+Estoque e Celulares eram dois cadastros que não se falavam: entregar um aparelho a quem já tinha um
+exigia dois lançamentos manuais e nada garantia que as duas versões concordassem. A troca é o
+momento em que os dois falam da mesma coisa.
+
+```mermaid
+flowchart TB
+    A["Saída de um material de CELULAR<br/>para um responsável"] --> B{"A pessoa já usa<br/>um aparelho?"}
+    B -->|Não| Z["Segue o fluxo normal"]
+    B -->|Sim| C["A tela mostra o aparelho atual<br/>e pergunta o que houve com ele"]
+    C -->|Voltou ao estoque| D["ENTRADA de 1 un. do material<br/>+ aparelho fica 'disponível', sem responsável"]
+    C -->|Foi para manutenção| E["Aparelho vira 'manutenção'<br/>SEM entrada no estoque"]
+    C -->|Continua com ela| Z
+```
+
+- **É perguntado, nunca automático.** Os três desfechos são comuns, e uma entrada automática colocaria
+  no saldo um aparelho que está quebrado ou na gaveta de alguém — erro que só aparece no inventário.
+- **Aparelho compartilhado fica de fora**: devolvê-lo ao estoque tiraria o aparelho das outras pessoas.
+- **O material correspondente** é sugerido pelo nome e fica **gravado no aparelho**
+  (`mobile_device.product_id`), então cada modelo só precisa ser apontado uma vez.
+- A devolução é preparada **antes** do commit da saída, na mesma sessão: as duas gravam juntas ou
+  nenhuma grava — saída do novo e volta do antigo são o mesmo fato.
+
+---
+
 ## 10. Chamados de Suporte (ciclo de vida)
 
 ```mermaid

@@ -192,6 +192,33 @@
             </div>
           </div>
 
+          {# Troca de celular: aparece só quando a saída é de um aparelho para
+             alguém que já tem um. Estoque e Celulares eram dois cadastros que
+             não se falavam; este é o momento em que falam da mesma coisa. #}
+          <div id="troca-box" class="d-none rounded p-3 mb-3"
+               style="background:#2a2410;border:1px solid #6b5a12">
+            <div class="fw-semibold mb-1">
+              <i class="bi bi-phone me-1"></i>
+              <span id="troca-pessoa" class="text-warning"></span> já usa
+              <span id="troca-aparelho" class="text-warning"></span>
+            </div>
+            <div class="small text-muted mb-2" id="troca-detalhe"></div>
+            {{ form.troca_mobile_id(id="troca_mobile_id") }}
+            <div class="mb-2">
+              {% for sub in form.troca_destino %}
+              <div class="form-check">
+                {{ sub(class="form-check-input troca-destino") }}
+                {{ sub.label(class="form-check-label") }}
+              </div>
+              {% endfor %}
+            </div>
+            <div id="troca-produto-box" class="d-none">
+              {{ form.troca_product_id.label(class="form-label fw-semibold mb-1 small") }}
+              {{ form.troca_product_id(class="form-select form-select-sm", id="troca_product_id") }}
+              <div class="form-text">Recebe a entrada de 1 unidade. A escolha fica gravada no aparelho.</div>
+            </div>
+          </div>
+
           <div>
             {{ form.note.label(class="form-label fw-semibold mb-1") }}
             {{ form.note(class="form-control", rows=2, maxlength=240, placeholder="Ex.: NF, motivo, etc.") }}
@@ -316,6 +343,72 @@
         }
       });
     }
+  })();
+
+  // ===== Troca de celular: saída de aparelho para quem já tem um ==========
+  (function(){
+    const IDS_CELULAR = new Set({{ (ids_celular or [])|tojson }});
+    const prod = document.getElementById('product_id');
+    const tipo = document.getElementById('movement_type');
+    const usr  = document.getElementById('responsible_user');
+    const box  = document.getElementById('troca-box');
+    if (!prod || !tipo || !usr || !box) return;
+
+    const elPessoa   = document.getElementById('troca-pessoa');
+    const elAparelho = document.getElementById('troca-aparelho');
+    const elDetalhe  = document.getElementById('troca-detalhe');
+    const inpId      = document.getElementById('troca_mobile_id');
+    const selProduto = document.getElementById('troca_product_id');
+    const boxProduto = document.getElementById('troca-produto-box');
+    const radios     = document.querySelectorAll('.troca-destino');
+
+    function esconder(){
+      box.classList.add('d-none');
+      inpId.value = '';
+      // zera a escolha: um destino que ficou marcado de uma consulta anterior
+      // devolveria ao estoque o aparelho errado.
+      radios.forEach(r => { r.checked = (r.value === 'nada'); });
+      boxProduto.classList.add('d-none');
+    }
+
+    function mostrarProdutoSeNecessario(){
+      const escolhido = document.querySelector('.troca-destino:checked');
+      boxProduto.classList.toggle('d-none', !escolhido || escolhido.value !== 'estoque');
+    }
+    radios.forEach(r => r.addEventListener('change', mostrarProdutoSeNecessario));
+
+    let ultimaBusca = '';
+    function conferir(){
+      const pessoa = usr.value.trim();
+      const ehCelular = IDS_CELULAR.has(parseInt(prod.value, 10));
+      if (tipo.value !== 'OUT' || !ehCelular || !pessoa){ esconder(); return; }
+      const chave = pessoa;
+      if (chave === ultimaBusca && !box.classList.contains('d-none')) return;
+      ultimaBusca = chave;
+      fetch('{{ url_for("movements.celular_do_responsavel") }}?user=' + encodeURIComponent(pessoa),
+            {headers: {'X-Requested-With': 'fetch'}})
+        .then(r => r.json())
+        .then(d => {
+          const ap = (d.aparelhos || [])[0];
+          if (!ap){ esconder(); return; }
+          elPessoa.textContent = pessoa;
+          elAparelho.textContent = ap.rotulo + (ap.patrimony ? ' (' + ap.patrimony + ')' : '');
+          const partes = [];
+          if (ap.linha) partes.push('linha ' + ap.linha);
+          if (ap.imei) partes.push('IMEI ' + ap.imei);
+          if (ap.setor) partes.push(ap.setor);
+          elDetalhe.textContent = partes.join(' · ');
+          inpId.value = ap.id;
+          if (ap.produto_id && selProduto) selProduto.value = ap.produto_id;
+          box.classList.remove('d-none');
+          mostrarProdutoSeNecessario();
+        })
+        .catch(() => esconder());
+    }
+
+    prod.addEventListener('change', conferir);
+    tipo.addEventListener('change', conferir);
+    usr.addEventListener('change', conferir);
   })();
 
   // ===== Nota fiscal: só aparece em entradas; o switch revela o anexo =====

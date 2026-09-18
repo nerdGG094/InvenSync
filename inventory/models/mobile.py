@@ -23,6 +23,12 @@ class MobileDevice(db.Model):
     # Aparelho compartilhado: até 2 funcionários adicionais usam o mesmo celular.
     assigned_employee_2 = db.Column(db.String(150), nullable=True, index=True)
     assigned_employee_3 = db.Column(db.String(150), nullable=True, index=True)
+    # Material do Estoque que corresponde a este aparelho. Fica gravado quando o
+    # celular é devolvido numa troca, para o modelo só precisar ser apontado uma
+    # vez (ver services/troca_celular.py).
+    product_id = db.Column(db.Integer, db.ForeignKey("product.id"), nullable=True, index=True)
+    product = db.relationship("Product")
+
     sector = db.Column(db.String(120), nullable=True)          # setor
     patrimony = db.Column(db.String(60), nullable=True, index=True)
 

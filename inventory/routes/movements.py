@@ -5,9 +5,9 @@ from datetime import datetime, timedelta
 
 from flask import (
     Blueprint, render_template, request, redirect, url_for, flash,
-    current_app, send_from_directory, abort,
+    current_app, send_from_directory, abort, jsonify,
 )
-from flask_login import login_required
+from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from sqlalchemy.orm import joinedload
 from ..extensions import db
@@ -17,7 +17,7 @@ from ..repositories import movement_repo
 from ..forms.catalog import MovementForm
 from ..models.product import Product
 from ..models.movement import StockMovement  # para filtrar/consultar com joins
-from ..services import people, audit
+from ..services import people, audit, troca_celular
 
 
 bp = Blueprint("movements", __name__)
@@ -61,6 +61,12 @@ def list_and_new():
     form.product_id.choices = [(p.id, f"{p.sku} - {p.name}") for p in products]
     form.responsible_user.choices = people.user_choices("— Nenhum —")
 
+    # Troca de celular: materiais que são aparelho, para o combo da devolução.
+    prod_celular = troca_celular.produtos_celular()
+    form.troca_product_id.choices = ([(0, "— selecione o material —")] +
+                                     [(p.id, f"{p.name} ({p.sku})") for p in prod_celular])
+    ids_celular = [p.id for p in prod_celular]
+
     # Mapa para autopreencher o formulário ao escolher o material: custo unitário
     # (preço do cadastro) e responsável/setor já apontados no item.
     products_info = {
@@ -78,6 +84,40 @@ def list_and_new():
         if form.movement_type.data == "IN" and form.has_nf.data:
             nf_filename, nf_original = _save_nf(form.nf_file.data)
 
+        # ===== Troca de celular (saída do novo devolve o antigo) =============
+        # Fica ANTES do create_movement de propósito: as alterações ficam
+        # pendentes na mesma sessão e o commit da saída grava tudo de uma vez.
+        # Se a saída falhar, a devolução não fica gravada sozinha.
+        troca_msg, troca_dev = None, None
+        troca_destino_esc = (form.troca_destino.data or "nada").strip()
+        pessoa = (form.responsible_user.data or "").strip()
+        try:
+            troca_mid = int(form.troca_mobile_id.data or 0)
+        except (TypeError, ValueError):
+            troca_mid = 0
+        if (form.movement_type.data == "OUT"
+                and troca_destino_esc in ("estoque", "manutencao")
+                and troca_mid and pessoa):
+            # O id vem do formulário: confere que o aparelho é mesmo desta
+            # pessoa antes de mexer nele (um id trocado na mão mexeria no
+            # celular de outro funcionário).
+            troca_dev = next((d for d in troca_celular.aparelhos_da_pessoa(pessoa)
+                              if d.id == troca_mid), None)
+            if troca_dev is None:
+                flash("O aparelho informado não está mais com esse responsável; "
+                      "a devolução não foi registrada.", "warning")
+            else:
+                item_novo = next((p for p in products if p.id == form.product_id.data), None)
+                troca_msg, _ = troca_celular.aplicar(
+                    troca_dev, troca_destino_esc,
+                    form.troca_product_id.data or 0, pessoa,
+                    novo_rotulo=(item_novo.name if item_novo else ""),
+                    user_id=getattr(current_user, "id", None),
+                )
+                # A auditoria fica DEPOIS do create_movement: audit.record() faz
+                # commit, e commitar aqui gravaria a devolução antes da saída
+                # existir -- exatamente o "pela metade" que se quer evitar.
+
         mov = movement_repo.create_movement(
             product_id=form.product_id.data,
             movement_type=form.movement_type.data,
@@ -94,6 +134,10 @@ def list_and_new():
         # na trilha — módulos bem menores (tomadas, cofre) já registravam tudo.
         # A tabela guarda `user_id`, mas só a trilha reúne as ações de uma
         # pessoa em ordem, ao lado das dos outros módulos.
+        if troca_msg and troca_dev is not None:
+            audit.record("update", "mobile", troca_dev.id,
+                         f"Troca de aparelho de {pessoa}: {troca_msg}")
+
         item = next((p for p in products if p.id == form.product_id.data), None)
         destino = (form.responsible_user.data or "").strip() or "—"
         setor = (form.responsible_sector.data or "").strip()
@@ -109,6 +153,8 @@ def list_and_new():
         )
         if form.movement_type.data == "IN" and form.has_nf.data and not nf_filename:
             flash("Entrada registrada, mas a NF não foi anexada (envie um XML ou PDF).", "warning")
+        elif troca_msg:
+            flash(f"Movimentação registrada! {troca_msg}", "success")
         else:
             flash("Movimentação registrada!", "success")
         return redirect(url_for("movements.list_and_new"))
@@ -213,6 +259,7 @@ def list_and_new():
         pagination=pagination,
         totals=totals,
         users_info=people.users_sector_map(),
+        ids_celular=ids_celular,
         products_info=products_info,
     )
 
@@ -230,3 +277,16 @@ def nf(mid):
         as_attachment=False,
         download_name=m.nf_original_name or m.nf_filename,
     )
+
+
+@bp.route("/celular-do-responsavel")
+@login_required
+def celular_do_responsavel():
+    """Aparelho que a pessoa já usa — consultado pela tela ao montar a saída.
+
+    JSON porque a pergunta só faz sentido depois que o analista escolhe o
+    responsável, e recarregar a página perderia o que ele já preencheu.
+    """
+    nome = (request.args.get("user") or "").strip()
+    itens = [troca_celular.resumo(d) for d in troca_celular.aparelhos_da_pessoa(nome)]
+    return jsonify(aparelhos=itens)
