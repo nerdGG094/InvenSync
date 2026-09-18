@@ -168,3 +168,19 @@ def test_endpoint_json_vazio_para_quem_nao_tem_aparelho(auth_client, cenario):
     r = auth_client.get("/movements/celular-do-responsavel?user=Ninguem Com Esse Nome")
     assert r.status_code == 200
     assert r.get_json()["aparelhos"] == []
+
+
+def test_opcoes_da_troca_sao_radios_de_verdade(auth_client, cenario):
+    """Regressão de tela: as três opções têm de ser <input type="radio">.
+
+    Eram um SelectField, e iterar um SelectField no template rende <option>
+    soltos FORA de um <select> — o navegador desenha isso como caixinhas de
+    texto por cima das labels. O valor postado é idêntico nos dois casos, então
+    só a tela denuncia: nenhum teste de servidor que olhasse o resultado do
+    POST pegaria.
+    """
+    html = auth_client.get("/movements").get_data(as_text=True)
+    assert 'name="troca_destino"' in html
+    assert html.count('type="radio"') >= 3
+    # <option> do destino só pode existir dentro de um <select>; aqui não há.
+    assert '<option value="manutencao"' not in html
