@@ -9,7 +9,7 @@ from ..repositories import dvr_repo
 from ..forms.dvr import DvrForm
 from ..models.dvr import Dvr
 from ..services import audit, crypto, router_ctl, dvr_cam, go2rtc, dvr_events
-from ..services.pagination import paginate
+from ..services.pagination import PER_PAGE_OPTIONS
 from ..models.dvr_detection import DvrDetection
 
 bp = Blueprint("dvr", __name__)
@@ -184,7 +184,13 @@ def deteccoes(did):
 
 @bp.route("/deteccoes")
 def historico():
-    """Histórico das detecções (humano/veículo) reportadas pelos DVRs."""
+    """Histórico das detecções (humano/veículo) reportadas pelos DVRs.
+
+    Pagina **no banco**. Antes trazia 600 linhas e fatiava em memória: com
+    ~6.900 detecções por dia, isso era menos de duas horas de histórico — o
+    resto dos 30 dias guardados não tinha como ser aberto, e o contador do
+    topo mostrava 600 como se fosse o total.
+    """
     tipo = (request.args.get("tipo") or "").strip()
     did = request.args.get("dvr", type=int)
     q = DvrDetection.query
@@ -192,11 +198,18 @@ def historico():
         q = q.filter(DvrDetection.object_type == tipo)
     if did:
         q = q.filter(DvrDetection.dvr_id == did)
-    itens = q.order_by(DvrDetection.id.desc()).limit(600).all()
-    pag_itens, pag = paginate(itens)
-    return render_template("cftv/deteccoes.html", itens=pag_itens, pag=pag,
+
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 20, type=int)
+    if per_page not in PER_PAGE_OPTIONS:
+        per_page = 20
+    pag = (q.order_by(DvrDetection.id.desc())
+            .paginate(page=page, per_page=per_page, error_out=False))
+    pag.per_page_options = list(PER_PAGE_OPTIONS)
+
+    return render_template("cftv/deteccoes.html", itens=pag.items, pag=pag,
                            dvrs=dvr_repo.list_dvrs(), tipo=tipo, did=did,
-                           total=len(itens))
+                           total=pag.total)
 
 
 @bp.route("/go2rtc")

@@ -1128,8 +1128,18 @@ flowchart LR
 ## 14. Auditoria
 
 `services.audit.record(...)` grava em `audit_log`, **best-effort** (nunca quebra o fluxo do app),
-quem fez o quê, em qual entidade, com IP e horário. A tela `/audit` (admin) filtra por ação/entidade.
-Ações típicas: criação/edição/exclusão de cadastros, **reveal** de senha do cofre, reset de 2FA.
+quem fez o quê, em qual entidade, com IP e horário. Ações típicas: criação/edição/exclusão de
+cadastros, **reveal** de senha do cofre, reset de 2FA.
+
+A tela `/audit` (admin) filtra por **ação, entidade, usuário, texto da descrição/IP e período**, e
+**pagina no banco** — dá para chegar ao registro mais antigo da trilha. A lista de ações do filtro
+sai da própria tabela, então uma ação nova passa a aparecer sozinha.
+
+> Antes a tela buscava as **400** entradas mais recentes e paginava essa lista em memória: o resto
+> da trilha não tinha como ser aberto e o rodapé anunciava "400 registros" como se fosse o total.
+> Como a auditoria só é consultada *depois* que algo aconteceu, o histórico antigo é justamente o
+> que se procura. O histórico de detecções do CFTV tinha o mesmo teto (600 linhas — menos de duas
+> horas, no volume real) e foi corrigido junto.
 
 ```mermaid
 flowchart LR
