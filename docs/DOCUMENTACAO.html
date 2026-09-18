@@ -48,13 +48,16 @@
 
 > **InvenSync** — sistema de gestão de almoxarifado e ativos de **TI** da **Refrigerantes Jaboti**.
 > Controla estoque (toner, cilindros, periféricos, peças), parque de máquinas, celulares, chips,
-> roteadores, colaboradores, chamados de suporte, base de conhecimento, cofre de senhas, licenças,
-> domínios, monitoramento de uptime e auditoria — tudo numa aplicação web **Flask** sobre **PostgreSQL**,
+> roteadores, impressoras de rede, câmeras (CFTV), colaboradores, chamados de suporte, base de
+> conhecimento, cofre de senhas, licenças, domínios, monitoramento de uptime, o board de
+> desenvolvimento e auditoria — tudo numa aplicação web **Flask** sobre **PostgreSQL**,
 > servida em produção por **waitress** e operada por um **launcher** desktop (PyQt5).
 
-> **Stack:** Python 3.12 · Flask 3 · Flask-Login · Flask-WTF (CSRF) · SQLAlchemy 2 · psycopg 3
-> · PostgreSQL 17 · Jinja2 · Bootstrap 5.3 · Bootstrap Icons · Chart.js · `waitress` · `openpyxl`
-> · `qrcode` · `pyotp` (TOTP) · `tinytuya` (tomadas inteligentes) · PyQt5 (launcher)
+> **Stack:** Python 3.12 · Flask 3 · Flask-Login · Flask-WTF (CSRF) · Flask-Limiter · SQLAlchemy 2
+> · psycopg 3 · PostgreSQL 17 · Jinja2 · Bootstrap 5.3 · Bootstrap Icons · Chart.js · Three.js + GSAP
+> (tela de Apresentação) · `waitress` · `openpyxl` · `qrcode` · `pyotp` (TOTP) · `cryptography`
+> (Fernet, segredos em repouso) · `tinytuya` (tomadas) · `puresnmp`/`pyipp` (impressoras)
+> · **go2rtc** externo (câmeras em WebRTC) · PyQt5 (launcher)
 > **Segurança:** hash de senha (werkzeug/scrypt) · 2FA TOTP · RBAC por perfil (admin × comum)
 > · `is_active` bloqueia login · trilha de auditoria · segredos só no `.env`
 
@@ -84,6 +87,12 @@
 11. [Ativos por Colaborador e Termo de Responsabilidade](#11-ativos-por-colaborador-e-termo-de-responsabilidade)
 12. [Monitoramento de Uptime](#12-monitoramento-de-uptime)
 13. [Notificações por E-mail (SMTP)](#13-notificações-por-e-mail-smtp)
+    - 13.1 [Tomadas Inteligentes](#131-tomadas-inteligentes-tuya--controle-local)
+    - 13.2 [Impressoras de Rede (SNMP)](#132-impressoras-de-rede-snmp--histórico-alerta-e-baixa-automática)
+    - 13.3 [CFTV — DVRs, Câmeras e Detecção](#133-cftv--dvrs-câmeras-ao-vivo-e-detecção-inteligente)
+    - 13.4 [Rede — Descoberta por ARP](#134-rede--descoberta-por-arp)
+    - 13.5 [Board DEV](#135-board-dev--kanban-alimentado-pelos-commits)
+    - 13.6 [Avisos, Busca, Cotações, Kiox e Apresentação](#136-avisos-busca-global-cotações-kiox-e-apresentação)
 14. [Auditoria](#14-auditoria)
 15. [Implantação (Deployment) e Launcher](#15-implantação-deployment-e-launcher)
 16. [Segurança](#16-segurança)
@@ -102,14 +111,22 @@ de TI** inteira. Hoje reúne, num só lugar:
 - **Estoque** — materiais com SKU automático, categorias, fornecedores, movimentações (entrada/saída
   com anexo de NF), board **Kanban** de saúde de estoque e relatórios/exportação.
 - **Máquinas & Rede** — cadastro de computadores/notebooks/impressoras, celulares (com compartilhamento
-  de aparelho), chips/linhas SIM, roteadores (com credenciais Wi-Fi), limpezas e manutenções, e
-  **etiquetas QR** para os ativos.
+  de aparelho), chips/linhas SIM, roteadores (com credenciais Wi-Fi), limpezas e manutenções,
+  **etiquetas QR** para os ativos e **descoberta da rede por ARP** (casa o que está ligado com o
+  cadastro, pelo MAC).
+- **Coleta automática** — impressoras lidas por **SNMP** (páginas, toner, cilindro, vida das peças),
+  com alerta de suprimento baixo e **baixa automática no estoque** quando a troca é detectada; e o
+  **CFTV** (DVRs Intelbras/Dahua) com câmeras ao vivo e **detecção de pessoa/veículo** feita pelo
+  próprio DVR.
 - **Pessoas** — cadastro central de colaboradores (com ou sem login), departamentos e a visão de
   **ativos por colaborador** com **termo de responsabilidade** imprimível.
 - **Suporte** — chamados (tickets) com comentários, anexos, SLA e painel; **base de conhecimento**.
 - **Administração de TI** — **cofre de senhas**, **licenças & garantias**, **domínios**,
   **monitoramento de uptime** (ping/HTTP com alerta por e-mail), **tomadas inteligentes**
   (controle local + agendamento), **backups** do banco e **auditoria**.
+- **Comunicação e trabalho** — **Central de Avisos** (mural interno, onde também caem os alertas
+  proativos), **busca global** (Ctrl+K) e o **board DEV**, um mini-Monday que se alimenta dos
+  commits dos repositórios da casa.
 
 ```mermaid
 mindmap
@@ -132,6 +149,9 @@ mindmap
     Integrações
       E-mail SMTP
       Tuya local (tomadas)
+      SNMP e IPP (impressoras)
+      DVR Dahua/Intelbras CGI
+      go2rtc (WebRTC)
       QR Code
       TOTP 2FA
     Operação
@@ -156,7 +176,7 @@ flowchart TB
 
     subgraph APP["🐍 Aplicação Flask (create_app)"]
         direction TB
-        ROUTES["Camada de Rotas — Blueprints<br/>auth · dashboard · products · categories · suppliers<br/>movements · reports · kanban · machines · mobile · chips<br/>routers · cleanings · maintenance · monitoring · labels<br/>colaboradores · departments · assets · tickets · kb<br/>credentials · licenses · domains · audit · backups<br/>smartplugs · errors · announcements · profile · health · docs"]
+        ROUTES["Camada de Rotas — Blueprints<br/>auth · dashboard · intro · products · categories · suppliers<br/>movements · reports · kanban · machines · mobile · chips<br/>routers · cleanings · maintenance · monitoring · labels<br/>colaboradores · departments · assets · tickets · kb<br/>credentials · licenses · domains · audit · backups<br/>smartplugs · cotacoes · rede · dvr · dev · kiox · search<br/>errors · announcements · wpp · profile · health · docs"]
         FORMS["Formulários (Flask-WTF)<br/>validação de entrada + CSRF"]
         SERVICES["Serviços (transversais)<br/>assets · audit · exports · imports · inventory_service<br/>mailer · monitoring · people · twofa · tuya · plug_scheduler · docs"]
         REPOS["Repositórios (acesso a dados)<br/>product · category · supplier · movement · machine<br/>mobile · chip · router · cleaning · maintenance<br/>ticket · kb · credential · license · domain"]
@@ -188,8 +208,13 @@ flowchart TB
 
 ## 3. Mapa de Módulos (Blueprints)
 
-Os 30 blueprints são agrupados na navegação conforme o menu lateral. **Admin** vê tudo; usuário
-**comum** acessa apenas Chamados, Base de Conhecimento, o próprio Perfil e a autenticação.
+Os **40 blueprints** registrados em `create_app()` são agrupados na navegação conforme o menu
+lateral. **Admin** vê tudo; usuário **comum** acessa apenas Apresentação, Central de Avisos,
+Chamados, Base de Conhecimento, o próprio Perfil e a autenticação — quem controla isso é o
+`before_request` global `_gate_non_admins` (ver §5.2).
+
+> **Onde cada um fica no menu:** a barra lateral comporta 12 ícones + a gaveta `…`. Acrescentar um
+> módulo à barra significa mover outro para a gaveta — o espaço é fixo de propósito.
 
 ```mermaid
 flowchart LR
@@ -208,16 +233,23 @@ flowchart LR
     subgraph CADASTROS["📒 Cadastros"]
         licenses & domains
     end
+    subgraph COLETA["📡 Coleta & CFTV"]
+        rede & dvr
+    end
+    subgraph TRABALHO["🛠️ Trabalho & Comunicação"]
+        dev & announcements & search & cotacoes
+    end
     subgraph ADMIN["⚙️ Admin"]
-        credentials & audit & backups & smartplugs & errors & docs
+        credentials & audit & backups & smartplugs & errors & docs & kiox & wpp
     end
     subgraph BASE["🔐 Base"]
-        auth & dashboard & profile & health
+        auth & dashboard & intro & profile & health
     end
 ```
 
 | Grupo (menu) | Blueprints | Acesso |
 |---|---|---|
+| Apresentação | `intro` | Todos (1ª entrada de todo usuário) |
 | Painel | `dashboard` | Admin |
 | Estoque | `products` · `categories` · `suppliers` · `movements` · `kanban` · `reports` | Admin |
 | Cadastros | `licenses` · `domains` | Admin |
@@ -225,7 +257,12 @@ flowchart LR
 | Colaboradores | `colaboradores` · `departments` · `assets` | Admin |
 | Suporte | `tickets` | Todos |
 | Conhecimento | `kb` | Ver: todos · Editar: Admin |
-| Admin (Cofre/Auditoria) | `credentials` · `audit` · `errors` | Admin |
+| CFTV | `dvr` (DVRs, câmeras, detecção, go2rtc) | Admin |
+| Rede | `rede` (descoberta ARP) | Admin |
+| DEV | `dev` (board, sprints, backlog) | Admin |
+| Busca global | `search` (Ctrl+K, JSON) | Admin |
+| Cotações | `cotacoes` (deep-link Mercado Livre) | Admin |
+| Admin (Cofre/Auditoria) | `credentials` · `audit` · `errors` · `kiox` · `wpp` | Admin |
 | Tomadas Inteligentes | `smartplugs` | Admin |
 | Avisos | `announcements` | Ver: todos · Postar: Admin |
 | Perfil / Sistema | `profile` · `backups` · `docs` | Perfil: todos · resto Admin |
@@ -692,6 +729,11 @@ Visão por blueprint. `L` = exige login · `A` = exige admin.
 | GET … | `/machines/cleanings` … | cleanings.* | Limpezas periódicas | A |
 | GET … | `/machines/maintenance` … | maintenance.* | Manutenções (+ Excel) | A |
 | GET … | `/machines/monitoring` … | monitoring.* | Uptime (+ importar/checar) | A |
+| GET | `/machines/<id>/snmp` | machines.snmp | Leitura SNMP da impressora (JSON) | A |
+| GET | `/machines/rede-ativos` | machines.rede_ativos | Chip online/offline pela tabela ARP (JSON) | A |
+| GET | `/machines/impressoras/consumo` | machines.printers_report | Consumo, resmas e custo por setor | A |
+| GET/POST | `/machines/import` · `/machines/import/template` | machines.* | Importar parque por planilha | A |
+| GET | `/machines/<id>/historico` | machines.historico | Histórico do equipamento | A |
 | GET | `/labels` · `/labels/qr/<kind>/<id>.png` | labels.* | Etiquetas QR | A |
 | GET … | `/colaboradores` … | colaboradores.* | Cadastro central de pessoas | A |
 | GET … | `/departments` … | departments.* | Departamentos/setores | A |
@@ -706,6 +748,19 @@ Visão por blueprint. `L` = exige login · `A` = exige admin.
 | GET/POST | `/profile` · `/profile/2fa/*` | profile.* | Meu perfil + 2FA | L |
 | GET/POST | `/wpp` · `/wpp/email-test` | wpp.* | Notificações por e-mail (teste SMTP) | A |
 | GET/POST | `/tomadas` … | smartplugs.* | Tomadas inteligentes (+ agendamentos) | A |
+| GET | `/apresentacao` | intro.index | Tela de boas-vindas (1ª entrada) | L |
+| GET … | `/avisos` … | announcements.* | Central de Avisos (mural) | Ver: L · Postar: A |
+| POST | `/avisos/alertas/executar` | announcements.run_alerts | Roda os alertas proativos na hora | A |
+| GET | `/busca` | search.query | Busca global (JSON, Ctrl+K) | A |
+| GET | `/rede` · `/rede/scan` · `/rede/vincular` | rede.* | Descoberta ARP + vincular MAC ao cadastro | A |
+| GET … | `/cftv` … | dvr.* | CRUD de DVRs, status e revelar senha | A |
+| GET | `/cftv/<id>/cameras` · `/cftv/<id>/snap/<ch>` | dvr.* | Grade de câmeras + proxy do snapshot | A |
+| GET | `/cftv/<id>/deteccoes` · `/cftv/deteccoes` | dvr.* | Detecções ao vivo (memória) e histórico | A |
+| GET/POST | `/cftv/go2rtc` · `/cftv/go2rtc/gerar` | dvr.* | Tempo real: sonda o serviço e gera o `go2rtc.yaml` | A |
+| GET | `/dev` · `/dev/board` · `/dev/sprints` | dev.* | Painel, kanban e sprints do time de dev | A |
+| GET/POST | `/dev/task/*` · `/dev/checklist/*` | dev.* | Tarefa, mover, reordenar, checklist, atualização | A |
+| GET | `/cotacoes` | cotacoes.index | Deep-link de preço no Mercado Livre | A |
+| GET | `/kiox` · `/kiox/apk` | kiox.* | Mapa de rastreio da frota (+ APK) | A |
 | GET | `/errors` | errors.* | Log central de erros | A |
 | GET | `/docs` | docs.index | **Documentação viva** | A |
 | GET | `/health` | health.health | Status do serviço (JSON) | — |
@@ -867,6 +922,12 @@ sequenceDiagram
 > A tela `/machines/monitoring` permite **adicionar/editar/pausar** hosts, **checar agora** e
 > **importar** automaticamente máquinas e roteadores que tenham IP.
 
+**Entram sozinhos no monitoramento** toda impressora, DVR e roteador **ativo e com IP fixo**:
+`_sync_auto_hosts()` roda a cada ciclo (e ao abrir a tela) e mantém um `monitored_host` com
+`auto_source` = `impressora:N` / `dvr:N` / `router:N`, de forma que esses equipamentos usem o mesmo
+alerta de caiu/voltou já existente. Host automático é **somente leitura** na tela — quem o remove é
+a remoção ou a inativação do próprio equipamento.
+
 ---
 
 ## 13. Notificações por E-mail (SMTP)
@@ -912,6 +973,201 @@ flowchart LR
     SVC -->|TCP local :6668| PLUG["Tomada Tuya na LAN"]
     SVC -.->|decifra local key| VAULT["VAULT_KEY"]
 ```
+
+---
+
+## 13.2 Impressoras de Rede (SNMP) — histórico, alerta e baixa automática
+
+Toda máquina cadastrada como `kind == "impressora"` **com IP fixo** é lida por **SNMP**
+(`services/snmp_printer.py`, porta 161/UDP): páginas impressas e níveis de suprimento pela
+**Printer-MIB** padrão, mais o **OID privado da Brother**, que além do toner traz a **vida restante
+das peças** (correia, fusor, laser, kits de tração). Para as Canon, que só expõem estado e alertas,
+há um **fallback por IPP** (`pyipp`). A consulta é sempre *best-effort*: devolve `{"ok": false, …}`
+em vez de estourar quando a impressora não responde.
+
+`services/printer_monitor.py` é a thread que roda de `PRINTER_MONITOR_MINUTES` em
+`PRINTER_MONITOR_MINUTES` e faz três coisas:
+
+1. **Guarda o histórico** — uma linha de `printer_reading` por impressora por ciclo (páginas,
+   toner %, cilindro %). É desse histórico que sai o relatório de consumo.
+2. **Avisa a TI** quando um suprimento cruza `PRINTER_SUPPLY_ALERT_PCT` — um e-mail por evento,
+   que só rearma depois que o nível se recupera (senão viraria spam a cada ciclo).
+3. **Dá baixa no estoque sozinho** quando detecta a troca física: o nível **subiu ao menos
+   `PRINTER_REPLACE_JUMP` pontos** (default 40) **e chegou a `PRINTER_REPLACE_PCT`** (default 80).
+   A comparação é contra a última leitura gravada no banco, não contra memória — por isso sobrevive
+   a reinício do servidor. A saída de 1 unidade sai do produto vinculado à impressora
+   (`Machine.toner_product_id` / `Machine.drum_product_id`), carimbada com o **setor** da impressora
+   e o **custo unitário** do produto. Se o material já estava com saldo ≤ 0, a TI recebe um e-mail.
+
+```mermaid
+flowchart LR
+    SCH["printer_monitor (thread)"] -->|SNMP :161| P["Impressora de rede"]
+    P --> R[("printer_reading<br/>páginas · toner % · cilindro %")]
+    SCH -->|nível abaixo de PRINTER_SUPPLY_ALERT_PCT| MAIL["e-mail à TI (1x por evento)"]
+    SCH -->|nível saltou >= JUMP e >= PCT| OUT["saída de 1 un. no estoque<br/>setor + custo unitário"]
+    R --> REL["/machines/impressoras/consumo"]
+```
+
+O relatório **`/machines/impressoras/consumo`** soma apenas as **subidas** entre leituras
+consecutivas: um contador que "cai" no meio do período (IP corrigido, aparelho trocado) nunca gera
+total negativo. Mostra também o KPI de **resmas de papel** (páginas ÷ 500) e o **custo de suprimento
+por setor**, somando as saídas de toner/cilindro × custo unitário agrupadas por
+`StockMovement.responsible_sector` — que é exatamente o que a baixa automática carimba.
+
+> **Vínculo do material:** o formulário da máquina só mostra os dois combos (toner e cilindro)
+> quando o tipo é impressora, e cada um lista apenas produtos das categorias **Toner** e
+> **Cilindro/Fotocondutor**.
+
+---
+
+## 13.3 CFTV — DVRs, câmeras ao vivo e detecção inteligente
+
+Módulo **`/cftv`** (admin). O cadastro de DVR segue o mesmo padrão dos roteadores: a senha do painel
+é **cifrada em repouso** (`VAULT_KEY`), o status é sondado ao vivo e o botão "Abrir painel" abre o
+`http://IP` e **copia a senha para a área de transferência** — navegador nenhum aceita credencial
+embutida na URL, então não existe um clique único de login de verdade.
+
+### Imagem: snapshot e tempo real
+
+| Caminho | Como funciona | Quando é usado |
+|---|---|---|
+| **Snapshot** (`services/dvr_cam.py`) | Proxy do `/cgi-bin/snapshot.cgi?channel=N` com autenticação **Digest**; o JPEG é servido **em memória, nunca gravado em disco**, com cache curto por (DVR, canal) compartilhado entre quem estiver vendo | Grade de câmeras e fallback universal |
+| **WebRTC** (go2rtc) | Serviço **externo** (binário único) que lê o RTSP do DVR e entrega ao navegador em **passthrough** | Câmera ampliada, quando o canal está publicado |
+
+O snapshot desses DVRs leva ~0,9 s para responder — ou seja, **o teto é ~1 fps**. Tempo real de
+verdade só via go2rtc. A grade continua em snapshot de propósito: 16-18 sessões WebRTC pesariam
+muito mais que 18 JPEGs a cada 3 s.
+
+O `go2rtc.yaml` é **gerado a partir do cadastro** pela tela `/cftv/go2rtc` (um stream por canal,
+`dvr<id>_ch<N>`, com a senha decifrada do cofre). Como o arquivo guarda credencial em texto puro, a
+pasta `go2rtc/` é ignorada pelo git. **Alterou um DVR? Regere o arquivo e reinicie o serviço** — ele
+não se atualiza sozinho. A origem do go2rtc também entra no CSP (`frame-src`/`connect-src`), senão
+o navegador bloqueia o player.
+
+> **O que estes DVRs realmente entregam (medido, não suposto):** o caminho é `/cam/realmonitor`
+> (singular); `subtype=0` é 1280x720 **H.265** a 15 fps e `subtype=1` é CIF 352x240 H.264 a 7 fps,
+> sem como aumentar. Como HD só existe em H.265 e o WebRTC não carrega H.265, cada canal é gerado
+> com duas fontes: o RTSP principal e `ffmpeg:<stream>#video=h264`. Navegador com suporte a H.265
+> recebe passthrough (CPU zero); os demais disparam a conversão — **um processo por espectador,
+> morto quando ele fecha**, medido em ~47% de um núcleo neste servidor. `GO2RTC_TRANSCODE=0` ou
+> `GO2RTC_SUBTYPE=1` são as saídas de emergência se a CPU apertar.
+
+### Detecção de pessoa e veículo
+
+Quem analisa a imagem é o **próprio DVR** (SMD da Dahua/Intelbras) — o InvenSync não decodifica
+vídeo nem roda modelo nenhum, então isso custa ~0 de CPU. Uma thread por DVR mantém aberto o
+`eventManager.cgi?action=attach` e interpreta os eventos `SmartMotionHuman` / `SmartMotionVehicle`.
+
+```mermaid
+flowchart LR
+    DVR["DVR (SMD)"] -->|long-poll eventManager.cgi| L["dvr_events (1 thread por DVR)"]
+    L --> MEM["estado ao vivo em memória<br/>expira em DVR_DETECT_TTL"]
+    L --> H[("dvr_detection<br/>início · fim · retângulo")]
+    MEM --> API["/cftv/:id/deteccoes (1-3s)"]
+    H --> PAG["/cftv/deteccoes (histórico)"]
+    L --> S["saude() → /health (dvr_eventos.stale)"]
+```
+
+Pontos que não são detalhe de implementação, e sim o que faz o módulo funcionar:
+
+- **O retângulo vem na escala 1024** (medido nos eventos reais). O `SizeFilter` da *configuração* usa
+  0-8191 — é outra coisa, não confunda.
+- **Um canal pode ter vários objetos ao mesmo tempo**, então a rota devolve uma *lista* por canal.
+  O casamento de "é o mesmo objeto" usa **IoU ≥ 0,30**, não distância de centro: numa sala cheia as
+  pessoas ficam mais próximas que qualquer limiar de centro razoável e virariam uma caixa só.
+- **`/cftv/<id>/deteccoes` não consulta o banco** — e um teste garante isso. A página chama essa rota
+  a cada 1-3 s; a primeira versão fazia um `SELECT` por chamada, o que deixava conexões
+  *idle in transaction* e derrubava o desempenho do app inteiro enquanto alguém estivesse com a
+  grade aberta. O estado ao vivo mora em memória.
+- **A escuta precisa de heartbeat + timeout de leitura.** Sem os dois, uma conexão que morre em
+  silêncio trava a thread para sempre — já ficou 6 dias fora do ar sem ninguém perceber. Por isso
+  `dvr_events.saude()` aparece no `/health` como `dvr_eventos.stale`: o app monitorava impressora,
+  roteador e DVR, mas não os próprios coletores.
+- **O histórico é expurgado** (`DVR_DETECT_KEEP_DAYS`, hoje 30 dias). É de longe a tabela que mais
+  cresce: ~6.900 linhas/dia, e com o antigo default de 90 dias ela chegou a 78% do banco — e do dump
+  diário.
+- **Nem todo firmware aceita.** Só o **MHDX1232** permite *ligar* o SMD (canais 1-16); os MHDX
+  11xx/1216 mostram a configuração mas recusam o `Enable` com HTTP 400. E não existe detecção de
+  animais — o SMD é humano/veículo apenas.
+
+---
+
+## 13.4 Rede — descoberta por ARP
+
+A tela **`/rede`** (admin) descobre o que está ligado na rede **sob demanda**: a página abre na hora
+e só varre quando se clica no botão (`services/net_scan.py` lê a tabela `arp -a`, resolve os nomes
+por DNS reverso em paralelo e, opcionalmente, faz um ping-sweep das /24 conhecidas).
+
+O casamento com o cadastro é **pelo MAC** primeiro — é o que funciona com DHCP — e só depois por
+hostname, IP ou nome. O botão "salvar MAC" preenche `Machine.mac_address`/`hostname` a partir do
+aparelho descoberto. É esse mesmo cadastro que alimenta o **chip de online/offline** na lista de
+máquinas (`machines.rede_ativos`), que lê só a tabela ARP — rápido, sem DNS.
+
+> **Cuidado herdado:** as duas piscinas de threads usam um **prazo total** (não por host) e encerram
+> com `shutdown(wait=False, cancel_futures=True)`. Com `with ThreadPoolExecutor(...)` o `shutdown`
+> espera *todas* as tarefas, inclusive as que já estouraram o próprio timeout — um único PTR lento
+> congelava a varredura inteira (94 s contra 20 s; há teste que trava isso).
+
+---
+
+## 13.5 Board DEV — kanban alimentado pelos commits
+
+**`/dev`** (admin) é um mini-Monday do time de desenvolvimento: painel com KPIs e gráficos,
+**`/dev/board`** com o kanban (backlog → a fazer → fazendo → revisão → concluído), sprints e backlog.
+
+```mermaid
+flowchart LR
+    C["git commit em QUALQUER repo da casa"] --> HK["hook post-commit"]
+    HK --> SC["dev_commit.py (app mínimo, ~2,7s)"]
+    SC -->|cita #12| UP["vira ATUALIZAÇÃO da tarefa 12"]
+    SC -->|título repetido em 3 dias| UP
+    SC -->|resto| NEW["cria CARD em DEV_COMMIT_STATUS<br/>na sprint ativa, tags do cabeçalho"]
+    SC -.->|merge · skip-kanban · rotina · hash repetido| IGN["ignora"]
+```
+
+- **Modelos:** `DevSprint`, `DevTask` (status, prioridade, sprint, responsável, tags, `code_ref`,
+  `position`, `due_date`, `done_at`, vínculo opcional com um chamado), `DevUpdate` (a timeline da
+  tarefa, onde entram os commits) e `DevChecklistItem`.
+- **Vários repositórios:** o hook instalado em outro projeto chama o `dev_commit.py` *deste* repo e
+  passa `--repo`; o nome do projeto vira a **primeira tag** do card e entra no dedupe por título —
+  dois repositórios podem ter o mesmo assunto de commit sem serem o mesmo trabalho.
+- **O hook nunca derruba um commit:** engole qualquer exceção e sai com 0. E não usa `create_app()`,
+  que rodaria migrações e seeds a cada commit.
+- **Mover é por botões de ícone** no card (◀ ▶ ✓ ↺) **e** por arrastar e soltar; os botões não são
+  redundância, porque DnD não existe no toque nem no teclado. As 5 colunas dividem a largura da tela
+  — o board não rola para o lado, quem rola é o corpo de cada coluna.
+- **O painel** traz KPIs (total, em andamento, atualizações no período, ciclo médio), atividade por
+  dia, tarefas por coluna, por projeto e por prioridade, e o **burndown** da sprint ativa. O ciclo
+  médio usa `done_at` (carimbado ao concluir, limpo ao reabrir) e não `updated_at`, que muda a cada
+  edição e faria um card antigo renomeado hoje "levar semanas" para ficar pronto.
+
+> Ligar/desligar: `DEV_COMMIT_ENABLED`. Instalar o hook num repositório:
+> `setup\instalar_hooks.ps1 -Repo <pasta>` (a pasta `.git/hooks` não é versionada, então cada clone
+> roda isso uma vez).
+
+---
+
+## 13.6 Avisos, Busca global, Cotações, Kiox e Apresentação
+
+- **Central de Avisos** (`/avisos`) — mural interno: **admin publica, todo mundo lê**, e é a
+  **página inicial do usuário comum**. É também onde os **alertas proativos** aparecem: o
+  `services/alerts.py` mantém *um único* aviso automático atualizado (estoque baixo, licenças e
+  garantias vencendo, chamados parados) em vez de empilhar um por dia, e manda o digest por e-mail.
+  O botão da própria tela dispara a apuração na hora.
+- **Busca global** (`/busca`, Ctrl+K) — endpoint JSON que varre produtos, máquinas, celulares,
+  chips, chamados, usuários e licenças (mínimo 2 caracteres, teto por categoria) e já devolve a
+  **URL pronta** de cada resultado.
+- **Cotações** (`/cotacoes`) — digite o modelo e a tela monta o **deep-link** da busca do Mercado
+  Livre ordenada pelo menor preço, aberta no navegador do admin. Não há API nem scraping **de
+  propósito**: o ML bloqueia busca feita pelo servidor.
+- **Kiox** (`/kiox`) — mapa de rastreio da frota (Leaflet + Firebase) servido **cru** por
+  `send_file`, sem passar pelo Jinja. É uma **cópia** do arquivo original da pasta `KioX/`: se o
+  original mudar, a cópia precisa ser ressincronizada.
+- **Apresentação** (`/apresentacao`) — tela de boas-vindas com Three.js + GSAP. Todo usuário é
+  levado a ela **uma vez** (`User.intro_visto`); depois ela fica como primeiro item do menu. O fundo
+  animado de bolhas é um componente compartilhado que o `base.html` usa em todas as telas —
+  **uma cena por página**, e `UI_FUNDO_BOLHAS=0` remove tudo (é WebGL rodando o dia inteiro na
+  máquina de quem usa).
 
 ---
 
@@ -1001,6 +1257,23 @@ flowchart LR
 - **Auditoria** registra ações críticas (inclusive *reveal* de senha do cofre).
 - **Segredos** (`SECRET_KEY`, `VAULT_KEY`, `DB_PASSWORD`, `SMTP_PASSWORD`) só no `.env`; o boot
   **recusa iniciar** com `SECRET_KEY` placeholder/fraco.
+- **Limite de tentativas** (Flask-Limiter): `POST /login` aceita `10/min` e `40/h`, e a verificação
+  de 2FA `10/min`. Quem estoura recebe um aviso amigável e um redirect, não um 429 cru.
+- **Segredos cifrados em repouso** (`services/crypto.py`, Fernet): cofre de senhas, senha de
+  roteador e de DVR e a *local key* das tomadas. A chave vem de `VAULT_KEY` — **mudá-la torna todo o
+  texto cifrado irrecuperável**. O boot cifra o que ainda estiver em texto puro.
+- **Arquivo enviado por usuário fica fora da `/static`**: anexo de chamado, NF e foto do cofre vão
+  para `uploads_private/` e só são servidos por rota com login; a extensão é conferida em cada
+  upload — avatar aceita só imagem, nunca `svg`/`html`.
+- **"Sair de todos os dispositivos"**: o `get_id()` devolve `id:token` e o `user_loader` recusa um
+  token que não bate, então girar o `session_token` do usuário derruba as outras sessões.
+- **Os cookies têm nome próprio** (`invensync_session` / `invensync_remember`) — e isso é correção,
+  não estilo. Cookie é isolado **por domínio, nunca por porta**: com os nomes padrão do Flask, os
+  outros aplicativos deste mesmo servidor sobrescreviam a sessão do InvenSync e o usuário caía no
+  login sem mensagem, além de quebrar o CSRF (o token mora na sessão).
+- **`/health` é público, mas econômico**: status, uptime e checagem do banco para qualquer um;
+  detalhes de infraestrutura (último backup, agendadores, escutas do CFTV, erro real do banco) só
+  para quem chama de `127.0.0.1` — ou seja, o launcher.
 
 ---
 
@@ -1012,21 +1285,30 @@ InventarioAlmox/
 │   ├── __init__.py             # create_app() — fábrica, migrações leves, seeds, blueprints
 │   ├── config.py               # configuração (lê .env)
 │   ├── extensions.py           # db, login_manager
-│   ├── models/                 # 22 entidades ORM (user, product, machine, ticket, …)
+│   ├── models/                 # 33 entidades ORM (user, product, machine, ticket, dvr, dev, …)
 │   ├── repositories/           # acesso a dados por entidade
-│   ├── services/               # transversais: assets, audit, exports, imports, mailer,
-│   │                           #   monitoring, people, twofa, tuya, plug_scheduler, docs
+│   ├── services/               # transversais: assets, audit, crypto, exports, imports, mailer,
+│   │                           #   monitoring, alerts, people, twofa, tuya, plug_scheduler,
+│   │                           #   snmp_printer, printer_monitor, net_scan, router_ctl,
+│   │                           #   dvr_cam, dvr_events, go2rtc, dev_commit, backup_scheduler,
+│   │                           #   errorlog, pagination, patrimony, docs
 │   ├── forms/                  # formulários Flask-WTF
-│   ├── routes/                 # blueprints (auth … docs, health)
+│   ├── routes/                 # 40 blueprints (auth … dvr, dev, docs, health)
 │   ├── templates/              # Jinja2 (base.html + telas por módulo)
-│   └── static/                 # style.css, logo, favicons, uploads/ (avatares)
+│   ├── kiox/                   # mapa de rastreio (HTML servido cru, cópia do projeto KioX)
+│   └── static/                 # style.css, js/ (bolhas, chart-tabela, intro), logo, favicons,
+│                               #   manifest + sw.js (PWA), uploads/ (avatares)
 ├── uploads_private/            # anexos de chamados, NFs e fotos do Cofre (fora da /static)
+├── go2rtc/                     # binário, ffmpeg e go2rtc.yaml GERADO (contém senhas — no .gitignore)
 ├── docs/
 │   ├── DOCUMENTACAO.md         # ESTE documento (fonte única)
 │   ├── DOCUMENTACAO.html       # versão navegável (gerada por gerar_html.py)
 │   ├── CAPA.html               # capa/portada separada
 │   └── gerar_html.py           # MD → HTML (marked.js + Mermaid no navegador)
-├── setup/                      # instaladores/atalhos (.bat)
+├── setup/                      # instaladores/atalhos (.bat), reiniciar.ps1 e hooks/ do board DEV
+├── tests/                      # pytest (guarda contra rodar em banco de produção)
+├── dev_commit.py               # chamado pelo hook post-commit — registra o commit no board DEV
+├── atualizar.bat               # deploy: git pull → deps → boot-check → reinicia e confere /health
 ├── launcher.py                 # painel desktop PyQt5
 ├── serve.py                    # produção (waitress)
 ├── run.py                      # desenvolvimento (Flask)
@@ -1059,9 +1341,26 @@ InventarioAlmox/
 | `ALERTS_DIGEST_HOURS` | `8,17` | Horas do digest diário por e-mail |
 | `SECURITY_ALERTS_ENABLED` | `1` | Alerta de atividade suspeita na auditoria |
 | `PLUG_SCHEDULER_ENABLED` | `1` | Agendador das tomadas inteligentes |
+| `VAULT_REAUTH_MINUTES` | `5` | Quanto tempo a re-autenticação do Cofre vale (0 = pede sempre) |
+| `SNMP_COMMUNITY` / `SNMP_TIMEOUT` | `public` / `3` | Leitura das impressoras (161/UDP) |
+| `PRINTER_MONITOR_ENABLED` / `_MINUTES` | `1` / `60` | Coleta periódica das impressoras |
+| `PRINTER_SUPPLY_ALERT_PCT` | `10` | Percentual que dispara o aviso de suprimento baixo |
+| `PRINTER_REPLACE_PCT` / `_JUMP` | `80` / `40` | Limiares da troca física → baixa automática no estoque |
+| `DVR_SNAP_TTL` / `_LIVE` | `3` / `0.4` | Cache do snapshot na grade e na câmera ampliada (s) |
+| `DVR_EVENTS_ENABLED` / `DVR_DETECT_TTL` | `1` / `8` | Escuta de detecção e validade da caixa na tela |
+| `DVR_DETECT_KEEP_DAYS` | `30` | Dias de histórico de detecção (0 = guarda tudo) |
+| `DVR_ALERT_ENABLED` / `_HOURS` / `_COOLDOWN` | `0` / — / `900` | E-mail à TI ao ver **pessoa** fora do expediente |
+| `GO2RTC_URL` | — | Endereço do go2rtc. **Vazio = tempo real desligado** (só snapshot) |
+| `GO2RTC_SUBTYPE` / `_TRANSCODE` | `0` / `1` | Stream usado (0 = HD) e conversão sob demanda p/ H.264 |
+| `BACKUP_SCHEDULER_ENABLED` / `BACKUP_HOUR` | `1` / `2` | Dump diário pelo próprio app (com self-heal) |
+| `BACKUP_MIRROR_DIR` / `BACKUP_UPLOAD_CMD` | — | **Cópia offsite** do backup (outro disco/NAS ou rclone) |
+| `DEV_COMMIT_ENABLED` / `DEV_COMMIT_STATUS` | `1` / `review` | Board DEV alimentado pelos commits |
+| `UI_FUNDO_BOLHAS` / `_DENSIDADE` | `1` / `0.3` | Fundo animado (WebGL); `0` remove de todas as telas |
 | `BEHIND_PROXY` / `SESSION_COOKIE_SECURE` | `0` / `0` | Ligue ambos ao servir por HTTPS (ver `docs/HTTPS.md`) |
 
 > `MAX_CONTENT_LENGTH` = 16 MB · `pool_pre_ping` + `pool_recycle=1800s` · `TEMPLATES_AUTO_RELOAD=True`.
+> O `.env.example` traz **todas** as variáveis com o comentário do que cada uma faz — é a referência
+> mais completa que esta tabela, que fica com o essencial.
 
 ---
 
@@ -1110,6 +1409,17 @@ mindmap
       Manutenções
       Monitoramento
       Etiquetas QR
+      Descoberta ARP
+    Coleta automática
+      Impressoras por SNMP
+      Baixa de toner na troca
+      Consumo e custo por setor
+    CFTV
+      DVRs cadastrados
+      Câmeras por snapshot
+      Tempo real WebRTC go2rtc
+      Detecção pessoa e veículo
+      Histórico de detecções
     Pessoas
       Colaboradores
       Departamentos
@@ -1125,7 +1435,17 @@ mindmap
       Backups
       Tomadas inteligentes
       Notificações por e-mail
+      Cotações Mercado Livre
+      Kiox - mapa da frota
+      Log de erros
       Documentação viva
+    Trabalho e Comunicação
+      Central de Avisos
+      Alertas proativos
+      Busca global Ctrl+K
+      Board DEV
+      Sprints e burndown
+      Cards vindos dos commits
     Segurança
       Login + 2FA
       RBAC
