@@ -49,6 +49,7 @@
     - 13.6 [Avisos, Busca, Cotações, Kiox e Apresentação](#136-avisos-busca-global-cotações-kiox-e-apresentação)
 14. [Auditoria](#14-auditoria)
 15. [Implantação (Deployment) e Launcher](#15-implantação-deployment-e-launcher)
+    - 15.1 [Backup e Restauração](#151-backup-e-restauração)
 16. [Segurança](#16-segurança)
 17. [Estrutura de Pastas](#17-estrutura-de-pastas)
 18. [Configuração (`.env`)](#18-configuração-env)
@@ -1193,6 +1194,31 @@ stateDiagram-v2
     Erro --> Iniciando : Iniciar
     Parado --> [*]
 ```
+
+---
+
+## 15.1 Backup e restauração
+
+São **duas camadas**, e elas resolvem problemas diferentes:
+
+| Camada | Cobre | Não cobre |
+|---|---|---|
+| **Cópia da VM inteira** para outro servidor (rotina de infraestrutura) | Perder o servidor: disco, máquina, sala | Recuperar **um** dado — voltar a VM derruba tudo o que roda nela |
+| **`pg_dump` diário** (`backup_db.py`, formato *custom* `-Fc`, rotação `BACKUP_KEEP`) | Recuperação cirúrgica: uma tabela, um registro, o banco todo | Perder o servidor — os arquivos ficam dentro da própria VM |
+
+Medido em 18/09/2026: 30 dumps, 161 MB no total, um por dia às ~02:08, o mais recente com 8,2 MB.
+O agendador é o próprio app e tem *self-heal* (servidor desligado na hora marcada → o backup sai na
+primeira verificação depois que ele sobe).
+
+> **A `VAULT_KEY` não está no banco.** Restaurar num ambiente com chave diferente devolve todas as
+> linhas **menos** os segredos cifrados (cofre, roteadores, DVRs, tomadas) — e as telas continuam
+> abrindo, então só quem tentar *usar* uma senha descobre. Guarde a chave junto da rotina de backup.
+
+**O procedimento completo está em `docs/RESTAURACAO.md`**: os três cenários (recuperar um dado,
+voltar o banco inteiro, servidor perdido), a conferência pós-restauração e as armadilhas conhecidas.
+O ensaio é um comando — `setup\ensaio_restauracao.ps1` restaura o dump mais recente num banco
+descartável, compara as contagens com a produção, cronometra e apaga o banco no fim. Ele se recusa a
+rodar se o nome do banco de ensaio for igual ao de produção, e nunca escreve na produção.
 
 ---
 

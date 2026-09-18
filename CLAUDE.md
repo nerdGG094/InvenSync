@@ -243,6 +243,8 @@ Notable optional toggles:
 - **Schedulers/alerts**: `MONITORING_ENABLED`, `ALERTS_ENABLED`/`ALERTS_*`, `INACTIVITY_MINUTES` (0=off).
 - **CFTV/DVR cameras**: `DVR_SNAP_TTL` (grid snapshot cache, default 3s), `DVR_SNAP_TTL_LIVE` (enlarged view, default 0.4s).
 - **Backups**: `BACKUP_DIR`, `BACKUP_KEEP`, `BACKUP_HOUR`, `BACKUP_SCHEDULER_ENABLED` (app-owned daily dump, self-heals if the server was down). **Offsite** (recommended): `BACKUP_MIRROR_DIR` (2nd folder/NAS/synced Drive) and/or `BACKUP_UPLOAD_CMD` (post-backup command, e.g. rclone to Google Drive — `{path}`/`{name}` placeholders). The Backups page shows the offsite status (off / unreachable / OK). `backup_db.py` at the repo root does the work (`run_backup`, `mirror_status`).
+  **Offsite is already covered one layer up**: the whole VM is copied to another server (infrastructure routine, outside this repo), and the dumps live inside it. `BACKUP_MIRROR_DIR` would only buy a *faster granular* restore, not survival — so it is optional here, not the gap it looks like. What the VM copy does **not** replace is the dump itself: going back a whole VM to recover one deleted row means taking down everything that runs on it. **Restore procedure and rehearsal: `docs/RESTAURACAO.md` + `setup\ensaio_restauracao.ps1`** (restores the newest dump into a throwaway database, compares row counts against production, times it, drops it — refuses to run if the scratch name equals the production one).
+  **The dump does not carry the `.env`, and `VAULT_KEY` is not in the database.** Restoring into an environment with a different `VAULT_KEY` gives every row back *except* the encrypted ones (vault, routers, DVRs, plugs) — and the screens still load, so only whoever tries to *use* a password finds out. Keep the key with the backup routine.
 - **HTTPS behind a reverse proxy**: `BEHIND_PROXY=1` + `SESSION_COOKIE_SECURE=1` (see `docs/HTTPS.md`).
 
 ## Deploy
@@ -278,7 +280,11 @@ Rotina, não pendência:
 lista — ele é alimentado pelos commits e cada card carrega a medição que o motivou.
 O que fica aqui é só o que precisa de decisão humana antes de virar trabalho:
 
-- **Backup sem cópia offsite** (card #28): `backup_db.mirror_status()` retorna
-  `configured: False` — os 30 dumps vivem no mesmo disco do banco. Configurar
-  `BACKUP_MIRROR_DIR` (outro disco/NAS) e/ou `BACKUP_UPLOAD_CMD` (rclone → Drive).
-  Depende de escolher o destino.
+- **Ensaio de restauração** (era o card #28, e a pergunta mudou): a cópia offsite
+  **existe** — a VM inteira é copiada para outro servidor, e os 30 dumps estão
+  dentro dela. `mirror_status()` continua dizendo `configured: False`, mas isso
+  só fala do `BACKUP_MIRROR_DIR`; não é o retrato do risco. O que **nunca** foi
+  feito é restaurar: `docs/RESTAURACAO.md` e `setup\ensaio_restauracao.ps1`
+  existem para isso e ainda não rodaram em produção. Backup que ninguém
+  restaurou é hipótese. Depende só de alguém rodar o ensaio (minutos, sem risco:
+  ele restaura num banco descartável).

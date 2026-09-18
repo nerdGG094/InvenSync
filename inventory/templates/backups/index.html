@@ -91,7 +91,13 @@
   <i class="bi bi-info-circle me-1"></i>
   Os backups são gerados automaticamente todo dia pelo próprio InvenSync (self-heal: se o
   servidor estava fora no horário, faz assim que volta) e a rotação mantém os mais recentes.
-  Uma <strong>cópia offsite</strong> é feita se <code>BACKUP_MIRROR_DIR</code> estiver definido
-  (outra máquina/NAS/rede). Para restaurar, use <code>pg_restore</code> sobre um <code>.dump</code>.
+  Uma <strong>cópia offsite</strong> adicional é feita se <code>BACKUP_MIRROR_DIR</code> estiver
+  definido (outra máquina/NAS/rede) — independente do backup da VM, que é feito fora daqui.
+  <br>
+  <i class="bi bi-life-preserver me-1"></i>
+  <strong>Para restaurar</strong>, siga <code>docs/RESTAURACAO.md</code>: tem o passo a passo dos
+  três cenários (recuperar um dado, voltar o banco inteiro, servidor perdido) e o ensaio
+  <code>setup\ensaio_restauracao.ps1</code>, que testa um dump num banco descartável sem
+  encostar na produção.
 </p>
 {% endblock %}
