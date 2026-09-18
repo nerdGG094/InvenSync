@@ -424,7 +424,7 @@ def expurgar(app):
     pesava em cada pg_dump e na página de histórico.
 
     `DVR_DETECT_KEEP_DAYS=0` desliga o expurgo (guarda tudo)."""
-    dias = int(app.config.get("DVR_DETECT_KEEP_DAYS", 90) or 0)
+    dias = int(app.config.get("DVR_DETECT_KEEP_DAYS", 30) or 0)
     if dias <= 0:
         return 0
     from datetime import datetime, timedelta

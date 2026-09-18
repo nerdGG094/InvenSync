@@ -117,7 +117,7 @@ DVRs de câmera (Intelbras/Dahua). Same pattern as routers: encrypted `admin_pas
 - **Firmware support is the catch:** only the **MHDX1232** accepts enabling SMD, and only on channels 1-16. The MHDX 11xx/1216 expose the config tree but reject `Enable` with HTTP 400 (verified across 4 units and several channels, while other writes on the same units return OK). No animal detection at all — SMD is human/vehicle only.
 - **The long-poll needs `heartbeat` + a read timeout — both, together.** The listener was found dead for **6 days**: `read()` was called with `timeout=None`, so when the connection died silently (NAT/switch dropping state) it blocked forever and the reconnect loop below it — which already existed, with exponential backoff — never got to run. The DVR now sends a heartbeat every `_HEARTBEAT`s and the socket times out after `_LEITURA_TIMEOUT` (~3 heartbeats), so silence becomes an exception instead of a hang. Never restore `timeout=None`; a test enforces it.
 - **`dvr_events.saude()`** exposes per-DVR listener health (in memory), surfaced in `/health` as `dvr_eventos.stale`. It exists because the app monitored printers, routers and DVRs but not *its own collectors*, so the outage was invisible.
-- **History is pruned** (`expurgar()`, daily thread, `DVR_DETECT_KEEP_DAYS` default 90). Measured in production: ~6.850 rows/day (~2.5M/year); after 7 days the table was 7.9 MB of an ~11 MB database, 12× the next-largest.
+- **History is pruned** (`expurgar()`, daily thread, `DVR_DETECT_KEEP_DAYS` **default 30**). Measured in production: ~6.900 rows/day (~2.5M/year); after 7 days the table was 7.9 MB of an ~11 MB database, 12× the next-largest. **The default used to be 90 and that was the bug**: the oldest row never reached 90 days, so the prune never had anything to delete and the table grew to 310.125 rows / 50 MB of a 64 MB database — 78% of it, in every daily dump. 30 days stabilise it at ~215k rows / ~35 MB and cover any real incident review, which is what the history page is for. Note the delete doesn't hand the 50 MB back to the disk (autovacuum frees it for reuse); what shrinks immediately is the dump, which only writes live rows.
 - Config: `DVR_EVENTS_ENABLED`, `DVR_DETECT_TTL`, `DVR_DETECT_KEEP_DAYS`, `DVR_ALERT_ENABLED`/`DVR_ALERT_HOURS` (e.g. `19-6`)/`DVR_ALERT_COOLDOWN` for the off-hours e-mail to TI.
 
 - Grid snapshots stay at whatever the DVR's `Snap` config gives (704x480 on `.134`, 352x240 on `.136`) — no URL parameter changes it (`type=`/`subtype=` are ignored); only the DVR's own config would.
@@ -278,6 +278,3 @@ O que fica aqui é só o que precisa de decisão humana antes de virar trabalho:
   `configured: False` — os 30 dumps vivem no mesmo disco do banco. Configurar
   `BACKUP_MIRROR_DIR` (outro disco/NAS) e/ou `BACKUP_UPLOAD_CMD` (rclone → Drive).
   Depende de escolher o destino.
-- **Retenção do `dvr_detection`** (card #30): 291k linhas / 48 MB hoje, ~570k / ~95 MB
-  aos 90 dias de `DVR_DETECT_KEEP_DAYS`, e isso entra em todo dump. Depende de decidir
-  se 90 dias de histórico de detecção servem para alguma coisa.
