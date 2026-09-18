@@ -250,6 +250,8 @@ Notable optional toggles:
 
 **Upgrading a native Python dep while the app runs** (`cryptography`, `psycopg`, …): pip cannot delete a `.pyd` that the running process has loaded, so on Windows it **renames the folder to `~<name>`** in `site-packages` and installs the new one beside it. The upgrade works, but the running process keeps the old module in memory until a restart, and the `~` folders pile up (four had accumulated before anyone noticed). After restarting, delete them: `rm -rf .venv/Lib/site-packages/~*`. When the dep touches secrets, prove the vault survived before trusting it — decrypt existing rows with the real `VAULT_KEY`, don't just round-trip a new value.
 
+The file log (`serve.log`, `RotatingFileHandler`, 5 MB × 5) is stamped **with the date**; stdout, which the launcher panel shows live, keeps time only. It was time-only in both, so a 5 MB file spanning days couldn't say which day a line came from — in the log that diagnosed the cookie collision. The rotated `serve.log.1..5` are generated files: `.gitignore` covers `serve.log*` because one of them had been committed (5 MB of production log in the repo).
+
 `setup\reiniciar.ps1` stops the app, starts it, and then polls `/health` — a deploy that doesn't come back reports failure instead of passing silently. **It selects processes by `ExecutablePath` under the project root, never by process name or command line**: this server runs other Python apps, and CARREG-LOGI's launcher has a byte-identical command line (`".venv\Scripts\pythonw.exe" "launcher.py"`). Filtering any other way kills the neighbours.
 
 ### Front-end dependencies (CDN)

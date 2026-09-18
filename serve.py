@@ -46,8 +46,14 @@ def main():
         maxBytes=5 * 1024 * 1024, backupCount=5,
     )
     fh.setLevel(logging.INFO)
+    # O ARQUIVO leva a data; o stdout não precisa (quem olha o painel do
+    # launcher está vendo acontecer). O serve.log guarda 5 MB -- dias de
+    # execução -- e gravava só "09:22:52", então não dava para saber de que dia
+    # era a linha. Num log que existe para reconstituir incidente (foi assim que
+    # a colisão de cookie foi diagnosticada), hora sem data é meio carimbo.
     fh.setFormatter(logging.Formatter(
-        "%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%H:%M:%S"))
+        "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        datefmt="%d/%m/%Y %H:%M:%S"))
     logging.getLogger().addHandler(fh)
 
     flask_app = create_app()

@@ -62,6 +62,10 @@ go2rtc.exe
 
 # === Logs ===
 *.log
+# Rotação do serve.log: serve.log.1 ... serve.log.5, gerados pelo
+# RotatingFileHandler do serve.py. O *.log acima não pega os numerados, e um
+# deles chegou a ser versionado (5 MB de log de produção dentro do repo).
+serve.log*
 flask_output.log
 
 # === IDEs / Editores ===
