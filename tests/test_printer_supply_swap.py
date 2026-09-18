@@ -205,3 +205,28 @@ def test_form_impressora_mostra_suprimentos(app, auth_client):
     assert r.status_code == 200
     assert "Suprimentos da impressora".encode() in r.data
     assert b"tonerProd" in r.data and b"drumProd" in r.data
+
+
+def test_limiares_da_troca_vem_do_ambiente(app):
+    """PRINTER_REPLACE_PCT/_JUMP precisam existir no Config, não só no default.
+
+    Os dois eram lidos apenas como `app.config.get("PRINTER_REPLACE_PCT", 80)`
+    dentro do printer_monitor, sem serem declarados em config.py — ou seja,
+    caíam sempre no default embutido e colocá-los no .env não surtia efeito
+    nenhum, apesar de estarem documentados como ajuste disponível.
+    """
+    import inspect
+
+    from inventory import config as cfg_mod
+
+    # Sem valor no ambiente, os defaults medidos; com valor, o que o .env disser
+    # (por isso não fixamos 80/40 aqui — quem instala pode ajustar).
+    assert isinstance(app.config["PRINTER_REPLACE_PCT"], int)
+    assert isinstance(app.config["PRINTER_REPLACE_JUMP"], int)
+
+    src = inspect.getsource(cfg_mod)
+    for chave in ("PRINTER_REPLACE_PCT", "PRINTER_REPLACE_JUMP"):
+        assert f'os.environ.get("{chave}"' in src, (
+            f"{chave} precisa sair do ambiente em config.py; só com o default "
+            "embutido no printer_monitor, defini-la no .env não muda nada."
+        )

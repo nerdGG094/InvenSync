@@ -114,6 +114,13 @@ class Config:
     PRINTER_MONITOR_ENABLED = os.environ.get("PRINTER_MONITOR_ENABLED", "1") in ("1", "true", "True")
     PRINTER_MONITOR_MINUTES = int(os.environ.get("PRINTER_MONITOR_MINUTES", "60"))
     PRINTER_SUPPLY_ALERT_PCT = int(os.environ.get("PRINTER_SUPPLY_ALERT_PCT", "10"))
+    # Detecção da troca física de suprimento: o nível subiu >= JUMP pontos E
+    # chegou a >= PCT? Então alguém trocou o toner/cilindro, e a baixa no
+    # estoque é registrada sozinha. Estes dois eram lidos só do app.config em
+    # printer_monitor.py, sem existir aqui — ou seja, caíam sempre no default
+    # embutido e colocá-los no .env não surtia efeito nenhum.
+    PRINTER_REPLACE_PCT = int(os.environ.get("PRINTER_REPLACE_PCT", "80"))
+    PRINTER_REPLACE_JUMP = int(os.environ.get("PRINTER_REPLACE_JUMP", "40"))
 
     # CFTV — câmeras dos DVRs.
     # Snapshot (fallback sempre disponível): cache da grade e da ampliada.
