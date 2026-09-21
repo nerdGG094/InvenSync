@@ -1123,8 +1123,11 @@ flowchart LR
   edição e faria um card antigo renomeado hoje "levar semanas" para ficar pronto.
 
 > Ligar/desligar: `DEV_COMMIT_ENABLED`. Instalar o hook num repositório:
-> `setup\instalar_hooks.ps1 -Repo <pasta>` (a pasta `.git/hooks` não é versionada, então cada clone
-> roda isso uma vez).
+> `setup\instalar_hooks.ps1 -Repo <pasta>` no Windows, `setup/instalar_hooks.sh --repo <pasta>` no
+> Linux/macOS (a pasta `.git/hooks` não é versionada, então cada clone roda isso uma vez). O hook
+> serve os dois sistemas: escolhe o interpretador pelo `uname` — por SMB o `python.exe` do Windows
+> aparece como executável no Linux — e lê o que é da máquina (venv, `DB_HOST`) em
+> `~/.config/invensync/dev_commit.env`, já que o `.env` do projeto vem pelo compartilhamento.
 
 ---
 

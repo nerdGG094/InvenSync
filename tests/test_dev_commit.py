@@ -204,3 +204,77 @@ def test_hook_serve_qualquer_repo(app):
     assert "@INVENSYNC@" in hook          # modelo: caminho entra na instalacao
     assert "--repo" in hook               # e o commit lido e o do repo local
     assert pathlib.Path("dev_commit.py").read_text(encoding="utf-8").count("--repo") >= 1
+
+
+def _hook_em(repo, caminho_gravado):
+    """Instala o modelo do hook num repo de teste, como o instalador faria."""
+    import pathlib
+    import subprocess
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    modelo = pathlib.Path("setup/hooks/post-commit").read_text(encoding="utf-8")
+    alvo = repo / ".git" / "hooks" / "post-commit"
+    alvo.write_text(modelo.replace("@INVENSYNC@", caminho_gravado), encoding="utf-8")
+    alvo.chmod(0o755)
+    return alvo
+
+
+def _rodar(hook, repo, **ambiente):
+    """Roda o hook isolado: HOME proprio, para nao ler a config da maquina."""
+    import os
+    import subprocess
+    env = {k: v for k, v in os.environ.items()
+           if k not in ("INVENSYNC_DIR", "INVENSYNC_PY")}
+    env["HOME"] = str(repo.parent)
+    env.update(ambiente)
+    subprocess.run(["sh", str(hook)], cwd=str(repo), env=env, check=True)
+
+
+@pytest.mark.skipif(__import__("os").name == "nt",
+                    reason="o hook e um script sh; no Windows quem instala e o .ps1")
+def test_hook_se_acha_com_caminho_de_outro_sistema(tmp_path):
+    """Caminho de outro SO gravado na instalacao nao pode calar o hook.
+
+    Aconteceu: o .git/hooks trazia C:/Users/... e, editando pelo Linux, o hook
+    avisava no stderr e saia 0 — o commit passava e o card nunca nascia. Quando
+    o commit e no proprio InvenSync, o dev_commit.py esta sempre a mao.
+    """
+    import os
+    repo = tmp_path / "InventarioAlmox"
+    repo.mkdir()
+    (repo / "dev_commit.py").write_text("", encoding="utf-8")
+    marca = tmp_path / "chamado.txt"
+    interp = tmp_path / "python-falso"
+    interp.write_text(f'#!/bin/sh\nprintf "%s\\n" "$@" > "{marca}"\n', encoding="utf-8")
+    interp.chmod(0o755)
+
+    hook = _hook_em(repo, "C:/Users/Administrador/Desktop/python/INVENSYNC/InventarioAlmox")
+    _rodar(hook, repo, INVENSYNC_PY=str(interp))
+
+    chamada = marca.read_text(encoding="utf-8").splitlines()
+    assert chamada[0] == str(repo / "dev_commit.py")
+    assert "--repo" in chamada
+    assert os.path.realpath(chamada[-1]) == os.path.realpath(str(repo))
+
+
+@pytest.mark.skipif(__import__("os").name == "nt",
+                    reason="o hook e um script sh; no Windows quem instala e o .ps1")
+def test_hook_nao_escolhe_o_python_do_windows_no_linux(tmp_path):
+    """Montado por SMB, o python.exe do Windows aparece como -rwx no Linux.
+
+    Ou seja: [-x] nao distingue os dois mundos, e escolher por ele so falharia
+    na hora do exec. Os candidatos tem que sair do uname.
+    """
+    repo = tmp_path / "InventarioAlmox"
+    (repo / ".venv" / "Scripts").mkdir(parents=True)
+    (repo / ".venv" / "bin").mkdir(parents=True)
+    (repo / "dev_commit.py").write_text("", encoding="utf-8")
+    marca = tmp_path / "quem.txt"
+    for nome, rotulo in ((".venv/Scripts/python.exe", "windows"), (".venv/bin/python", "linux")):
+        alvo = repo / nome
+        alvo.write_text(f'#!/bin/sh\necho {rotulo} > "{marca}"\n', encoding="utf-8")
+        alvo.chmod(0o755)
+
+    hook = _hook_em(repo, str(repo))
+    _rodar(hook, repo)
+
+    assert marca.read_text(encoding="utf-8").strip() == "linux"

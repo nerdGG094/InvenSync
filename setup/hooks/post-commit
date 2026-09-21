@@ -1,20 +1,68 @@
 #!/bin/sh
 # InvenSync - joga o commit recem-feito no board DEV (kanban de desenvolvimento).
 #
-# Serve a QUALQUER repositorio: o board e compartilhado, e o trabalho de verdade
-# esta sempre em dev_commit.py do InvenSync (que fala com o banco). O caminho do
-# InvenSync abaixo e preenchido na instalacao por setup/instalar_hooks.ps1.
+# Serve a QUALQUER repositorio e a QUALQUER sistema: o board e compartilhado, e o
+# trabalho de verdade esta sempre em dev_commit.py do InvenSync (que fala com o
+# banco). Instaladores: setup/instalar_hooks.ps1 (Windows) e
+# setup/instalar_hooks.sh (Linux/macOS) - os dois preenchem @INVENSYNC@ abaixo.
 #
 # Este hook NUNCA pode falhar um commit: o commit ja aconteceu quando ele roda,
 # entao qualquer problema vira aviso e o hook sai com 0.
 
-invensync="@INVENSYNC@"
 repo="$(git rev-parse --show-toplevel 2>/dev/null)"
 [ -n "$repo" ] || exit 0
 
-py="$invensync/.venv/Scripts/python.exe"      # Windows
-[ -x "$py" ] || py="$invensync/.venv/bin/python"
-[ -x "$py" ] || { echo "dev_commit: .venv do InvenSync nao encontrado — kanban nao atualizado." >&2; exit 0; }
+# Ajustes desta maquina: venv, INVENSYNC_DIR e DB_HOST quando o banco esta
+# noutro host. O .env do projeto nao resolve isso - ele vem pelo
+# compartilhamento SMB, e o "DB_HOST=127.0.0.1" dele so vale dentro do servidor;
+# load_dotenv nao sobrescreve o ambiente, entao o que for exportado aqui vence.
+# Caminho fixo em $HOME, sem XDG_*: o hook roda em qualquer shell, e o snap do
+# VS Code aponta XDG_DATA_HOME para dentro do confinamento - o que a instalacao
+# gravasse la, o terminal comum nao acharia.
+cfg="$HOME/.config/invensync/dev_commit.env"
+[ -r "$cfg" ] && . "$cfg"
+
+# Onde esta o InvenSync: ambiente > caminho gravado na instalacao > o proprio
+# repo. O ultimo e o que faz o hook sobreviver a um caminho de OUTRO sistema
+# gravado por uma instalacao anterior - commitando no proprio InvenSync, o
+# dev_commit.py esta sempre a mao, seja C:\... ou /run/user/.../InventarioAlmox.
+invensync=""
+for cand in "$INVENSYNC_DIR" "@INVENSYNC@" "$repo"; do
+    if [ -n "$cand" ] && [ -f "$cand/dev_commit.py" ]; then
+        invensync="$cand"
+        break
+    fi
+done
+[ -n "$invensync" ] || {
+    echo "dev_commit: InvenSync nao encontrado - kanban nao atualizado." >&2
+    exit 0
+}
+
+# Interpretador. O teste -x NAO distingue os dois mundos: montado por SMB no
+# Linux, o python.exe do Windows aparece como -rwx e o exec so falha na hora.
+# Por isso os candidatos saem do uname, nao de tentativa e erro. E por isso a
+# venv do Linux fica fora do repo: .venv/ no compartilhamento e a do Windows.
+py=""
+if [ -n "$INVENSYNC_PY" ] && [ -x "$INVENSYNC_PY" ]; then
+    py="$INVENSYNC_PY"
+else
+    case "$(uname -s 2>/dev/null)" in
+        MINGW*|MSYS*|CYGWIN*|Windows*)
+            [ -x "$invensync/.venv/Scripts/python.exe" ] && py="$invensync/.venv/Scripts/python.exe"
+            ;;
+        *)
+            for cand in "$HOME/.local/share/invensync/venv/bin/python" \
+                        "$invensync/.venv/bin/python"; do
+                [ -x "$cand" ] && { py="$cand"; break; }
+            done
+            ;;
+    esac
+fi
+[ -n "$py" ] || {
+    echo "dev_commit: sem interpretador com as dependencias - kanban nao atualizado." >&2
+    echo "            instale com: sh '$invensync/setup/instalar_hooks.sh'" >&2
+    exit 0
+}
 
 "$py" "$invensync/dev_commit.py" HEAD --repo "$repo"
 exit 0

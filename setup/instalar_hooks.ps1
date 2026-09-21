@@ -7,6 +7,9 @@
 #     powershell -ExecutionPolicy Bypass -File setup\instalar_hooks.ps1
 #     powershell -ExecutionPolicy Bypass -File setup\instalar_hooks.ps1 -Repo C:\...\CARREG-LOGI
 #
+# No Linux/macOS o equivalente e setup/instalar_hooks.sh - o hook em si serve
+# aos dois sistemas (escolhe o interpretador pelo uname).
+#
 # .git/hooks nao e versionado: cada clone precisa rodar isto uma vez.
 # Para desligar o registro automatico sem remover o hook, ponha
 # DEV_COMMIT_ENABLED=0 no .env do InvenSync.
